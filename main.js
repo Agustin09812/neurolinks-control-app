@@ -18,6 +18,7 @@ function createSplash() {
     width: 420,
     height: 300,
     frame: false,
+    icon: path.join(__dirname, "assets/icons/icon.ico"),
     alwaysOnTop: true,
     resizable: false,
     center: true,
@@ -40,6 +41,7 @@ function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: path.join(__dirname, "assets/icons/icon.ico"),
     minWidth: 1024,
     minHeight: 768,
     show: false,
@@ -85,11 +87,11 @@ async function checkForUpdates() {
 
     const options = {
       hostname: "api.github.com",
-      path: "/repos/TU_USUARIO/neurolinks-control-app/releases/latest",
+      path: "/repos/Agustin09812/neurolinks-control-app/releases/latest",
       method: "GET",
       headers: {
         "User-Agent": "Neurolinks-Control",
-        "Authorization": "Bearer ghp_xxxxxxxxxxxxx",
+        "Authorization": "Bearer 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",
         "Accept": "application/vnd.github+json"
       }
     };
@@ -395,6 +397,7 @@ ipcMain.handle('open-logs-window', async (_, deploymentId) => {
   const logsWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: path.join(__dirname, "assets/icons/icon.ico"),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -419,6 +422,7 @@ ipcMain.handle('open-variables-window', async (_, projectId, environmentId, serv
   const variablesWindow = new BrowserWindow({
     width: 1000,
     height: 700,
+    icon: path.join(__dirname, "assets/icons/icon.ico"),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

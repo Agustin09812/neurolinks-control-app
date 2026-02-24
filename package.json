@@ -1,6 +1,6 @@
 {
   "name": "neurolinks-control",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Panel interno de gestión Railway - Neurolinks",
   "author": "Neurolinks",
   "main": "main.js",
@@ -28,6 +28,7 @@
     ],
     "executableName": "Neurolinks Control",
     "win": {
+      "icon": "assets/icons/icon.ico",
       "target": [
         {
           "target": "portable",
