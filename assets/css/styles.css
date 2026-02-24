@@ -1,0 +1,143 @@
+ :root {
+   --bg-color: #eee;
+   --primary-text-color: #333;
+   --secondary-text-color: #666;
+ }
+
+ body {
+   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+   padding: 20px;
+   scroll-behavior: smooth;
+ }
+
+
+ /* 
+--------------------------------------------------
+  INDEX STYLES
+------------------------------------------------ */
+
+ .assistant-item {
+   position: relative;
+   transition: background 0.2s ease;
+ }
+
+ .assistant-item:hover {
+   background-color: #1a1a1a;
+ }
+
+ .active-assistant {
+   background-color: #151515;
+ }
+
+ .active-assistant::before {
+   content: "";
+   position: absolute;
+   left: 0;
+   top: 6px;
+   bottom: 6px;
+   width: 3px;
+   background-color: #0d6efd;
+   border-radius: 3px;
+ }
+
+ /* ===== SCROLLBAR GLOBAL ===== */
+
+ ::-webkit-scrollbar {
+   width: 8px;
+   height: 8px;
+ }
+
+ ::-webkit-scrollbar-track {
+   background: var(--primary-text-color);
+ }
+
+ ::-webkit-scrollbar-thumb {
+   background: var(--secondary-text-color);
+   border-radius: 6px;
+   transition: background 0.2s ease;
+ }
+
+ ::-webkit-scrollbar-thumb:hover {
+   background: var(--secondary-text-color);
+ }
+
+ .error-pre {
+   min-width: 0;
+   max-height: 100%;
+   overflow: auto;
+   white-space: pre-wrap;
+   word-break: break-word;
+ }
+
+ #assistant-detail {
+   min-width: 0;
+ }
+
+ .service-card {
+   background: #111;
+   border: 1px solid #222;
+   transition: all 0.2s ease;
+ }
+
+ .service-card:hover {
+   border-color: #0d6efd;
+   transform: translateY(-2px);
+ }
+
+ .service-card .btn {
+   font-size: 0.75rem;
+ }
+
+ .dropdown-menu {
+   background: #151515;
+   border: 1px solid #333;
+ }
+
+ .dropdown-item {
+   color: #ddd;
+ }
+
+ .dropdown-item:hover {
+   background: #222;
+ }
+
+ /* 
+--------------------------------------------------
+  LOGS STYLES
+------------------------------------------------ */
+
+ .logs-terminal {
+   background: #0d0f12;
+   font-family: Consolas, Monaco, monospace;
+   font-size: 14px;
+   height: 100%;
+   width: 100%;
+   overflow-y: auto;
+ }
+
+ .log-line {
+   line-height: 1.5;
+   word-break: break-word;
+   overflow-wrap: anywhere;
+   margin: 0;
+   padding: 2px 0;
+ }
+
+ .log-time {
+   color: #888;
+   margin-right: 8px;
+ }
+
+ /* 
+--------------------------------------------------
+  SIDEBAR
+------------------------------------------------ */
+
+ .sidebar-name {
+   flex: 1;
+   min-width: 0;
+   /* importante para que funcione ellipsis */
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+ }

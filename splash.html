@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Neurolinks Control</title>
+
+  <!-- Bootstrap -->
+  <link rel="stylesheet" href="./node_modules/bootstrap/dist/css/bootstrap.min.css">
+
+  <!-- Tus estilos -->
+  <link rel="stylesheet" href="./assets/css/styles.css">
+
+  <style>
+    body {
+      background: #0d0f12;
+      overflow: hidden;
+    }
+
+    .splash-container {
+      animation: splashFadeIn 0.8s ease forwards;
+    }
+
+    @keyframes splashFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .splash-title {
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    .splash-version {
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body class="d-flex justify-content-center align-items-center vh-100 text-light">
+
+  <div class="text-center splash-container">
+
+    <h2 class="splash-title mb-4">NEUROLINKS CONTROL</h2>
+
+    <div class="d-flex justify-content-center mb-3">
+      <div class="spinner-border text-primary" role="status"></div>
+    </div>
+
+    <div class="splash-version">v1.0.0</div>
+
+  </div>
+
+</body>
+
+</html>

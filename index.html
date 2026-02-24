@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neurolinks Control</title>
+  <link rel="stylesheet" href="./node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="./node_modules/bootstrap-icons/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="./assets/css/styles.css">
+</head>
+
+<body class="bg-dark text-light vh-100 overflow-hidden d-flex flex-column">
+
+  <!-- HEADER -->
+  <div class="border-bottom border-secondary py-3 px-4">
+    <h1 class="mb-0 fw-bold text-center">NEUROLINKS CONTROL</h1>
+  </div>
+
+  <!-- WRAPPER PRINCIPAL -->
+  <div class="flex-grow-1 d-flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <div style="width: 260px;" class="border-end border-secondary d-flex flex-column overflow-hidden">
+
+      <div class="p-3 border-bottom border-secondary">
+        <button class="btn btn-outline-success w-100 btn-sm" id="btnDeployAssistant">+ Nuevo</button>
+      </div>
+
+      <div id="assistant-list" class="flex-grow-1 overflow-auto p-3">
+      </div>
+
+    </div>
+
+    <!-- PANEL DERECHO -->
+    <div class="flex-grow-1 overflow-hidden d-flex flex-column">
+      <div id="assistant-detail" class="flex-grow-1 overflow-auto p-4">
+        <h5 class="text-secondary">Seleccioná un asistente</h5>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RENAME PROJECT MODAL -->
+  <div class="modal fade" id="renameProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark text-light border-secondary">
+
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title">Renombrar Proyecto</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" id="renameProjectId">
+          <input type="text" id="renameProjectName" class="form-control bg-dark text-light border-secondary">
+        </div>
+
+        <div class="modal-footer border-secondary">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+          <button class="btn btn-success btn-sm" id="btnSaveRename">
+            Guardar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- DEPLOY ASSISTANT MODAL -->
+  <div class="modal fade" id="deployAssistantModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content bg-dark text-light border-secondary">
+
+        <div class="modal-header border-secondary">
+          <div>
+            <h5 class="modal-title mb-0">Desplegar nuevo asistente</h5>
+            <small class="text-secondary">
+              Seleccioná el tipo de asistente que querés desplegar
+            </small>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <div id="deploy-step-1">
+            <div class="row g-3" id="templates-container">
+            </div>
+          </div>
+
+          <!-- STEP 2 CONFIRMACION -->
+          <div id="deploy-step-2" style="display:none;">
+
+            <div class="text-center py-4">
+
+              <h5 id="confirm-template-name"></h5>
+
+              <p class="text-secondary mt-3">
+                Se abrirá Railway para completar el despliegue del asistente.
+                Luego podrás volver a Neurolinks Control para monitorearlo.
+              </p>
+
+              <div class="d-flex justify-content-center gap-3 mt-4">
+                <button class="btn btn-secondary btn-sm" onclick="backToSelection()">
+                  Volver
+                </button>
+
+                <button class="btn btn-success btn-sm" onclick="confirmDeploy()">
+                  Confirmar despliegue
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- JS -->
+  <script src="./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="render.js" defer></script>
+  <!-- Templates de despliegue -->
+  <script src="deploy-template.js" defer></script>
+</body>
+
+</html>

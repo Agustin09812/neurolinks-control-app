@@ -1,0 +1,42 @@
+{
+  "name": "neurolinks-control",
+  "version": "1.0.0",
+  "description": "Panel interno de gestión Railway - Neurolinks",
+  "author": "Neurolinks",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^40.6.0",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1"
+  },
+  "build": {
+    "appId": "com.neurolinks.control",
+    "productName": "Neurolinks Control",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*"
+    ],
+    "executableName": "Neurolinks Control",
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "requireAdministrator"
+    }
+  }
+}
