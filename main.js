@@ -1,5 +1,6 @@
 const { app, BrowserWindow, shell, ipcMain, Menu } = require('electron');
 const path = require('path');
+const https = require("https");
 
 // let mainWindow;
 
@@ -76,10 +77,100 @@ function createMainWindow() {
   });
 }
 
+// Updates Function (checkForUpdates + isNewerVersion)
+
+async function checkForUpdates() {
+
+  return new Promise((resolve) => {
+
+    const options = {
+      hostname: "api.github.com",
+      path: "/repos/TU_USUARIO/neurolinks-control-app/releases/latest",
+      method: "GET",
+      headers: {
+        "User-Agent": "Neurolinks-Control",
+        "Authorization": "Bearer ghp_xxxxxxxxxxxxx",
+        "Accept": "application/vnd.github+json"
+      }
+    };
+
+    const req = https.request(options, (res) => {
+
+      let data = "";
+
+      res.on("data", chunk => data += chunk);
+
+      res.on("end", () => {
+
+        try {
+
+          const json = JSON.parse(data);
+
+          const remoteVersion = json.tag_name?.replace("v", "");
+          const localVersion = app.getVersion();
+
+          if (!remoteVersion) return resolve(null);
+
+          if (isNewerVersion(remoteVersion, localVersion)) {
+
+            const asset = json.assets?.[0];
+
+            return resolve({
+              version: remoteVersion,
+              url: asset?.browser_download_url
+            });
+
+          }
+
+          resolve(null);
+
+        } catch {
+          resolve(null);
+        }
+
+      });
+
+    });
+
+    req.on("error", () => resolve(null));
+    req.end();
+
+  });
+
+}
+
+function isNewerVersion(remote, local) {
+
+  const r = remote.split('.').map(Number);
+  const l = local.split('.').map(Number);
+
+  for (let i = 0; i < r.length; i++) {
+    if ((r[i] || 0) > (l[i] || 0)) return true;
+    if ((r[i] || 0) < (l[i] || 0)) return false;
+  }
+
+  return false;
+}
+
+// =======================================================
+
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   createSplash();
-  createMainWindow();
+
+  checkForUpdates().then(update => {
+
+    if (update) {
+
+      splash.webContents.send("update-available", update);
+
+    } else {
+
+      createMainWindow();
+
+    }
+
+  });
 });
 
 

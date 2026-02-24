@@ -90,4 +90,14 @@ contextBridge.exposeInMainWorld('api', {
     });
   },
 
+  // --------------------------------------------------
+  // UPDATES
+  // -------------------------------------------------
+
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on("update-available", (_, data) => {
+      callback(data);
+    });
+  },
+
 });

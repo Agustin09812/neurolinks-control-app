@@ -54,15 +54,64 @@
     <div class="d-flex justify-content-center mb-3">
       <div class="spinner-border text-primary" role="status"></div>
     </div>
+    <div id="update-box" style="display:none;">
+      <p class="mt-3 text-warning">
+        Nueva versión disponible
+      </p>
+
+      <div class="d-flex justify-content-center gap-3 mt-2">
+        <button id="btnDownload" class="btn btn-success btn-sm">
+          Descargar
+        </button>
+
+        <button id="btnCloseApp" class="btn btn-outline-light btn-sm">
+          Cerrar
+        </button>
+      </div>
+    </div>
 
     <div class="splash-version">v1.0.0</div>
 
   </div>
 
   <script>
+    // Mostrar versión en splash
     window.api?.onLoadVersion?.((version) => {
       const el = document.querySelector(".splash-version");
       if (el) el.textContent = "v" + version;
+    });
+
+    // Cuando hay update disponible
+    window.api?.onUpdateAvailable?.((data) => {
+
+      const spinner = document.querySelector(".spinner-border");
+      if (spinner) spinner.style.display = "none";
+
+      const box = document.getElementById("update-box");
+      if (!box) return;
+
+      box.style.display = "block";
+
+      const text = box.querySelector("p");
+      if (text) {
+        text.textContent = `Nueva versión disponible (v${data.version})`;
+      }
+
+      const btnDownload = document.getElementById("btnDownload");
+      const btnClose = document.getElementById("btnCloseApp");
+
+      if (btnDownload) {
+        btnDownload.onclick = () => {
+          window.api.openExternal(data.url);
+        };
+      }
+
+      if (btnClose) {
+        btnClose.onclick = () => {
+          window.close();
+        };
+      }
+
     });
   </script>
 
