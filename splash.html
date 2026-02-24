@@ -59,6 +59,14 @@
 
   </div>
 
+  <script>
+    window.api?.onLoadVersion?.((version) => {
+      const el = document.querySelector(".splash-version");
+      if (el) el.textContent = "v" + version;
+    });
+  </script>
+
 </body>
+
 
 </html>

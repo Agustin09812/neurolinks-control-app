@@ -77,4 +77,17 @@ contextBridge.exposeInMainWorld('api', {
   getServiceDomains: (projectId, environmentId, serviceId) =>
     ipcRenderer.invoke('get-service-domains', projectId, environmentId, serviceId),
 
+  // --------------------------------------------------
+  // APP VERSION
+  // -------------------------------------------------
+
+  getAppVersion: () =>
+    ipcRenderer.invoke('get-app-version'),
+
+  onLoadVersion: (callback) => {
+    ipcRenderer.on('set-version', (_, version) => {
+      callback(version);
+    });
+  },
+
 });

@@ -19,10 +19,20 @@ function createSplash() {
     frame: false,
     alwaysOnTop: true,
     resizable: false,
-    center: true
+    center: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
   });
 
   splash.loadFile("splash.html");
+
+  splash.webContents.on('did-finish-load', async () => {
+    const version = app.getVersion();
+    splash.webContents.send('set-version', version);
+  });
 }
 
 function createMainWindow() {
@@ -637,4 +647,12 @@ ipcMain.handle('get-service-domains', async (_, projectId, environmentId, servic
     console.error("Error fetching domains:", error);
     return null;
   }
+});
+
+// --------------------------------------------------
+// APP VERSION
+// --------------------------------------------------
+
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
 });

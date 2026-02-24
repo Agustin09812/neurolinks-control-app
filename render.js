@@ -540,6 +540,15 @@ window.addEventListener("focus", () => {
 
 startAutoRefresh();
 
+document.addEventListener("DOMContentLoaded", async () => {
+
+  const version = await window.api.getAppVersion();
+
+  const el = document.getElementById("app-version");
+  if (el) el.textContent = "v" + version;
+
+});
+
 // --------------------------------------------------
 // INIT
 // --------------------------------------------------
