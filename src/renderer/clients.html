@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Clientes - Neurolinks</title>
+    <link rel="stylesheet" href="../../node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../../node_modules/bootstrap-icons/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --bg-deep: #0a0c14;
+            --bg-card: rgba(26, 29, 43, 0.7);
+            --accent: #00d2ff;
+            --accent-glass: rgba(0, 210, 255, 0.1);
+            --text-main: #e6e6e6;
+            --text-dim: #888;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 210, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(121, 40, 202, 0.05) 0%, transparent 40%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .navbar {
+            background: rgba(15, 17, 26, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1rem 2rem;
+        }
+
+        .table {
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        .table thead th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1.25rem 1rem;
+        }
+
+        .table tbody td {
+            padding: 1.25rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            background: transparent;
+        }
+
+        .table-hover tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s ease;
+        }
+
+        .btn-premium {
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            padding: 0.6rem 1.2rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.2);
+        }
+
+        .btn-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 210, 255, 0.4);
+            color: white;
+        }
+
+        .btn-outline-custom {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+        }
+
+        .btn-outline-custom:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .badge-pending {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+
+        .form-control, .form-select, .modal-content {
+            background-color: #161925;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .form-control:focus {
+            background-color: #1a1d2b;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 0.25rem var(--accent-glass);
+            color: white;
+        }
+
+        .modal-header, .modal-footer {
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .client-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-glass);
+            color: var(--accent);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg border-bottom sticky-top">
+        <div class="container-fluid">
+            <span class="navbar-brand d-flex align-items-center fw-bold">
+                <i class="bi bi-shield-check text-info me-2 fs-4"></i> NEUROLINKS <span class="text-info ms-1">CRM</span>
+            </span>
+            <div class="d-flex gap-3">
+                <button class="btn btn-outline-custom" onclick="window.api.openTickets()">
+                    <i class="bi bi-ticket-perforated me-2"></i> Gestión de Tickets
+                </button>
+                <button class="btn btn-premium" onclick="openNewClientModal()">
+                    <i class="bi bi-person-plus-fill me-2"></i> Nuevo Cliente
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-5 px-4">
+        <div class="glass-card overflow-hidden">
+            <div class="p-4 border-bottom border-light border-opacity-10 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">Cartera de Clientes</h5>
+                <div class="input-group" style="width: 300px;">
+                    <span class="input-group-text bg-transparent border-end-0 text-dim">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" class="form-control border-start-0 bg-transparent text-white" 
+                           placeholder="Buscar cliente..." id="searchClient" onkeyup="filterClients()">
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Contacto</th>
+                            <th>Tickets Pendientes</th>
+                            <th>Proyectos</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clients-table-body">
+                        <!-- Clientes dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CLIENTE -->
+    <div class="modal fade" id="clientModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card shadow-lg">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="clientModalTitle">Nuevo Cliente</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="clientId">
+                    <div class="mb-3">
+                        <label class="form-label text-dim small fw-bold">NOMBRE COMPLETO</label>
+                        <input type="text" class="form-control" id="clientName" placeholder="Hugo Pereyra" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-dim small fw-bold">EMAIL</label>
+                        <input type="email" class="form-control" id="clientEmail" placeholder="ejemplo@correo.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-dim small fw-bold">TELÉFONO</label>
+                        <input type="text" class="form-control" id="clientPhone" placeholder="+54 11 ...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-dim small fw-bold">NOTAS ADICIONALES</label>
+                        <textarea class="form-control" id="clientNotes" rows="3" placeholder="Información relevante del cliente..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer p-3 bg-black bg-opacity-20">
+                    <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-premium" onclick="saveClient()">Guardar Cliente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PROYECTOS -->
+    <div class="modal fade" id="projectsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card shadow-lg">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Proyectos Vinculados</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div id="client-projects-list" class="d-grid gap-2">
+                        <!-- Listado de proyectos -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allClients = [];
+        let railwayProjectsMap = {};
+
+        async function loadData() {
+            try {
+                const assistants = await window.api.getAssistants();
+                assistants.forEach(p => { railwayProjectsMap[p.id] = p.name; });
+
+                allClients = await window.api.getClients();
+                renderClients();
+            } catch (err) {
+                console.error("Error cargando clientes:", err);
+            }
+        }
+
+        async function renderClients() {
+            const tbody = document.getElementById("clients-table-body");
+            tbody.innerHTML = "";
+
+            for (const c of allClients) {
+                const pendingTickets = await window.api.getClientPendingTickets(c.id);
+                const initials = c.nombre.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="client-avatar">${initials}</div>
+                            <div>
+                                <div class="fw-bold">${c.nombre}</div>
+                                <div class="small text-dim">${c.email || 'Sin email'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="small">${c.telefono || '-'}</div>
+                        <div class="small text-dim" title="${c.notas || ''}">
+                            ${c.notas ? (c.notas.substring(0, 20) + '...') : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="${pendingTickets > 0 ? 'badge-pending' : 'text-success small fw-bold'}">
+                            ${pendingTickets > 0 ? `<i class="bi bi-exclamation-triangle-fill me-1"></i> ${pendingTickets} Pendientes` : '<i class="bi bi-check-all me-1"></i> Al día'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-custom" onclick="viewProjects('${c.id}', '${c.nombre}')">
+                            <i class="bi bi-box-seam me-1"></i> Ver
+                        </button>
+                    </td>
+                    <td class="text-end">
+                        <div class="dropdown">
+                            <button class="btn btn-link text-white p-0" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical fs-5"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#" onclick="openEditClient('${c.id}')"><i class="bi bi-pencil me-2"></i> Editar</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="viewTicketsOfClient('${c.id}')"><i class="bi bi-ticket-perforated me-2"></i> Ver Tickets</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteClient('${c.id}')"><i class="bi bi-trash me-2"></i> Eliminar</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function filterClients() {
+            const term = document.getElementById("searchClient").value.toLowerCase();
+            const filtered = allClients.filter(c => 
+                c.nombre.toLowerCase().includes(term) || 
+                (c.email && c.email.toLowerCase().includes(term))
+            );
+            // Re-render filtered (simplified for now)
+            allClients = filtered; 
+            renderClients();
+            loadData(); // Re-load to original after filter? No, better just render local.
+        }
+
+        function openNewClientModal() {
+            document.getElementById("clientId").value = "";
+            document.getElementById("clientName").value = "";
+            document.getElementById("clientEmail").value = "";
+            document.getElementById("clientPhone").value = "";
+            document.getElementById("clientNotes").value = "";
+            document.getElementById("clientModalTitle").innerText = "Nuevo Cliente";
+            new bootstrap.Modal(document.getElementById("clientModal")).show();
+        }
+
+        function openEditClient(id) {
+            const c = allClients.find(client => client.id === id);
+            if (!c) return;
+            document.getElementById("clientId").value = c.id;
+            document.getElementById("clientName").value = c.nombre;
+            document.getElementById("clientEmail").value = c.email || "";
+            document.getElementById("clientPhone").value = c.telefono || "";
+            document.getElementById("clientNotes").value = c.notas || "";
+            document.getElementById("clientModalTitle").innerText = "Editar Cliente";
+            new bootstrap.Modal(document.getElementById("clientModal")).show();
+        }
+
+        async function saveClient() {
+            const id = document.getElementById("clientId").value;
+            const clientData = {
+                nombre: document.getElementById("clientName").value.trim(),
+                email: document.getElementById("clientEmail").value.trim(),
+                telefono: document.getElementById("clientPhone").value.trim(),
+                notas: document.getElementById("clientNotes").value.trim()
+            };
+
+            if (!clientData.nombre) return alert("El nombre es requerido");
+
+            try {
+                if (id) {
+                    await window.api.updateClient(id, clientData);
+                } else {
+                    await window.api.createClient(clientData);
+                }
+                bootstrap.Modal.getInstance(document.getElementById("clientModal")).hide();
+                loadData();
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+        async function deleteClient(id) {
+            if (!confirm("¿Eliminar este cliente y todos sus datos vinculados?")) return;
+            try {
+                await window.api.deleteClient(id);
+                loadData();
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+        async function viewProjects(clientId, clientName) {
+            const container = document.getElementById("client-projects-list");
+            container.innerHTML = '<div class="text-center p-3 text-dim">Cargando proyectos...</div>';
+            
+            new bootstrap.Modal(document.getElementById("projectsModal")).show();
+
+            try {
+                const projectIds = await window.api.getClientProjects(clientId);
+                if (projectIds.length === 0) {
+                    container.innerHTML = '<div class="alert alert-dark border-0 py-3 text-center">Este cliente no tiene proyectos vinculados.</div>';
+                } else {
+                    container.innerHTML = projectIds.map(id => {
+                        const name = railwayProjectsMap[id] || "Proyecto Railway";
+                        return `
+                            <button class="btn btn-outline-custom p-3 d-flex justify-content-between align-items-center" onclick="goToProject('${id}')">
+                                <div class="text-start">
+                                    <div class="fw-bold">${name}</div>
+                                    <div class="small text-dim">ID: ${id.substring(0,8)}...</div>
+                                </div>
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        `;
+                    }).join("");
+                }
+            } catch (err) {
+                container.innerHTML = '<div class="alert alert-danger">Error al cargar proyectos.</div>';
+            }
+        }
+
+        function goToProject(projectId) {
+            window.api.requestSelectProject(projectId);
+            bootstrap.Modal.getInstance(document.getElementById("projectsModal")).hide();
+        }
+
+        function viewTicketsOfClient(clientId) {
+            // Podríamos abrir tickets.html con un filtro pre-aplicado
+            window.api.openTickets();
+            // Para pasar el filtro al otro window, podríamos usar IPC o simplemente abrir y que el user filtre.
+            // Por simplicidad ahora, solo abrimos.
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+
+</html>

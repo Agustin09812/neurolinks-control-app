@@ -1,143 +1,126 @@
- :root {
-   --bg-color: #eee;
-   --primary-text-color: #333;
-   --secondary-text-color: #666;
- }
+:root {
+  --bg-deep: #0a0c14;
+  --bg-sidebar: rgba(15, 17, 26, 0.95);
+  --bg-card: rgba(26, 29, 43, 0.7);
+  --accent: #00d2ff;
+  --accent-glass: rgba(0, 210, 255, 0.1);
+  --text-main: #e6e6e6;
+  --text-dim: #888;
+  --border: rgba(255, 255, 255, 0.05);
+  --error: #ff4757;
+  --success: #2ed573;
+  --warning: #ffa502;
+}
 
- body {
-   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-   padding: 20px;
-   scroll-behavior: smooth;
- }
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  background-image: 
+      radial-gradient(circle at 0% 0%, rgba(0, 210, 255, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 100% 100%, rgba(121, 40, 202, 0.03) 0%, transparent 50%);
+}
 
+/* Sidebar Styles */
+.nav-link {
+  border-radius: 8px;
+  margin-bottom: 4px;
+  padding: 10px 15px;
+  transition: all 0.2s ease;
+}
 
- /* 
---------------------------------------------------
-  INDEX STYLES
------------------------------------------------- */
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
 
- .assistant-item {
-   position: relative;
-   transition: background 0.2s ease;
- }
+.nav-link.active {
+  background: var(--accent-glass) !important;
+  color: var(--accent) !important;
+  font-weight: 600;
+}
 
- .assistant-item:hover {
-   background-color: #1a1a1a;
- }
+.assistant-item {
+  position: relative;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+}
 
- .active-assistant {
-   background-color: #151515;
- }
+.assistant-item:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+  border-color: var(--border);
+}
 
- .active-assistant::before {
-   content: "";
-   position: absolute;
-   left: 0;
-   top: 6px;
-   bottom: 6px;
-   width: 3px;
-   background-color: #0d6efd;
-   border-radius: 3px;
- }
+.active-assistant {
+  background: linear-gradient(90deg, rgba(0, 210, 255, 0.1) 0%, transparent 100%);
+  border-left: 3px solid var(--accent);
+  color: white !important;
+}
 
- /* ===== SCROLLBAR GLOBAL ===== */
+.sidebar-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
- ::-webkit-scrollbar {
-   width: 8px;
-   height: 8px;
- }
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
 
- ::-webkit-scrollbar-track {
-   background: var(--primary-text-color);
- }
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 
- ::-webkit-scrollbar-thumb {
-   background: var(--secondary-text-color);
-   border-radius: 6px;
-   transition: background 0.2s ease;
- }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
 
- ::-webkit-scrollbar-thumb:hover {
-   background: var(--secondary-text-color);
- }
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
 
- .error-pre {
-   min-width: 0;
-   max-height: 100%;
-   overflow: auto;
-   white-space: pre-wrap;
-   word-break: break-word;
- }
+/* Detail Panel & Cards */
+.service-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
 
- #assistant-detail {
-   min-width: 0;
- }
+.service-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
 
- .service-card {
-   background: #111;
-   border: 1px solid #222;
-   transition: all 0.2s ease;
- }
+.glass-header {
+  background: rgba(15, 17, 26, 0.5);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
 
- .service-card:hover {
-   border-color: #0d6efd;
-   transform: translateY(-2px);
- }
+/* Badges */
+.badge-ticket {
+  background: var(--error);
+  color: white;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 800;
+}
 
- .service-card .btn {
-   font-size: 0.75rem;
- }
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
- .dropdown-menu {
-   background: #151515;
-   border: 1px solid #333;
- }
-
- .dropdown-item {
-   color: #ddd;
- }
-
- .dropdown-item:hover {
-   background: #222;
- }
-
- /* 
---------------------------------------------------
-  LOGS STYLES
------------------------------------------------- */
-
- .logs-terminal {
-   background: #0d0f12;
-   font-family: Consolas, Monaco, monospace;
-   font-size: 14px;
-   height: 100%;
-   width: 100%;
-   overflow-y: auto;
- }
-
- .log-line {
-   line-height: 1.5;
-   word-break: break-word;
-   overflow-wrap: anywhere;
-   margin: 0;
-   padding: 2px 0;
- }
-
- .log-time {
-   color: #888;
-   margin-right: 8px;
- }
-
- /* 
---------------------------------------------------
-  SIDEBAR
------------------------------------------------- */
-
- .sidebar-name {
-   flex: 1;
-   min-width: 0;
-   /* importante para que funcione ellipsis */
-   overflow: hidden;
-   text-overflow: ellipsis;
-   white-space: nowrap;
- }
+.animate-fade {
+  animation: fadeIn 0.4s ease forwards;
+}

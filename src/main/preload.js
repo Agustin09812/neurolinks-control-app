@@ -9,6 +9,9 @@ contextBridge.exposeInMainWorld('api', {
   openExternal: (url) =>
     ipcRenderer.invoke('open-external', url),
 
+  openClients: () =>
+    ipcRenderer.invoke('open-clients-window'),
+
   // --------------------------------------------------
   // PROJECTS
   // --------------------------------------------------
@@ -99,5 +102,61 @@ contextBridge.exposeInMainWorld('api', {
       callback(data);
     });
   },
+
+  // --------------------------------------------------
+  // SUPABASE / CRM
+  // --------------------------------------------------
+
+  getClients: () =>
+    ipcRenderer.invoke('get-clients'),
+
+  createClient: (clientData) =>
+    ipcRenderer.invoke('create-client', clientData),
+
+  updateClient: (id, clientData) =>
+    ipcRenderer.invoke('update-client', id, clientData),
+
+  deleteClient: (id) =>
+    ipcRenderer.invoke('delete-client', id),
+
+  linkProjectClient: (railwayProjectId, clientId) =>
+    ipcRenderer.invoke('link-project-client', railwayProjectId, clientId),
+
+  getProjectClient: (railwayProjectId) =>
+    ipcRenderer.invoke('get-project-client', railwayProjectId),
+
+  getClientProjects: (clientId) =>
+    ipcRenderer.invoke('get-client-projects', clientId),
+
+  openTickets: () =>
+    ipcRenderer.invoke('open-tickets-window'),
+
+  getTickets: (filters) =>
+    ipcRenderer.invoke('get-tickets', filters),
+
+  createTicket: (ticketData) =>
+    ipcRenderer.invoke('create-ticket', ticketData),
+
+  updateTicket: (id, ticketData) =>
+    ipcRenderer.invoke('update-ticket', id, ticketData),
+
+  deleteTicket: (id) =>
+    ipcRenderer.invoke('delete-ticket', id),
+
+  getClientPendingTickets: (clientId) =>
+    ipcRenderer.invoke('get-client-pending-tickets', clientId),
+
+  // --------------------------------------------------
+  // NAVIGATION
+  // -------------------------------------------------
+
+  onSelectProject: (callback) => {
+    ipcRenderer.on('select-project', (_, projectId) => {
+      callback(projectId);
+    });
+  },
+
+  requestSelectProject: (projectId) =>
+    ipcRenderer.send('request-select-project', projectId),
 
 });

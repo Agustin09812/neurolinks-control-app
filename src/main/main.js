@@ -1,0 +1,424 @@
+require('dotenv').config();
+const { app, BrowserWindow, shell, ipcMain, Menu } = require('electron');
+const path = require('path');
+const https = require("https");
+
+const railwayService = require('../services/railwayService');
+const supabaseService = require('../services/supabaseService');
+
+let splash;
+let mainWindow;
+let splashStartTime;
+
+function createSplash() {
+  splashStartTime = Date.now();
+
+  splash = new BrowserWindow({
+    width: 420,
+    height: 300,
+    frame: false,
+    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
+    alwaysOnTop: true,
+    resizable: false,
+    center: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  splash.loadFile(path.join(__dirname, "../renderer/splash.html"));
+
+  splash.webContents.on('did-finish-load', async () => {
+    const version = app.getVersion();
+    splash.webContents.send('set-version', version);
+  });
+}
+
+function createMainWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
+    minWidth: 1024,
+    minHeight: 768,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+
+  mainWindow.once("ready-to-show", () => {
+
+    const elapsed = Date.now() - splashStartTime;
+    const minTime = 3000; // Segundos mínimo
+
+    const remaining = Math.max(minTime - elapsed, 0);
+
+    setTimeout(() => {
+      if (splash) splash.destroy();
+
+      mainWindow.setOpacity(0);
+      mainWindow.show();
+
+      let opacity = 0;
+      const fade = setInterval(() => {
+        opacity += 0.05;
+        mainWindow.setOpacity(opacity);
+        if (opacity >= 1) clearInterval(fade);
+      }, 20);
+
+    }, remaining);
+
+  });
+}
+
+// Updates Function (checkForUpdates + isNewerVersion)
+
+async function checkForUpdates() {
+
+  return new Promise((resolve) => {
+
+    const options = {
+      hostname: "api.github.com",
+      path: "/repos/Agustin09812/neurolinks-control-app/releases/latest",
+      method: "GET",
+      headers: {
+        "User-Agent": "Neurolinks-Control",
+        "Authorization": "Bearer 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",
+        "Accept": "application/vnd.github+json"
+      }
+    };
+
+    const req = https.request(options, (res) => {
+
+      let data = "";
+
+      res.on("data", chunk => data += chunk);
+
+      res.on("end", () => {
+
+        try {
+
+          const json = JSON.parse(data);
+
+          const remoteVersion = json.tag_name?.replace("v", "");
+          const localVersion = app.getVersion();
+
+          if (!remoteVersion) return resolve(null);
+
+          if (isNewerVersion(remoteVersion, localVersion)) {
+
+            const asset = json.assets?.[0];
+
+            return resolve({
+              version: remoteVersion,
+              url: asset?.browser_download_url
+            });
+
+          }
+
+          resolve(null);
+
+        } catch {
+          resolve(null);
+        }
+
+      });
+
+    });
+
+    req.on("error", () => resolve(null));
+    req.end();
+
+  });
+
+}
+
+function isNewerVersion(remote, local) {
+
+  const r = remote.split('.').map(Number);
+  const l = local.split('.').map(Number);
+
+  for (let i = 0; i < r.length; i++) {
+    if ((r[i] || 0) > (l[i] || 0)) return true;
+    if ((r[i] || 0) < (l[i] || 0)) return false;
+  }
+
+  return false;
+}
+
+// =======================================================
+
+app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
+  createSplash();
+
+  checkForUpdates().then(update => {
+
+    if (update) {
+
+      splash.webContents.send("update-available", update);
+
+    } else {
+
+      createMainWindow();
+
+    }
+
+  });
+});
+
+
+// --------------------------------------------------
+// OPEN EXTERNAL
+// --------------------------------------------------
+
+ipcMain.handle('open-external', async (_, url) => {
+  return shell.openExternal(url);
+});
+
+ipcMain.handle('open-clients-window', async () => {
+  const clientsWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  clientsWindow.loadFile(path.join(__dirname, '../renderer/clients.html'));
+});
+
+ipcMain.handle('open-tickets-window', async () => {
+  const ticketsWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  ticketsWindow.loadFile(path.join(__dirname, '../renderer/tickets.html'));
+});
+
+
+// --------------------------------------------------
+// GET ASSISTANTS (Projects + Services + Latest Deployment)
+// --------------------------------------------------
+
+ipcMain.handle('get-assistants', async () => {
+  return await railwayService.getAssistants();
+});
+
+
+// --------------------------------------------------
+// REDEPLOY SERVICE
+// --------------------------------------------------
+
+ipcMain.handle('redeploy-service', async (_, serviceId, environmentId) => {
+  return await railwayService.redeployService(serviceId, environmentId);
+});
+
+
+// --------------------------------------------------
+// DELETE SERVICE
+// --------------------------------------------------
+
+ipcMain.handle('delete-service', async (_, serviceId) => {
+  return await railwayService.deleteService(serviceId);
+});
+
+
+// --------------------------------------------------
+// OPEN LOGS WINDOW
+// --------------------------------------------------
+
+ipcMain.handle('open-logs-window', async (_, deploymentId) => {
+
+  const logsWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  logsWindow.loadFile(path.join(__dirname, '../renderer/logs.html'));
+
+  logsWindow.webContents.on('did-finish-load', () => {
+    logsWindow.webContents.send('load-logs', deploymentId);
+  });
+
+});
+
+// --------------------------------------------------
+// OPEN VARIABLES WINDOW
+// --------------------------------------------------
+
+ipcMain.handle('open-variables-window', async (_, projectId, environmentId, serviceId) => {
+
+  const variablesWindow = new BrowserWindow({
+    width: 1000,
+    height: 700,
+    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  variablesWindow.loadFile(path.join(__dirname, '../renderer/variables.html'));
+
+  variablesWindow.webContents.on('did-finish-load', () => {
+    variablesWindow.webContents.send('load-variables', {
+      projectId,
+      environmentId,
+      serviceId
+    });
+  });
+
+});
+
+// --------------------------------------------------
+// UPDATE PROJECT
+// --------------------------------------------------
+
+ipcMain.handle('update-project-name', async (_, projectId, newName) => {
+  return await railwayService.updateProjectName(projectId, newName);
+});
+
+
+// --------------------------------------------------
+// DELETE PROJECT
+// --------------------------------------------------
+
+ipcMain.handle('delete-project', async (_, projectId) => {
+  return await railwayService.deleteProject(projectId);
+});
+
+// --------------------------------------------------
+// FETCH DEPLOYMENT LOGS
+// --------------------------------------------------
+
+ipcMain.handle('fetch-deployment-logs', async (_, deploymentId) => {
+  return await railwayService.fetchDeploymentLogs(deploymentId);
+});
+
+// --------------------------------------------------
+// GET SERVICE VARIABLES
+// --------------------------------------------------
+
+ipcMain.handle('get-service-variables', async (_, projectId, environmentId, serviceId) => {
+  return await railwayService.getServiceVariables(projectId, environmentId, serviceId);
+});
+
+// --------------------------------------------------
+// UPSERT VARIABLE
+// --------------------------------------------------
+
+ipcMain.handle('upsert-variable', async (_, projectId, environmentId, serviceId, name, value) => {
+  return await railwayService.upsertVariable(projectId, environmentId, serviceId, name, value);
+});
+
+// --------------------------------------------------
+// DELETE VARIABLE
+// --------------------------------------------------
+
+ipcMain.handle('delete-variable', async (_, projectId, environmentId, serviceId, name) => {
+  return await railwayService.deleteVariable(projectId, environmentId, serviceId, name);
+});
+
+// --------------------------------------------------
+// GET SERVICE DOMAINS
+// --------------------------------------------------
+
+ipcMain.handle('get-service-domains', async (_, projectId, environmentId, serviceId) => {
+  return await railwayService.getServiceDomains(projectId, environmentId, serviceId);
+});
+
+// --------------------------------------------------
+// APP VERSION
+// --------------------------------------------------
+
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+// --------------------------------------------------
+// SUPABASE / CRM
+// --------------------------------------------------
+
+ipcMain.handle('get-clients', async () => {
+  return await supabaseService.getClients();
+});
+
+ipcMain.handle('create-client', async (_, clientData) => {
+  return await supabaseService.createClient(clientData);
+});
+
+ipcMain.handle('update-client', async (_, id, clientData) => {
+  return await supabaseService.updateClient(id, clientData);
+});
+
+ipcMain.handle('delete-client', async (_, id) => {
+  return await supabaseService.deleteClient(id);
+});
+
+ipcMain.handle('link-project-client', async (_, railwayProjectId, clientId) => {
+  return await supabaseService.linkProjectToClient(railwayProjectId, clientId);
+});
+
+ipcMain.handle('get-project-client', async (_, railwayProjectId) => {
+  return await supabaseService.getProjectClient(railwayProjectId);
+});
+
+ipcMain.handle('get-client-projects', async (_, clientId) => {
+  return await supabaseService.getClientProjects(clientId);
+});
+
+ipcMain.handle('get-tickets', async (_, filters) => {
+  return await supabaseService.getTickets(filters);
+});
+
+ipcMain.handle('create-ticket', async (_, ticketData) => {
+  return await supabaseService.createTicket(ticketData);
+});
+
+ipcMain.handle('update-ticket', async (_, id, ticketData) => {
+  return await supabaseService.updateTicket(id, ticketData);
+});
+
+ipcMain.handle('delete-ticket', async (_, id) => {
+  return await supabaseService.deleteTicket(id);
+});
+
+ipcMain.handle('get-client-pending-tickets', async (_, clientId) => {
+  return await supabaseService.getClientPendingTickets(clientId);
+});
+
+// --------------------------------------------------
+// NAVIGATION / MESSAGING
+// --------------------------------------------------
+
+ipcMain.on('request-select-project', (_, projectId) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('select-project', projectId);
+    mainWindow.focus();
+  }
+});
