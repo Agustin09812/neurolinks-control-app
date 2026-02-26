@@ -23,10 +23,10 @@ El objetivo es pasar de una herramienta técnica a una interfaz de gestión de n
 Fortalecer la base del sistema para soportar datos de negocio y mejorar la seguridad.
 
 *   **Persistencia de Datos Propia:**
-    *   Integración de una base de datos (PostgreSQL/Supabase) para almacenar información que Railway no provee: nombres de clientes, contratos, fechas de pago y notas de soporte.
+    *   Integración de una base de datos (Supabase) para almacenar información que Railway no provee: nombres de clientes, contratos, fechas de pago y notas de soporte.
 *   **Seguridad y Autenticación:**
-    *   **Sistema de Login:** Eliminar el token de Railway hardcodeado. Cada empleado debe acceder con su cuenta.
-    *   **Roles (RBAC):** Definir quién puede ver logs técnicos (`Soporte`) y quién solo datos de contacto y cobros (`Comercial`).
+    *   **Sistema de Login:** Cada empleado debe acceder con su cuenta. (Analizar ventajas, no es necesario por el momento)
+    *   **Roles (RBAC):** Definir quién puede ver logs técnicos (`Soporte`) y quién solo datos de contacto y cobros (`Comercial`). (Analizar ventajas, no es necesario por el momento)
 *   **Modularización del Código:**
     *   Separar la lógica en servicios independientes (ej: `railwayService.js`, `databaseService.js`) para facilitar el mantenimiento y escalabilidad del CRM.
 
