@@ -1,9 +1,9 @@
 {
-  "name": "Neurolinks CRM",
-  "version": "1.1.0",
-  "description": "CRM Gestión Neurolinks",
+  "name": "neurolinks-control",
+  "version": "1.0.2",
+  "description": "Panel interno de gestión Railway - Neurolinks",
   "author": "Neurolinks",
-  "main": "src/main/main.js",
+  "main": "main.js",
   "private": true,
   "scripts": {
     "start": "electron .",
@@ -14,21 +14,19 @@
     "electron-builder": "^26.8.1"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.98.0",
     "bootstrap": "^5.3.8",
-    "bootstrap-icons": "^1.13.1",
-    "dotenv": "^17.3.1"
+    "bootstrap-icons": "^1.13.1"
   },
   "build": {
     "appId": "com.neurolinks.control",
-    "productName": "Neurolinks CRM",
+    "productName": "Neurolinks Control",
     "directories": {
       "output": "dist"
     },
     "files": [
       "**/*"
     ],
-    "executableName": "Neurolinks CRM",
+    "executableName": "Neurolinks Control",
     "win": {
       "icon": "assets/icons/icon.ico",
       "target": [

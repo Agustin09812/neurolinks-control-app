@@ -17,9 +17,9 @@ body {
   color: var(--text-main);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow: hidden;
-  background-image: 
-      radial-gradient(circle at 0% 0%, rgba(0, 210, 255, 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 100% 100%, rgba(121, 40, 202, 0.03) 0%, transparent 50%);
+  background-image:
+    radial-gradient(circle at 0% 0%, rgba(0, 210, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(121, 40, 202, 0.03) 0%, transparent 50%);
 }
 
 /* Sidebar Styles */
@@ -117,10 +117,49 @@ body {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade {
   animation: fadeIn 0.4s ease forwards;
+}
+
+/* Dashboard Specific Styles */
+.ls-1 {
+  letter-spacing: 1px;
+}
+
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(15px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(0, 210, 255, 0.3);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+}
+
+.bg-dark-hover {
+  transition: background 0.2s;
+}
+
+.bg-dark-hover:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.display-5 {
+  font-size: 3rem;
+  line-height: 1.2;
 }

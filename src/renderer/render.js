@@ -109,11 +109,24 @@ function renderSidebar() {
     updateAssistantBadge(a.id);
   });
 
-  if (!selectedProjectId && assistants.length > 0) {
+  // Solo click automático si no hay nada seleccionado Y no estamos en el Dashboard Maestro
+  const isDashboardActive = document.getElementById("dashboard-global").style.display === "block";
+
+  if (!selectedProjectId && assistants.length > 0 && !isDashboardActive) {
     setTimeout(() => {
       const first = list.querySelector('.assistant-item');
       if (first) first.click();
     }, 100);
+  }
+
+  // Actualizar estado del link dashboard en la sidebar
+  const btnDash = document.getElementById("btn-reload");
+  if (btnDash) {
+    if (selectedProjectId) {
+      btnDash.classList.remove("active");
+    } else if (isDashboardActive) {
+      btnDash.classList.add("active");
+    }
   }
 }
 
@@ -138,6 +151,13 @@ async function updateAssistantBadge(projectId) {
 // --------------------------------------------------
 
 async function renderDetail(a) {
+
+  // Ocultar dashboard si estaba activo
+  const dashGlobal = document.getElementById("dashboard-global");
+  if (dashGlobal) dashGlobal.style.display = "none";
+
+  const detailPanel = document.getElementById("assistant-detail");
+  if (detailPanel) detailPanel.style.display = "block";
 
   selectedProjectId = a.id;
 
@@ -543,10 +563,12 @@ startAutoRefresh();
 
 document.addEventListener("DOMContentLoaded", async () => {
 
-  const version = await window.api.getAppVersion();
-
-  const el = document.getElementById("app-version");
-  if (el) el.textContent = "v" + version;
+  const btnReload = document.getElementById("btn-reload");
+  if (btnReload) {
+    btnReload.addEventListener("click", () => {
+      renderMainDashboard();
+    });
+  }
 
   const btnOpenClients = document.getElementById("btn-open-clients");
   if (btnOpenClients) {
@@ -565,17 +587,156 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnOpenLogs = document.getElementById("btn-open-logs");
   if (btnOpenLogs) {
     btnOpenLogs.addEventListener("click", () => {
-      // Si tuviéramos una ventana de logs separada... por ahora solo recargamos dashboard o similar?
-      // En main.js no vi open-logs-window. Podemos agregarlo si es necesario.
+      // Implementación futura
     });
   }
 });
 
-// --------------------------------------------------
-// INIT
-// --------------------------------------------------
+/**
+ * DASHBOARD MAESTRO (GLOBAL)
+ */
+async function renderMainDashboard() {
+  selectedProjectId = null;
+  document.querySelectorAll(".assistant-item").forEach(el => el.classList.remove("active-assistant"));
 
-loadAssistants();
+  document.getElementById("assistant-detail").style.display = "none";
+  const dash = document.getElementById("dashboard-global");
+  dash.style.display = "block";
+  dash.innerHTML = `
+    <div class="d-flex justify-content-center align-items-center h-100">
+      <div class="spinner-border text-success" role="status"></div>
+    </div>
+  `;
+
+  try {
+    const clients = await window.api.getClients();
+    const tickets = await window.api.getTickets();
+    const pendingTickets = tickets.filter(t => t.estado !== 'Cerrado');
+
+    let totalServices = 0;
+    let onlineServices = 0;
+    let errorServices = 0;
+
+    assistants.forEach(a => {
+      a.services.forEach(s => {
+        totalServices++;
+        if (s.status === 'online') onlineServices++;
+        if (s.status === 'error') errorServices++;
+      });
+    });
+
+    dash.innerHTML = `
+      <div class="animate-fade">
+        <h2 class="mb-4 fw-bold">DASHBOARD MAESTRO</h2>
+        
+        <div class="row g-4 mb-5">
+          <!-- CARD BOTS -->
+          <div class="col-md-3">
+            <div class="glass-card p-4 text-center h-100">
+              <div class="display-5 fw-bold text-success">${assistants.length}</div>
+              <div class="text-secondary text-uppercase small ls-1">Proyectos Totales</div>
+              <div class="mt-3 small text-secondary">
+                <span class="text-success">${onlineServices} Online</span> / 
+                <span class="text-danger">${errorServices} Error</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD CLIENTES -->
+          <div class="col-md-3">
+            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="window.api.openClients()">
+              <div class="display-5 fw-bold text-info">${clients.length}</div>
+              <div class="text-secondary text-uppercase small ls-1">Clientes Activos</div>
+              <div class="mt-3">
+                 <button class="btn btn-sm btn-outline-info">Gestionar Clientes</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD TICKETS -->
+          <div class="col-md-3">
+            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="window.api.openTickets()">
+              <div class="display-5 fw-bold text-warning">${pendingTickets.length}</div>
+              <div class="text-secondary text-uppercase small ls-1">Tickets Pendientes</div>
+              <div class="mt-3">
+                 <button class="btn btn-sm btn-outline-warning">Ver Tickets</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD SALUD -->
+          <div class="col-md-3">
+            <div class="glass-card p-4 text-center h-100">
+              <div class="display-5 fw-bold ${errorServices > 0 ? 'text-danger' : 'text-success'}">
+                 ${errorServices > 0 ? 'ALERTA' : 'OK'}
+              </div>
+              <div class="text-secondary text-uppercase small ls-1">Estado de Salud</div>
+              <div class="mt-3 small text-secondary">
+                ${errorServices > 0 ? 'Se detectaron fallos técnicos' : 'Todos los sistemas operativos'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="glass-card p-4">
+               <h5 class="mb-3">Último Ticket</h5>
+               ${pendingTickets.length > 0 ? `
+                  <div class="p-3 border border-secondary rounded bg-dark-hover">
+                     <div class="d-flex justify-content-between">
+                        <span class="fw-bold">${pendingTickets[0].titulo}</span>
+                        <span class="badge bg-warning text-dark">${pendingTickets[0].prioridad}</span>
+                     </div>
+                     <div class="small text-secondary mt-1">${pendingTickets[0].clientes ? pendingTickets[0].clientes.nombre : 'Sin Cliente'}</div>
+                  </div>
+               ` : '<div class="text-secondary">No hay tickets pendientes</div>'}
+            </div>
+          </div>
+          <div class="col-md-6">
+             <div class="glass-card p-4">
+               <h5 class="mb-3">Quick Actions</h5>
+               <div class="d-grid gap-2">
+                  <button class="btn btn-outline-light text-start btn-sm" onclick="window.api.openClients()">
+                    <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
+                  </button>
+                  <button class="btn btn-outline-light text-start btn-sm" onclick="window.api.openTickets()">
+                    <i class="bi bi-plus-circle me-2"></i> Crear Ticket
+                  </button>
+                  <button class="btn btn-outline-success text-start btn-sm" id="dashboard-refresh">
+                    <i class="bi bi-arrow-clockwise me-2"></i> Actualizar Infraestructura
+                  </button>
+               </div>
+             </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('dashboard-refresh').onclick = () => {
+      loadAssistants(false);
+      renderMainDashboard();
+    };
+
+  } catch (err) {
+    console.error("Error cargando dashboard:", err);
+    dash.innerHTML = `<div class="alert alert-danger">Error al cargar datos del dashboard</div>`;
+  }
+}
+
+async function init() {
+  const version = await window.api.getAppVersion();
+  const el = document.getElementById("app-version");
+  if (el) el.textContent = "v" + version;
+
+  // Cargar asistentes sin auto-click
+  await loadAssistants(false);
+
+  // Mostrar dashboard por defecto al arrancar
+  renderMainDashboard();
+}
+
+init();
 
 // --------------------------------------------------
 // EXTERNAL SELECTION (MESSAGING FROM OTHER WINDOWS)

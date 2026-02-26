@@ -174,7 +174,9 @@
                         <tr>
                             <th>Cliente</th>
                             <th>Contacto</th>
-                            <th>Tickets Pendientes</th>
+                            <th>Plan</th>
+                            <th>Vencimiento</th>
+                            <th>Tickets</th>
                             <th>Proyectos</th>
                             <th class="text-end">Acciones</th>
                         </tr>
@@ -209,9 +211,23 @@
                         <label class="form-label text-dim small fw-bold">TELÉFONO</label>
                         <input type="text" class="form-control" id="clientPhone" placeholder="+54 11 ...">
                     </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-dim small fw-bold">PLAN CONTRATADO</label>
+                            <select class="form-select" id="clientPlan">
+                                <option value="Standard">Standard</option>
+                                <option value="Premium">Premium</option>
+                                <option value="Enterprise">Enterprise</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-dim small fw-bold">VENCIMIENTO</label>
+                            <input type="date" class="form-control" id="clientVencimiento">
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label text-dim small fw-bold">NOTAS ADICIONALES</label>
-                        <textarea class="form-control" id="clientNotes" rows="3" placeholder="Información relevante del cliente..."></textarea>
+                        <textarea class="form-control" id="clientNotes" rows="2" placeholder="Información relevante del cliente..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer p-3 bg-black bg-opacity-20">
@@ -282,9 +298,17 @@
                         </div>
                     </td>
                     <td>
-                        <span class="${pendingTickets > 0 ? 'badge-pending' : 'text-success small fw-bold'}">
-                            ${pendingTickets > 0 ? `<i class="bi bi-exclamation-triangle-fill me-1"></i> ${pendingTickets} Pendientes` : '<i class="bi bi-check-all me-1"></i> Al día'}
+                        <span class="badge ${c.plan === 'Premium' ? 'bg-info text-dark' : c.plan === 'Enterprise' ? 'bg-premium text-white' : 'border border-secondary text-dim'}">
+                            ${c.plan || 'Standard'}
                         </span>
+                    </td>
+                    <td>
+                        <span class="${isNearExpiry(c.vencimiento) ? 'text-warning animate-pulse' : 'text-dim'} small">
+                            ${c.vencimiento ? formatDate(c.vencimiento) : 'N/A'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge-ticket animate-fade">${pendingTickets}</span>
                     </td>
                     <td>
                         <button class="btn btn-sm btn-outline-custom" onclick="viewProjects('${c.id}', '${c.nombre}')">
@@ -327,6 +351,8 @@
             document.getElementById("clientEmail").value = "";
             document.getElementById("clientPhone").value = "";
             document.getElementById("clientNotes").value = "";
+            document.getElementById("clientPlan").value = "Standard"; // Set default plan
+            document.getElementById("clientVencimiento").value = ""; // Clear vencimiento
             document.getElementById("clientModalTitle").innerText = "Nuevo Cliente";
             new bootstrap.Modal(document.getElementById("clientModal")).show();
         }
@@ -339,6 +365,8 @@
             document.getElementById("clientEmail").value = c.email || "";
             document.getElementById("clientPhone").value = c.telefono || "";
             document.getElementById("clientNotes").value = c.notas || "";
+            document.getElementById('clientPlan').value = c.plan || 'Standard';
+            document.getElementById('clientVencimiento').value = c.vencimiento || '';
             document.getElementById("clientModalTitle").innerText = "Editar Cliente";
             new bootstrap.Modal(document.getElementById("clientModal")).show();
         }
@@ -349,7 +377,9 @@
                 nombre: document.getElementById("clientName").value.trim(),
                 email: document.getElementById("clientEmail").value.trim(),
                 telefono: document.getElementById("clientPhone").value.trim(),
-                notas: document.getElementById("clientNotes").value.trim()
+                notas: document.getElementById("clientNotes").value.trim(),
+                plan: document.getElementById('clientPlan').value,
+                vencimiento: document.getElementById('clientVencimiento').value || null
             };
 
             if (!clientData.nombre) return alert("El nombre es requerido");
@@ -416,6 +446,20 @@
             window.api.openTickets();
             // Para pasar el filtro al otro window, podríamos usar IPC o simplemente abrir y que el user filtre.
             // Por simplicidad ahora, solo abrimos.
+        }
+
+        function isNearExpiry(dateStr) {
+            if (!dateStr) return false;
+            const expiry = new Date(dateStr);
+            const today = new Date();
+            const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+            return diffDays <= 7 && diffDays >= 0;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return "N/A";
+            const d = new Date(dateStr + 'T12:00:00'); // Evitar problemas de zona horaria
+            return d.toLocaleDateString();
         }
 
         window.onload = loadData;

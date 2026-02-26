@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { app, BrowserWindow, shell, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, Menu, Notification } = require('electron');
 const path = require('path');
 const https = require("https");
 
@@ -72,6 +72,9 @@ function createMainWindow() {
         mainWindow.setOpacity(opacity);
         if (opacity >= 1) clearInterval(fade);
       }, 20);
+
+      // Iniciar monitoreo en background cuando la ventana principal está lista
+      startBackgroundMonitoring();
 
     }, remaining);
 
@@ -422,3 +425,69 @@ ipcMain.on('request-select-project', (_, projectId) => {
     mainWindow.focus();
   }
 });
+
+/**
+ * BACKGROUND MONITORING & NOTIFICATIONS
+ */
+let lastAssistantsState = new Map();
+
+async function startBackgroundMonitoring() {
+  console.log("Iniciando monitoreo de alertas...");
+
+  // Guardar estado inicial
+  try {
+    const assistants = await railwayService.getProjects();
+    assistants.forEach(a => {
+      a.services.forEach(s => {
+        lastAssistantsState.set(`${a.id}-${s.id}`, s.status);
+      });
+    });
+  } catch (e) {
+    console.error("Error inicializando monitoreo:", e.message);
+  }
+
+  // Intervalo de chequeo (cada 1 minuto)
+  setInterval(async () => {
+    try {
+      const assistants = await railwayService.getProjects();
+
+      assistants.forEach(a => {
+        a.services.forEach(s => {
+          const key = `${a.id}-${s.id}`;
+          const oldStatus = lastAssistantsState.get(key);
+          const newStatus = s.status;
+
+          // Si cambia a error y antes no lo estaba
+          if (newStatus === 'error' && oldStatus !== 'error') {
+            showErrorNotification(a.name, s.name, a.id);
+          }
+
+          lastAssistantsState.set(key, newStatus);
+        });
+      });
+    } catch (err) {
+      console.error("Error en monitoreo background:", err.message);
+    }
+  }, 60000);
+}
+
+function showErrorNotification(projectName, serviceName, projectId) {
+  if (Notification.isSupported()) {
+    const notice = new Notification({
+      title: `⚠️ Alerta de Servicio: ${projectName}`,
+      body: `El servicio "${serviceName}" ha entrado en estado de ERROR.`,
+      icon: path.join(__dirname, "../../assets/icons/icon.ico"),
+      silent: false
+    });
+
+    notice.onclick = () => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+        mainWindow.webContents.send('select-project', projectId);
+      }
+    };
+
+    notice.show();
+  }
+}
