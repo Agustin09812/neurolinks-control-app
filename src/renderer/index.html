@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neurolinks Control</title>
+  <link rel="stylesheet" href="../../node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../../node_modules/bootstrap-icons/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+
+<body class="bg-dark text-light vh-100 overflow-hidden d-flex flex-column">
+
+  <!-- HEADER -->
+  <div class="border-bottom border-secondary py-3 px-4">
+    <h1 class="mb-0 fw-bold text-center">NEUROLINKS CONTROL</h1>
+    <div class="text-center"><small id="app-version" class="text-secondary"></small></div>
+  </div>
+
+  <!-- WRAPPER PRINCIPAL -->
+  <div class="flex-grow-1 d-flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <div style="width: 260px;" class="border-end border-secondary d-flex flex-column overflow-hidden">
+
+      <div class="p-3 border-bottom border-secondary">
+        <button class="btn btn-outline-success w-100 btn-sm" id="btnDeployAssistant">
+          <i class="bi bi-plus-lg"></i> Nuevo Asistente
+        </button>
+      </div>
+
+      <nav class="nav flex-column p-3">
+        <a href="#" class="nav-link active" id="btn-reload">
+          <i class="bi bi-speedometer2 me-2"></i> Dashboard
+        </a>
+        <a href="#" class="nav-link text-white" id="btn-open-clients">
+          <i class="bi bi-people me-2"></i> Clientes
+        </a>
+        <a href="#" class="nav-link text-white" id="btn-open-tickets">
+          <i class="bi bi-ticket-perforated me-2"></i> Tickets
+        </a>
+        <a href="#" class="nav-link text-white" id="btn-open-billing">
+          <i class="bi bi-credit-card me-2"></i> Facturación
+        </a>
+        <a href="#" class="nav-link text-white" id="btn-open-audit">
+          <i class="bi bi-shield-check me-2"></i> Auditoría
+        </a>
+      </nav>
+
+      <div id="assistant-list" class="flex-grow-1 overflow-auto p-3">
+      </div>
+
+    </div>
+
+    <!-- PANEL DERECHO -->
+    <div class="flex-grow-1 overflow-hidden d-flex flex-column">
+      <!-- DASHBOARD GLOBAL (NUEVO) -->
+      <div id="dashboard-global" class="flex-grow-1 overflow-auto p-4">
+      </div>
+
+      <!-- DETALLE DEL ASISTENTE (EXISTENTE) -->
+      <div id="assistant-detail" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+        <h5 class="text-secondary">Seleccioná un asistente</h5>
+      </div>
+
+      <!-- VISTA CLIENTES (NUEVA) -->
+      <div id="clients-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+      </div>
+
+      <!-- VISTA TICKETS (NUEVA) -->
+      <div id="tickets-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+      </div>
+      <!-- VISTA FACTURACIÓN -->
+      <div id="billing-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+      </div>
+      <!-- VISTA AUDITORÍA -->
+      <div id="audit-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+      </div>
+
+      <!-- VISTA LOGS / VARIABLES (NUEVA INTEGRADA) -->
+      <div id="secondary-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RENAME PROJECT MODAL -->
+  <div class="modal fade" id="renameProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark text-light border-secondary">
+
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title">Renombrar Proyecto</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" id="renameProjectId">
+          <input type="text" id="renameProjectName" class="form-control bg-dark text-light border-secondary">
+        </div>
+
+        <div class="modal-footer border-secondary">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+          <button class="btn btn-success btn-sm" id="btnSaveRename">
+            Guardar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- DEPLOY ASSISTANT MODAL -->
+  <div class="modal fade" id="deployAssistantModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content bg-dark text-light border-secondary">
+
+        <div class="modal-header border-secondary">
+          <div>
+            <h5 class="modal-title mb-0">Desplegar nuevo asistente</h5>
+            <small class="text-secondary">
+              Seleccioná el tipo de asistente que querés desplegar
+            </small>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <div id="deploy-step-1">
+            <div class="row g-3" id="templates-container">
+            </div>
+          </div>
+
+          <!-- STEP 2 CONFIRMACION -->
+          <div id="deploy-step-2" style="display:none;">
+
+            <div class="text-center py-4">
+
+              <h5 id="confirm-template-name"></h5>
+
+              <p class="text-secondary mt-3">
+                Se abrirá Railway para completar el despliegue del asistente.
+                Luego podrás volver a Neurolinks Control para monitorearlo.
+              </p>
+
+              <div class="d-flex justify-content-center gap-3 mt-4">
+                <button class="btn btn-secondary btn-sm" onclick="backToSelection()">
+                  Volver
+                </button>
+
+                <button class="btn btn-success btn-sm" onclick="confirmDeploy()">
+                  Confirmar despliegue
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- LINK CLIENT MODAL -->
+  <div class="modal fade" id="linkClientModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark text-light border-secondary">
+
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title">Vincular Cliente</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" id="linkClientIdProject">
+          <label class="form-label">Seleccioná un cliente</label>
+          <select id="select-client-list" class="form-select bg-dark text-light border-secondary">
+            <option value="">Cargando clientes...</option>
+          </select>
+        </div>
+
+        <div class="modal-footer border-secondary">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+          <button class="btn btn-primary btn-sm" id="btnConfirmLinkClient">
+            Vincular
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- JS -->
+  <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="clients-view.js" defer></script>
+  <script src="tickets-view.js" defer></script>
+  <script src="billing-view.js" defer></script>
+  <script src="audit-view.js" defer></script>
+  <script src="logs-view.js" defer></script>
+  <script src="variables-view.js" defer></script>
+  <script src="render.js" defer></script>
+  <!-- Templates de despliegue -->
+  <script src="deploy-template.js" defer></script>
+
+  <!-- Toast Container -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+    <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="toastMessage"></div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

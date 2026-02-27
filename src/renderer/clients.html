@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Clientes - Neurolinks</title>
+    <link rel="stylesheet" href="../../node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../../node_modules/bootstrap-icons/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --bg-deep: #0a0c14;
+            --bg-card: rgba(26, 29, 43, 0.7);
+            --accent: #f093fb;
+            --accent-glass: rgba(240, 147, 251, 0.1);
+            --text-main: #e6e6e6;
+            --text-dim: #888;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 5% 5%, rgba(240, 147, 251, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 95% 95%, rgba(0, 210, 255, 0.05) 0%, transparent 40%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .navbar {
+            background: rgba(15, 17, 26, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1rem 2rem;
+        }
+
+        .table {
+            color: #ffffff !important;
+            vertical-align: middle;
+        }
+
+        .table tbody td {
+            color: #ffffff !important;
+            padding: 1.25rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            background: transparent;
+        }
+
+        .table thead th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1.25rem 1rem;
+        }
+
+
+        .table-hover tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s ease;
+        }
+
+        .btn-premium {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            padding: 0.6rem 1.2rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.2);
+        }
+
+        .btn-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
+            color: white;
+        }
+
+        .btn-outline-custom {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+        }
+
+        .btn-outline-custom:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .badge-pending {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+
+        .form-control, .form-select, .modal-content {
+            background-color: #161925;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-danger-soft {
+            background: rgba(220, 53, 69, 0.1);
+            color: #ff6b6b;
+            border: 1px solid rgba(220, 53, 69, 0.2);
+            transition: all 0.3s;
+        }
+
+        .btn-danger-soft:hover {
+            background: #dc3545;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .x-small { font-size: 0.7rem; }
+        .ls-1 { letter-spacing: 1px; }
+
+        .form-control:focus {
+            background-color: #1a1d2b;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 0.25rem var(--accent-glass);
+            color: white;
+        }
+
+        .modal-header, .modal-footer {
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .client-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-glass);
+            color: var(--accent);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .badge-ticket {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            padding: 0.3rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+
+        .details-row {
+            display: none;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .details-row.active {
+            display: table-row;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .details-container {
+            padding: 1.5rem;
+            border-left: 4px solid var(--accent);
+            display: grid;
+            grid-template-columns: 1fr 250px;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .action-section {
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            padding-left: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .row-active {
+            box-shadow: inset 4px 0 0 var(--accent);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .clickable-row:hover {
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .clickable-row:active {
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg border-bottom sticky-top">
+        <div class="container-fluid">
+            <span class="navbar-brand d-flex align-items-center fw-bold">
+                <i class="bi bi-people-fill text-danger me-2 fs-4"></i> NEUROLINKS <span class="text-danger ms-1">CLIENTES</span>
+            </span>
+            <div class="d-flex gap-3">
+                <button class="btn btn-outline-custom" onclick="window.api.openTickets()">
+                    <i class="bi bi-ticket-perforated me-2"></i> Gestión de Tickets
+                </button>
+                <button class="btn btn-premium" onclick="openNewClientModal()">
+                    <i class="bi bi-person-plus-fill me-2"></i> Nuevo Cliente
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4 px-4">
+        <!-- Filtros -->
+        <div class="glass-card p-4 mb-4">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="small text-dim fw-bold mb-2 text-uppercase ls-1">Buscar Cliente</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0 text-dim">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0" 
+                               placeholder="Nombre, email o teléfono..." id="searchClient" onkeyup="filterClients()">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="small text-dim fw-bold mb-2 text-uppercase ls-1">Filtrar por Plan</label>
+                    <select class="form-select" id="filterPlan" onchange="filterClients()">
+                        <option value="">Todos los planes</option>
+                        <option value="Standard">Standard</option>
+                        <option value="Premium">Premium</option>
+                        <option value="Enterprise">Enterprise</option>
+                        <option value="Baja">Baja</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-outline-light w-100" onclick="resetFilters()">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i> Resetear Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Contacto</th>
+                            <th>Plan</th>
+                            <th>Vencimiento</th>
+                            <th class="text-end">Tickets</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clients-table-body">
+                        <!-- Clientes dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CLIENTE -->
+    <div class="modal fade" id="clientModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card shadow-lg">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="clientModalTitle">Nuevo Cliente</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="clientId">
+                    <div class="mb-3">
+                        <label class="form-label text-dim small fw-bold">NOMBRE COMPLETO</label>
+                        <input type="text" class="form-control" id="clientName" placeholder="Hugo Pereyra" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-dim small fw-bold">EMAIL</label>
+                        <input type="email" class="form-control" id="clientEmail" placeholder="ejemplo@correo.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-dim small fw-bold">TELÉFONO</label>
+                        <input type="text" class="form-control" id="clientPhone" placeholder="+54 11 ...">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-dim small fw-bold">PLAN CONTRATADO</label>
+                            <select class="form-select" id="clientPlan">
+                                <option value="Standard">Standard</option>
+                                <option value="Premium">Premium</option>
+                                <option value="Enterprise">Enterprise</option>
+                                <option value="Baja">Baja</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-dim small fw-bold">VENCIMIENTO</label>
+                            <input type="date" class="form-control" id="clientVencimiento">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-dim small fw-bold">NOTAS ADICIONALES</label>
+                        <textarea class="form-control" id="clientNotes" rows="2" placeholder="Información relevante del cliente..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer p-3 bg-black bg-opacity-20">
+                    <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-premium" onclick="saveClient()">Guardar Cliente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allClients = [];
+        let railwayProjectsMap = {};
+
+        async function loadData() {
+            try {
+                const assistants = await window.api.getAssistants();
+                assistants.forEach(p => { railwayProjectsMap[p.id] = p.name; });
+
+                allClients = await window.api.getClients();
+                renderClients(allClients);
+            } catch (err) {
+                console.error("Error cargando clientes:", err);
+            }
+        }
+
+        async function renderClients(clientsToRender) {
+            const tbody = document.getElementById("clients-table-body");
+            tbody.innerHTML = "";
+
+            if (!clientsToRender || clientsToRender.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-dim">No se encontraron clientes</td></tr>';
+                return;
+            }
+
+            for (const c of clientsToRender) {
+                const pendingTickets = await window.api.getClientPendingTickets(c.id);
+                const initials = c.nombre.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+
+                const tr = document.createElement("tr");
+                tr.id = `row-${c.id}`;
+                tr.className = "clickable-row";
+                tr.style.cursor = "pointer";
+                tr.onclick = () => toggleDetails(c.id, c.nombre);
+                tr.innerHTML = `
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="client-avatar">${initials}</div>
+                            <div>
+                                <div class="fw-bold text-white">${c.nombre}</div>
+                                <div class="small text-dim">${c.email || 'Sin email'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="small text-white">${c.telefono || '-'}</div>
+                        <div class="small text-dim" title="${c.notas || ''}">
+                            ${c.notas ? (c.notas.substring(0, 20) + '...') : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge ${c.plan === 'Premium' ? 'bg-danger text-white' : c.plan === 'Enterprise' ? 'bg-warning text-dark' : 'border border-secondary text-dim'}">
+                            ${c.plan || 'Standard'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="${isNearExpiry(c.vencimiento) ? 'text-warning animate-pulse' : 'text-dim'} small">
+                            ${c.vencimiento ? formatDate(c.vencimiento) : 'N/A'}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <span class="badge-ticket animate-fade">${pendingTickets}</span>
+                    </td>
+                `;
+
+                const detailsTr = document.createElement("tr");
+                detailsTr.id = `details-${c.id}`;
+                detailsTr.className = "details-row";
+                detailsTr.innerHTML = `
+                    <td colspan="5">
+                        <div class="details-container">
+                            <div class="projects-section">
+                                <h6 class="text-uppercase x-small fw-bold mb-3 text-secondary ls-1">
+                                    <i class="bi bi-box-seam me-2"></i> Proyectos Vinculados
+                                </h6>
+                                <div id="projects-container-${c.id}" class="d-flex flex-wrap gap-2">
+                                    <!-- Proyectos -->
+                                </div>
+                            </div>
+                            <div class="action-section">
+                                <h6 class="text-uppercase x-small fw-bold mb-3 text-secondary ls-1">
+                                    Acciones Rápidas
+                                </h6>
+                                <button class="btn btn-sm btn-glass text-start py-2 px-3" onclick="openEditClient('${c.id}')">
+                                    <i class="bi bi-pencil me-2 text-warning"></i> Editar Perfil
+                                </button>
+                                <button class="btn btn-sm btn-glass text-start py-2 px-3" onclick="viewTicketsOfClient('${c.id}')">
+                                    <i class="bi bi-ticket-perforated me-2 text-info"></i> Ver Tickets
+                                </button>
+                                <button class="btn btn-sm btn-danger-soft text-start py-2 px-3 mt-2" onclick="deleteClient('${c.id}')">
+                                    <i class="bi bi-trash me-2"></i> Eliminar Cliente
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+                tbody.appendChild(detailsTr);
+            }
+        }
+
+        async function toggleDetails(clientId, clientName) {
+            const tr = document.getElementById(`row-${clientId}`);
+            const detailsTr = document.getElementById(`details-${clientId}`);
+            
+            if (detailsTr.classList.contains('active')) {
+                detailsTr.classList.remove('active');
+                tr.classList.remove('row-active');
+            } else {
+                detailsTr.classList.add('active');
+                tr.classList.add('row-active');
+                await loadClientProjects(clientId);
+            }
+        }
+
+        async function loadClientProjects(clientId) {
+            const container = document.getElementById(`projects-container-${clientId}`);
+            container.innerHTML = '<div class="spinner-border spinner-border-sm text-danger"></div>';
+            
+            try {
+                const projectIds = await window.api.getClientProjects(clientId);
+                if (projectIds.length === 0) {
+                    container.innerHTML = '<span class="text-dim italic small">Este cliente no tiene proyectos vinculados.</span>';
+                } else {
+                    container.innerHTML = projectIds.map(pid => {
+                        const name = railwayProjectsMap[pid] || pid;
+                        return `
+                            <button class="btn btn-outline-custom d-flex align-items-center gap-2 p-2 px-3" onclick="goToProject('${pid}')" title="Ir al Proyecto">
+                                <i class="bi bi-box-seam"></i>
+                                <span>${name}</span>
+                                <i class="bi bi-arrow-right small ms-1"></i>
+                            </button>
+                        `;
+                    }).join('');
+                }
+            } catch (err) {
+                container.innerHTML = '<span class="text-danger small">Error cargando proyectos</span>';
+            }
+        }
+
+        function filterClients() {
+            const term = document.getElementById("searchClient").value.toLowerCase();
+            const plan = document.getElementById("filterPlan").value;
+
+            const filtered = allClients.filter(c => {
+                const matchesSearch = c.nombre.toLowerCase().includes(term) || 
+                                     (c.email && c.email.toLowerCase().includes(term)) ||
+                                     (c.telefono && c.telefono.includes(term));
+                
+                const matchesPlan = plan === "" || c.plan === plan;
+
+                return matchesSearch && matchesPlan;
+            });
+            
+            renderClients(filtered);
+        }
+
+        function resetFilters() {
+            document.getElementById("searchClient").value = "";
+            document.getElementById("filterPlan").value = "";
+            renderClients(allClients);
+        }
+
+        function openNewClientModal() {
+            document.getElementById("clientId").value = "";
+            document.getElementById("clientName").value = "";
+            document.getElementById("clientEmail").value = "";
+            document.getElementById("clientPhone").value = "";
+            document.getElementById("clientNotes").value = "";
+            document.getElementById("clientPlan").value = "Standard"; // Set default plan
+            document.getElementById("clientVencimiento").value = ""; // Clear vencimiento
+            document.getElementById("clientModalTitle").innerText = "Nuevo Cliente";
+            new bootstrap.Modal(document.getElementById("clientModal")).show();
+        }
+
+        function openEditClient(id) {
+            const c = allClients.find(client => client.id === id);
+            if (!c) return;
+            document.getElementById("clientId").value = c.id;
+            document.getElementById("clientName").value = c.nombre;
+            document.getElementById("clientEmail").value = c.email || "";
+            document.getElementById("clientPhone").value = c.telefono || "";
+            document.getElementById("clientNotes").value = c.notas || "";
+            document.getElementById('clientPlan').value = c.plan || 'Standard';
+            document.getElementById('clientVencimiento').value = c.vencimiento || '';
+            document.getElementById("clientModalTitle").innerText = "Editar Cliente";
+            new bootstrap.Modal(document.getElementById("clientModal")).show();
+        }
+
+        async function saveClient() {
+            const id = document.getElementById("clientId").value;
+            const clientData = {
+                nombre: document.getElementById("clientName").value.trim(),
+                email: document.getElementById("clientEmail").value.trim(),
+                telefono: document.getElementById("clientPhone").value.trim(),
+                notas: document.getElementById("clientNotes").value.trim(),
+                plan: document.getElementById('clientPlan').value,
+                vencimiento: document.getElementById('clientVencimiento').value || null
+            };
+
+            if (!clientData.nombre) return alert("El nombre es requerido");
+
+            try {
+                if (id) {
+                    await window.api.updateClient(id, clientData);
+                } else {
+                    await window.api.createClient(clientData);
+                }
+                bootstrap.Modal.getInstance(document.getElementById("clientModal")).hide();
+                loadData();
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+        async function deleteClient(id) {
+            if (!confirm("¿Eliminar este cliente y todos sus datos vinculados?")) return;
+            try {
+                await window.api.deleteClient(id);
+                loadData();
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+        function goToProject(projectId) {
+            window.api.requestSelectProject(projectId);
+        }
+
+        function viewTicketsOfClient(clientId) {
+            // Podríamos abrir tickets.html con un filtro pre-aplicado
+            window.api.openTickets();
+            // Para pasar el filtro al otro window, podríamos usar IPC o simplemente abrir y que el user filtre.
+            // Por simplicidad ahora, solo abrimos.
+        }
+
+        function isNearExpiry(dateStr) {
+            if (!dateStr) return false;
+            const expiry = new Date(dateStr);
+            const today = new Date();
+            const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+            return diffDays <= 7 && diffDays >= 0;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return "N/A";
+            const d = new Date(dateStr + 'T12:00:00'); // Evitar problemas de zona horaria
+            return d.toLocaleDateString();
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+
+</html>

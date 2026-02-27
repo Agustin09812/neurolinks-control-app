@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Tickets - Neurolinks</title>
+    <link rel="stylesheet" href="../../node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../../node_modules/bootstrap-icons/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --bg-deep: #0a0c14;
+            --bg-card: rgba(26, 29, 43, 0.7);
+            --accent: #f093fb;
+            --accent-glass: rgba(240, 147, 251, 0.1);
+            --text-main: #e6e6e6;
+            --text-dim: #888;
+            --status-open: #ffc107;
+            --status-progress: #00d2ff;
+            --status-closed: #28a745;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 5% 5%, rgba(240, 147, 251, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 95% 95%, rgba(0, 210, 255, 0.05) 0%, transparent 40%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .navbar {
+            background: rgba(15, 17, 26, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1rem 2rem;
+        }
+
+        .table {
+            color: #ffffff !important;
+            vertical-align: middle;
+        }
+
+        .table thead th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1.25rem 1rem;
+        }
+
+        .table tbody td {
+            color: #ffffff !important;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            background: transparent;
+        }
+
+        .btn-ticket {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            padding: 0.6rem 1.2rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.2);
+        }
+
+        .btn-ticket:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
+            color: white;
+        }
+
+        .status-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-abierto { background: rgba(255, 193, 7, 0.1); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.2); }
+        .status-enprogreso { background: rgba(0, 210, 255, 0.1); color: #00d2ff; border: 1px solid rgba(0, 210, 255, 0.2); }
+        .status-cerrado { background: rgba(40, 167, 69, 0.1); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.2); }
+
+        .priority-alta { color: #ff4757; }
+        .priority-media { color: #ffa502; }
+        .priority-baja { color: #2ed573; }
+
+        .form-control, .form-select, .modal-content {
+            background-color: #161925;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .form-select option {
+            background: #161925;
+            color: white;
+        }
+
+        .ticket-row:hover {
+            background: rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container-fluid">
+            <span class="navbar-brand d-flex align-items-center fw-bold">
+                <i class="bi bi-ticket-perforated text-danger me-2 fs-4"></i> NEUROLINKS <span class="text-danger ms-1">TICKETS</span>
+            </span>
+            <button class="btn btn-ticket" onclick="openNewTicketModal()">
+                <i class="bi bi-plus-lg me-2"></i> Abrir Nuevo Ticket
+            </button>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4 px-4">
+        <!-- Filtros -->
+        <div class="glass-card p-4 mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="small text-dim fw-bold mb-2">FILTRAR POR ESTADO</label>
+                    <select class="form-select" id="filterStatus" onchange="loadTickets()">
+                        <option value="">Todos los estados</option>
+                        <option value="Abierto">Abierto</option>
+                        <option value="En progreso">En progreso</option>
+                        <option value="Cerrado">Cerrado</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-dim fw-bold mb-2">FILTRAR POR TIPO</label>
+                    <select class="form-select" id="filterType" onchange="loadTickets()">
+                        <option value="">Todos los tipos</option>
+                        <option value="Soporte">Soporte</option>
+                        <option value="Ventas">Ventas</option>
+                        <option value="Técnico">Técnico</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="small text-dim fw-bold mb-2">FILTRAR POR CLIENTE</label>
+                    <select class="form-select" id="filterClient" onchange="loadTickets()">
+                        <option value="">Todos los clientes</option>
+                        <!-- Clientes dinámicos -->
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-outline-light w-100" onclick="resetFilters()">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="glass-card overflow-hidden">
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID / Título</th>
+                            <th>Cliente</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                            <th>Prioridad</th>
+                            <th>Creado</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tickets-table-body">
+                        <!-- Tickets dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TICKET -->
+    <div class="modal fade" id="ticketModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-card shadow-lg">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="ticketModalTitle">Nuevo Ticket</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="ticketId">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label text-dim small fw-bold">TÍTULO DEL PROBLEMA</label>
+                            <input type="text" class="form-control" id="ticketTitle" placeholder="Ej: Error en despliegue de base de datos" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-dim small fw-bold">CLIENTE ASOCIADO</label>
+                            <select class="form-select" id="ticketClient" required>
+                                <option value="">Seleccionar cliente...</option>
+                                <!-- Clientes dinámicos -->
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-dim small fw-bold">TIPO DE CONSULTA</label>
+                            <select class="form-select" id="ticketType">
+                                <option value="Soporte">Soporte</option>
+                                <option value="Ventas">Ventas</option>
+                                <option value="Técnico">Técnico</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-dim small fw-bold">ESTADO</label>
+                            <select class="form-select" id="ticketStatus">
+                                <option value="Abierto">Abierto</option>
+                                <option value="En progreso">En progreso</option>
+                                <option value="Cerrado">Cerrado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-dim small fw-bold">PRIORIDAD</label>
+                            <select class="form-select" id="ticketPriority">
+                                <option value="Baja">Baja</option>
+                                <option value="Media" selected>Media</option>
+                                <option value="Alta">Alta</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label text-dim small fw-bold">DESCRIPCIÓN DETALLADA</label>
+                            <textarea class="form-control" id="ticketDescription" rows="5" placeholder="Explique el problema aquí..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer p-3 bg-black bg-opacity-20">
+                    <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-ticket" onclick="saveTicket()">Guardar Ticket</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allTickets = [];
+        let clientsList = [];
+
+        async function init() {
+            clientsList = await window.api.getClients();
+            populateClientDropdowns();
+            loadTickets();
+        }
+
+        function populateClientDropdowns() {
+            const filters = document.getElementById("filterClient");
+            const modal = document.getElementById("ticketClient");
+            
+            const options = clientsList.map(c => `<option value="${c.id}">${c.nombre}</option>`).join("");
+            
+            filters.innerHTML = '<option value="">Todos los clientes</option>' + options;
+            modal.innerHTML = '<option value="">Seleccionar cliente...</option>' + options;
+        }
+
+        async function loadTickets() {
+            const filters = {
+                estado: document.getElementById("filterStatus").value,
+                tipo: document.getElementById("filterType").value,
+                cliente_id: document.getElementById("filterClient").value
+            };
+
+            try {
+                allTickets = await window.api.getTickets(filters);
+                renderTickets();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderTickets() {
+            const tbody = document.getElementById("tickets-table-body");
+            tbody.innerHTML = "";
+
+            allTickets.forEach(t => {
+                const date = new Date(t.created_at).toLocaleDateString();
+                const tr = document.createElement("tr");
+                tr.className = "ticket-row";
+                tr.innerHTML = `
+                    <td>
+                        <div class="fw-bold">${t.titulo}</div>
+                        <div class="small text-dim">#${t.id.substring(0, 8)}</div>
+                    </td>
+                    <td>${t.clientes ? t.clientes.nombre : 'Sin asignar'}</td>
+                    <td><span class="small opacity-75">${t.tipo}</span></td>
+                    <td>
+                        <span class="status-badge status-${t.estado.toLowerCase().replace(/\s+/g, '')}">
+                            ${t.estado}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="priority-${t.prioridad.toLowerCase()} fw-bold">
+                            <i class="bi bi-circle-fill small me-1"></i> ${t.prioridad}
+                        </span>
+                    </td>
+                    <td class="small text-dim">${date}</td>
+                    <td class="text-end">
+                        <button class="btn btn-link text-white p-0" onclick="openEditTicket('${t.id}')">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        <button class="btn btn-link text-danger p-0 ms-2" onclick="deleteTicket('${t.id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById("filterStatus").value = "";
+            document.getElementById("filterType").value = "";
+            document.getElementById("filterClient").value = "";
+            loadTickets();
+        }
+
+        function openNewTicketModal() {
+            document.getElementById("ticketId").value = "";
+            document.getElementById("ticketTitle").value = "";
+            document.getElementById("ticketClient").value = "";
+            document.getElementById("ticketType").value = "Soporte";
+            document.getElementById("ticketStatus").value = "Abierto";
+            document.getElementById("ticketPriority").value = "Media";
+            document.getElementById("ticketDescription").value = "";
+            document.getElementById("ticketModalTitle").innerText = "Nuevo Ticket";
+            new bootstrap.Modal(document.getElementById("ticketModal")).show();
+        }
+
+        function openEditTicket(id) {
+            const t = allTickets.find(x => x.id === id);
+            if (!t) return;
+            document.getElementById("ticketId").value = t.id;
+            document.getElementById("ticketTitle").value = t.titulo;
+            document.getElementById("ticketClient").value = t.cliente_id;
+            document.getElementById("ticketType").value = t.tipo;
+            document.getElementById("ticketStatus").value = t.estado;
+            document.getElementById("ticketPriority").value = t.prioridad;
+            document.getElementById("ticketDescription").value = t.descripcion || "";
+            document.getElementById("ticketModalTitle").innerText = "Editar Ticket";
+            new bootstrap.Modal(document.getElementById("ticketModal")).show();
+        }
+
+        async function saveTicket() {
+            const id = document.getElementById("ticketId").value;
+            const data = {
+                titulo: document.getElementById("ticketTitle").value.trim(),
+                cliente_id: document.getElementById("ticketClient").value,
+                tipo: document.getElementById("ticketType").value,
+                estado: document.getElementById("ticketStatus").value,
+                prioridad: document.getElementById("ticketPriority").value,
+                descripcion: document.getElementById("ticketDescription").value.trim()
+            };
+
+            if (!data.titulo || !data.cliente_id) return alert("Título y Cliente son obligatorios");
+
+            try {
+                if (id) {
+                    await window.api.updateTicket(id, data);
+                } else {
+                    await window.api.createTicket(data);
+                }
+                bootstrap.Modal.getInstance(document.getElementById("ticketModal")).hide();
+                loadTickets();
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+        async function deleteTicket(id) {
+            if (!confirm("¿Eliminar este ticket definitivamente?")) return;
+            try {
+                await window.api.deleteTicket(id);
+                loadTickets();
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>
