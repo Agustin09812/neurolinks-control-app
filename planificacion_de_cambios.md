@@ -56,10 +56,16 @@ Este documento sirve como hoja de ruta operativa para la transformación del pan
 | :--- | :---: | :---: | :--- |
 | **Actualización Automática (Internal)** | Alta | ✅ Completado | Descarga y auto-instalación desde el splash screen. |
 | **Dashboard como Vista Inicial** | Media | ✅ Completado | El Dashboard Maestro es lo primero que ve el usuario. |
-| **Descarga de Logs por Proyecto** | Alta | ✅ Completado | Opción para descargar logs históricos de Railway dentro del detalle del proyecto. |
+| **Reportes y Exportación (CSV)** | Alta | ✅ Completado | Exportación de Clientes y Tickets a formato Excel (CSV). |
+| **Filtros Avanzados y Prioridad** | Media | ✅ Completado | Filtros por fecha y prioridad en el módulo de Tickets. |
+| **Módulo de Historial de Pagos** | Alta | ✅ Completado | Registro y consulta de pagos vinculados a cada cliente. |
 
 ---
 
 ## 📓 Notas de Progreso
-*   **[2026-02-27]**: Implementación de **Actualización Automática** y **Descarga de Logs por Proyecto**. El Dashboard Maestro ahora es la vista inicial.
-*   **Próximo paso sugerido**: Pulir detalles de UI o avanzar con la exportación de otros datos si es necesario.
+*   **[2026-02-27]**: 
+    *   Resolución de **estados de carga infinitos** en Clientes y Tickets (Carga Progresiva).
+    *   Corrección de formato de **Logs de Railway** (extracción de texto legible).
+    *   Integración del botón **Descargar Logs** junto al botón Cerrar para mayor fluidez.
+    *   Unificación del sistema de **Notificaciones Toast** para errores y confirmaciones.
+*   **Estado Actual**: Todas las funcionalidades principales del CRM y Dashboard están operativas y optimizadas.

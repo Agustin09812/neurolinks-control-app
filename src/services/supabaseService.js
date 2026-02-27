@@ -185,6 +185,47 @@ const supabaseService = {
                 entidad_id: entityId
             }]);
         if (error) console.error('Error logging action:', error);
+    },
+
+    /**
+     * Gestión de Pagos (Billing)
+     */
+    async getClientPayments(clientId) {
+        const { data, error } = await supabase
+            .from('pagos')
+            .select('*')
+            .eq('cliente_id', clientId)
+            .order('fecha', { ascending: false });
+        if (error) throw error;
+        return data;
+    },
+
+    async getAllPayments() {
+        const { data, error } = await supabase
+            .from('pagos')
+            .select('*, clientes(nombre)')
+            .order('fecha', { ascending: false });
+        if (error) throw error;
+        return data;
+    },
+
+    async createPayment(paymentData) {
+        const { data, error } = await supabase
+            .from('pagos')
+            .insert([paymentData])
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    },
+
+    async deletePayment(id) {
+        const { error } = await supabase
+            .from('pagos')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        return true;
     }
 };
 

@@ -3,7 +3,10 @@ let allTicketsView = [];
 let ticketFilters = {
     status: "",
     type: "",
-    client: ""
+    client: "",
+    priority: "",
+    dateStart: "",
+    dateEnd: ""
 };
 
 async function renderTicketsView(filterClientId = "") {
@@ -11,6 +14,7 @@ async function renderTicketsView(filterClientId = "") {
     document.getElementById("dashboard-global").style.display = "none";
     document.getElementById("assistant-detail").style.display = "none";
     document.getElementById("clients-view").style.display = "none";
+    document.getElementById("billing-view").style.display = "none";
 
     const secondary = document.getElementById("integrated-log-container");
     if (secondary) secondary.remove();
@@ -37,36 +41,50 @@ async function renderTicketsView(filterClientId = "") {
 
             <div class="glass-card p-4 mb-4">
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="small text-dim fw-bold mb-2">ESTADO</label>
-                        <select class="form-select" id="view-filter-status" onchange="handleTicketFilter('status', this.value)">
+                        <select class="form-select select-sm" id="view-filter-status" onchange="handleTicketFilter('status', this.value)">
                             <option value="">Todos</option>
                             <option value="Abierto">Abierto</option>
                             <option value="En Progreso">En Progreso</option>
                             <option value="Cerrado">Cerrado</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label class="small text-dim fw-bold mb-2">TIPO</label>
-                        <select class="form-select" id="view-filter-type" onchange="handleTicketFilter('type', this.value)">
-                            <option value="">Todos</option>
-                            <option value="Soporte">Soporte</option>
-                            <option value="Mejora">Mejora</option>
-                            <option value="Bugs">Bugs</option>
+                    <div class="col-md-2">
+                        <label class="small text-dim fw-bold mb-2">PRIORIDAD</label>
+                        <select class="form-select select-sm" id="view-filter-priority" onchange="handleTicketFilter('priority', this.value)">
+                            <option value="">Todas</option>
+                            <option value="Baja">Baja</option>
+                            <option value="Media">Media</option>
+                            <option value="Alta">Alta</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="small text-dim fw-bold mb-2">CLIENTE</label>
-                        <select class="form-select" id="view-filter-client" onchange="handleTicketFilter('client', this.value)">
+                        <select class="form-select select-sm" id="view-filter-client" onchange="handleTicketFilter('client', this.value)">
                             <option value="">Todos los clientes</option>
                         </select>
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button class="btn btn-outline-custom w-100" onclick="resetTicketFilters()">
+                    <div class="col-md-2">
+                        <label class="small text-dim fw-bold mb-2">DESDE</label>
+                        <input type="date" class="form-control form-control-sm" id="view-filter-date-start" onchange="handleTicketFilter('dateStart', this.value)">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="small text-dim fw-bold mb-2">HASTA</label>
+                        <input type="date" class="form-control form-control-sm" id="view-filter-date-end" onchange="handleTicketFilter('dateEnd', this.value)">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button class="btn btn-outline-custom w-100 btn-sm" onclick="resetTicketFilters()" title="Limpiar Filtros">
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </button>
                     </div>
                 </div>
+            </div>
+
+            <div class="d-flex justify-content-end mb-3">
+                <button class="btn btn-sm btn-outline-success" onclick="exportTicketsToCSV()">
+                    <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel (CSV)
+                </button>
             </div>
 
             <div class="glass-card overflow-hidden">
@@ -203,10 +221,12 @@ function handleTicketFilter(key, val) {
 }
 
 function resetTicketFilters() {
-    ticketFilters = { status: "", type: "", client: "" };
+    ticketFilters = { status: "", type: "", client: "", priority: "", dateStart: "", dateEnd: "" };
     if (document.getElementById("view-filter-status")) document.getElementById("view-filter-status").value = "";
-    if (document.getElementById("view-filter-type")) document.getElementById("view-filter-type").value = "";
+    if (document.getElementById("view-filter-priority")) document.getElementById("view-filter-priority").value = "";
     if (document.getElementById("view-filter-client")) document.getElementById("view-filter-client").value = "";
+    if (document.getElementById("view-filter-date-start")) document.getElementById("view-filter-date-start").value = "";
+    if (document.getElementById("view-filter-date-end")) document.getElementById("view-filter-date-end").value = "";
     renderTicketsList();
 }
 
@@ -217,9 +237,18 @@ function renderTicketsList() {
 
     const filtered = allTicketsView.filter(t => {
         const matchStatus = !ticketFilters.status || t.estado === ticketFilters.status;
-        const matchType = !ticketFilters.type || t.tipo === ticketFilters.type;
+        const matchPriority = !ticketFilters.priority || t.prioridad === ticketFilters.priority;
         const matchClient = !ticketFilters.client || t.id_cliente === ticketFilters.client;
-        return matchStatus && matchType && matchClient;
+
+        // Filtro de fecha
+        let matchDate = true;
+        if (ticketFilters.dateStart || ticketFilters.dateEnd) {
+            const ticketDate = new Date(t.created_at).toISOString().split('T')[0];
+            if (ticketFilters.dateStart && ticketDate < ticketFilters.dateStart) matchDate = false;
+            if (ticketFilters.dateEnd && ticketDate > ticketFilters.dateEnd) matchDate = false;
+        }
+
+        return matchStatus && matchPriority && matchClient && matchDate;
     });
 
     if (filtered.length === 0) {
@@ -305,12 +334,44 @@ async function handleTicketSubmit(e) {
 }
 
 async function handleDeleteTicket(id) {
-    if (!confirm("¿Eliminar este ticket?")) return;
+    if (!confirm("¿Seguro que querés eliminar este ticket?")) return;
     try {
         await window.api.deleteTicket(id);
         showToast("Ticket eliminado", "warning");
         loadTicketsData();
     } catch (err) {
-        showToast("Error al eliminar", "danger");
+        showToast("Error al eliminar ticket", "danger");
     }
+}
+
+function exportTicketsToCSV() {
+    if (allTicketsView.length === 0) {
+        showToast("No hay tickets para exportar", "warning");
+        return;
+    }
+
+    const headers = ["ID", "Título", "Cliente", "Tipo", "Estado", "Prioridad", "Creado"];
+    const rows = allTicketsView.map(t => [
+        t.id,
+        t.titulo,
+        t.clientes ? t.clientes.nombre : 'Sin cliente',
+        t.tipo,
+        t.estado,
+        t.prioridad || 'Baja',
+        new Date(t.created_at).toLocaleDateString()
+    ]);
+
+    let csvContent = "data:text/csv;charset=utf-8,"
+        + headers.join(",") + "\n"
+        + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `reporte_tickets_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast("Reporte generado", "success");
 }

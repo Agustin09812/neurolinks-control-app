@@ -9,6 +9,7 @@ async function renderClientsView() {
     document.getElementById("dashboard-global").style.display = "none";
     document.getElementById("assistant-detail").style.display = "none";
     document.getElementById("tickets-view").style.display = "none";
+    document.getElementById("billing-view").style.display = "none";
 
     // Clear secondary views if any
     const secondary = document.getElementById("integrated-log-container");
@@ -25,9 +26,14 @@ async function renderClientsView() {
         <div id="clients-content" style="display:none;" class="animate-fade">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="fw-bold mb-0">GESTIÓN DE <span class="text-accent-clients">CLIENTES</span></h2>
-                <button class="btn btn-premium" onclick="openNewClientModal()">
-                    <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
-                </button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-success" onclick="exportClientsToCSV()">
+                        <i class="bi bi-file-earmark-excel me-2"></i> Exportar
+                    </button>
+                    <button class="btn btn-premium" onclick="openNewClientModal()">
+                        <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
+                    </button>
+                </div>
             </div>
 
             <!-- Filtros -->
@@ -127,10 +133,76 @@ async function renderClientsView() {
                 </div>
             </div>
         </div>
+
+        <!-- MODAL PAGOS -->
+        <div class="modal fade" id="paymentsModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content glass-card shadow-lg">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">Historial de Pagos: <span id="paymentClientName" class="text-accent-clients"></span></h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="row g-4">
+                            <!-- Formulario Nuevo Pago -->
+                            <div class="col-md-4">
+                                <h6 class="text-dim small fw-bold mb-3">REGISTRAR PAGO</h6>
+                                <form id="paymentForm">
+                                    <input type="hidden" id="paymentClientId">
+                                    <div class="mb-3">
+                                        <label class="form-label small text-dim">CONCEPTO</label>
+                                        <input type="text" class="form-control form-control-sm" id="payConcept" required placeholder="Ej: Abono Marzo">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small text-dim">MONTO ($)</label>
+                                        <input type="number" step="0.01" class="form-control form-control-sm" id="payAmount" required placeholder="0.00">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small text-dim">MÉTODO</label>
+                                        <select class="form-select form-select-sm" id="payMethod">
+                                            <option value="Transferencia">Transferencia</option>
+                                            <option value="Efectivo">Efectivo</option>
+                                            <option value="Mercado Pago">Mercado Pago</option>
+                                            <option value="Cripto">Cripto</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small text-dim">FECHA</label>
+                                        <input type="date" class="form-control form-control-sm" id="payDate" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-premium btn-sm w-100">
+                                        <i class="bi bi-plus-circle me-2"></i>Agregar Pago
+                                    </button>
+                                </form>
+                            </div>
+                            <!-- Tabla de Historial -->
+                            <div class="col-md-8 border-start border-secondary ps-4">
+                                <h6 class="text-dim small fw-bold mb-3">HISTORIAL RECIENTE</h6>
+                                <div class="table-responsive" style="max-height: 300px;">
+                                    <table class="table table-hover table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Fecha</th>
+                                                <th>Concepto</th>
+                                                <th>Monto</th>
+                                                <th class="text-end"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="payments-table-body">
+                                            <!-- Pagos dinámicos -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+        </div>
     `;
 
     document.getElementById("clientForm").onsubmit = handleClientSubmit;
-    loadClientsData(); // Quitamos el await para no bloquear el hilo principal
+    document.getElementById("paymentForm").onsubmit = handlePaymentSubmit;
+    loadClientsData();
 }
 
 async function loadClientsData() {
@@ -242,6 +314,9 @@ async function renderClientsList() {
                             </button>
                             <button class="btn btn-outline-custom btn-sm text-start" onclick="openClientsTickets('${c.id}')">
                                 <i class="bi bi-ticket-perforated me-2"></i> Ver Tickets
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm text-start" onclick="openPaymentsModal('${c.id}', '${c.nombre}')">
+                                <i class="bi bi-credit-card me-2"></i> Pagos/Historial
                             </button>
                             <hr class="my-1 border-secondary">
                             <button class="btn btn-danger-soft btn-sm text-start" onclick="handleDeleteClient('${c.id}')">
@@ -368,12 +443,125 @@ async function handleClientSubmit(e) {
 }
 
 async function handleDeleteClient(id) {
-    if (!confirm("¿Seguro que querés eliminar este cliente?")) return;
+    if (!confirm("¿Deseas eliminar este cliente? Se perderán sus vínculos técnicos.")) return;
     try {
         await window.api.deleteClient(id);
         showToast("Cliente eliminado", "warning");
         loadClientsData();
     } catch (err) {
-        showToast("Error al eliminar", "danger");
+        showToast("Error al eliminar cliente", "danger");
+    }
+}
+
+function exportClientsToCSV() {
+    if (allClients.length === 0) {
+        showToast("No hay clientes para exportar", "warning");
+        return;
+    }
+
+    const headers = ["ID", "Nombre", "Empresa", "Email", "Teléfono", "Plan", "Vencimiento"];
+    const rows = allClients.map(c => [
+        c.id,
+        c.nombre,
+        c.empresa || '-',
+        c.email || '-',
+        c.telefono || '-',
+        c.plan || 'Standard',
+        c.vencimiento_plan || '-'
+    ]);
+
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"
+        + headers.join(",") + "\n"
+        + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `listado_clientes.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast("Reporte de clientes generado", "success");
+}
+
+// --------------------------------------------------
+// MÓDULO DE PAGOS
+// --------------------------------------------------
+
+async function openPaymentsModal(clientId, clientName) {
+    document.getElementById("paymentClientId").value = clientId;
+    document.getElementById("paymentClientName").innerText = clientName;
+    document.getElementById("payDate").value = new Date().toISOString().split('T')[0];
+
+    // Abrir modal
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById("paymentsModal"));
+    modal.show();
+
+    loadPaymentsData(clientId);
+}
+
+async function loadPaymentsData(clientId) {
+    const tbody = document.getElementById("payments-table-body");
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
+
+    try {
+        const payments = await window.api.getClientPayments(clientId);
+        tbody.innerHTML = "";
+
+        if (payments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-dim py-3">No hay pagos registrados</td></tr>';
+            return;
+        }
+
+        payments.forEach(p => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${new Date(p.fecha).toLocaleDateString()}</td>
+                <td class="small">${p.concepto}</td>
+                <td class="fw-bold">$${p.monto}</td>
+                <td class="text-end">
+                    <button class="btn btn-link text-danger p-0" onclick="handleDeletePayment('${p.id}', '${clientId}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-3">Error al cargar pagos</td></tr>';
+    }
+}
+
+async function handlePaymentSubmit(e) {
+    e.preventDefault();
+    const clientId = document.getElementById("paymentClientId").value;
+    const paymentData = {
+        cliente_id: clientId,
+        concepto: document.getElementById("payConcept").value,
+        monto: parseFloat(document.getElementById("payAmount").value),
+        metodo: document.getElementById("payMethod").value,
+        fecha: document.getElementById("payDate").value
+    };
+
+    try {
+        await window.api.createPayment(paymentData);
+        showToast("Pago registrado con éxito", "success");
+        e.target.reset();
+        document.getElementById("paymentClientId").value = clientId; // Restaurar ID
+        loadPaymentsData(clientId);
+    } catch (err) {
+        showToast("Error al registrar pago", "danger");
+    }
+}
+
+async function handleDeletePayment(id, clientId) {
+    if (!confirm("¿Eliminar este registro de pago?")) return;
+    try {
+        await window.api.deletePayment(id);
+        showToast("Pago eliminado", "warning");
+        loadPaymentsData(clientId);
+    } catch (err) {
+        showToast("Error al eliminar pago", "danger");
     }
 }

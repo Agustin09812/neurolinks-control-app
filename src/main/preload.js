@@ -172,4 +172,19 @@ contextBridge.exposeInMainWorld('api', {
   requestSelectProject: (projectId) =>
     ipcRenderer.send('request-select-project', projectId),
 
+  // --------------------------------------------------
+  // BILLING / PAGOS
+  // --------------------------------------------------
+  getClientPayments: (clientId) =>
+    ipcRenderer.invoke('get-client-payments', clientId),
+
+  getAllPayments: () =>
+    ipcRenderer.invoke('get-all-payments'),
+
+  createPayment: (paymentData) =>
+    ipcRenderer.invoke('create-payment', paymentData),
+
+  deletePayment: (id) =>
+    ipcRenderer.invoke('delete-payment', id),
+
 });

@@ -40,6 +40,9 @@
         <a href="#" class="nav-link text-white" id="btn-open-tickets">
           <i class="bi bi-ticket-perforated me-2"></i> Tickets
         </a>
+        <a href="#" class="nav-link text-white" id="btn-open-billing">
+          <i class="bi bi-credit-card me-2"></i> Facturación
+        </a>
       </nav>
 
       <div id="assistant-list" class="flex-grow-1 overflow-auto p-3">
@@ -64,6 +67,9 @@
 
       <!-- VISTA TICKETS (NUEVA) -->
       <div id="tickets-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+      </div>
+      <!-- VISTA FACTURACIÓN -->
+      <div id="billing-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
       </div>
 
       <!-- VISTA LOGS / VARIABLES (NUEVA INTEGRADA) -->
@@ -192,6 +198,7 @@
   <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script src="clients-view.js" defer></script>
   <script src="tickets-view.js" defer></script>
+  <script src="billing-view.js" defer></script>
   <script src="logs-view.js" defer></script>
   <script src="variables-view.js" defer></script>
   <script src="render.js" defer></script>

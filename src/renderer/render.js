@@ -60,11 +60,13 @@ async function loadAssistants(preserveSelection = true) {
 
   renderSidebar();
 
+  const isDashboardActive = document.getElementById("dashboard-global").style.display === "block";
+
   if (preserveSelection && currentSelected) {
     const item = document.querySelector(`[data-id="${currentSelected}"]`);
     if (item) item.click();
-  } else if (!selectedProjectId) {
-    // Si no hay selección, estamos en el dashboard, refrescarlo con la nueva data de bots
+  } else if (!selectedProjectId && isDashboardActive) {
+    // Si no hay selección y estamos en el dashboard, lo refrescamos
     renderMainDashboard();
   }
 }
@@ -158,8 +160,9 @@ function renderSidebar() {
   const isDashboardActive = document.getElementById("dashboard-global").style.display === "block";
   const isClientsActive = document.getElementById("clients-view").style.display === "block";
   const isTicketsActive = document.getElementById("tickets-view").style.display === "block";
+  const isBillingActive = document.getElementById("billing-view").style.display === "block";
 
-  if (!selectedProjectId && assistants.length > 0 && !isDashboardActive && !isClientsActive && !isTicketsActive) {
+  if (!selectedProjectId && assistants.length > 0 && !isDashboardActive && !isClientsActive && !isTicketsActive && !isBillingActive) {
     setTimeout(() => {
       const first = list.querySelector('.assistant-item');
       if (first) first.click();
@@ -170,18 +173,21 @@ function renderSidebar() {
   const btnDash = document.getElementById("btn-reload");
   const btnCli = document.getElementById("btn-open-clients");
   const btnTkt = document.getElementById("btn-open-tickets");
+  const btnBill = document.getElementById("btn-open-billing");
 
   // Limpiar activos de navegación principal
-  [btnDash, btnCli, btnTkt].forEach(b => b?.classList.remove("active"));
+  [btnDash, btnCli, btnTkt, btnBill].forEach(b => b?.classList.remove("active"));
 
   if (!selectedProjectId) {
     const dashGlobal = document.getElementById("dashboard-global").style.display === "block";
     const clientsView = document.getElementById("clients-view").style.display === "block";
     const ticketsView = document.getElementById("tickets-view").style.display === "block";
+    const billingView = document.getElementById("billing-view").style.display === "block";
 
     if (dashGlobal) btnDash?.classList.add("active");
     if (clientsView) btnCli?.classList.add("active");
     if (ticketsView) btnTkt?.classList.add("active");
+    if (billingView) btnBill?.classList.add("active");
   }
 }
 
@@ -211,6 +217,7 @@ async function renderDetail(a) {
   document.getElementById("dashboard-global").style.display = "none";
   document.getElementById("clients-view").style.display = "none";
   document.getElementById("tickets-view").style.display = "none";
+  document.getElementById("billing-view").style.display = "none";
 
   const detailPanel = document.getElementById("assistant-detail");
   if (detailPanel) detailPanel.style.display = "block";
@@ -661,6 +668,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderSidebar();
     });
   }
+
+  const btnOpenBilling = document.getElementById("btn-open-billing");
+  if (btnOpenBilling) {
+    btnOpenBilling.addEventListener("click", () => {
+      renderBillingView();
+      renderSidebar();
+    });
+  }
 });
 
 /**
@@ -673,6 +688,7 @@ async function renderMainDashboard() {
   document.getElementById("assistant-detail").style.display = "none";
   document.getElementById("clients-view").style.display = "none";
   document.getElementById("tickets-view").style.display = "none";
+  document.getElementById("billing-view").style.display = "none";
 
   const dash = document.getElementById("dashboard-global");
   dash.style.display = "block";

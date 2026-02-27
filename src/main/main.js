@@ -482,6 +482,27 @@ ipcMain.handle('get-client-pending-tickets', async (_, clientId) => {
 });
 
 // --------------------------------------------------
+// BILLING / PAGOS
+// --------------------------------------------------
+
+ipcMain.handle('get-client-payments', async (_, clientId) => {
+  return await supabaseService.getClientPayments(clientId);
+});
+
+ipcMain.handle('get-all-payments', async () => {
+  return await supabaseService.getAllPayments();
+});
+
+
+ipcMain.handle('create-payment', async (_, paymentData) => {
+  return await supabaseService.createPayment(paymentData);
+});
+
+ipcMain.handle('delete-payment', async (_, id) => {
+  return await supabaseService.deletePayment(id);
+});
+
+// --------------------------------------------------
 // NAVIGATION / MESSAGING
 // --------------------------------------------------
 
