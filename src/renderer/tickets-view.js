@@ -15,6 +15,7 @@ async function renderTicketsView(filterClientId = "") {
     document.getElementById("assistant-detail").style.display = "none";
     document.getElementById("clients-view").style.display = "none";
     document.getElementById("billing-view").style.display = "none";
+    document.getElementById("audit-view").style.display = "none";
 
     const secondary = document.getElementById("integrated-log-container");
     if (secondary) secondary.remove();

@@ -268,7 +268,9 @@ ipcMain.handle('get-assistants', async () => {
 // --------------------------------------------------
 
 ipcMain.handle('redeploy-service', async (_, serviceId, environmentId) => {
-  return await railwayService.redeployService(serviceId, environmentId);
+  const result = await railwayService.redeployService(serviceId, environmentId);
+  await supabaseService.logAction('Reiniciar Servicio', `Reinicio de servicio ID: ${serviceId}`, 'servicios', serviceId);
+  return result;
 });
 
 
@@ -277,7 +279,9 @@ ipcMain.handle('redeploy-service', async (_, serviceId, environmentId) => {
 // --------------------------------------------------
 
 ipcMain.handle('delete-service', async (_, serviceId) => {
-  return await railwayService.deleteService(serviceId);
+  const result = await railwayService.deleteService(serviceId);
+  await supabaseService.logAction('Eliminar Servicio', `Eliminación de servicio ID: ${serviceId}`, 'servicios', serviceId);
+  return result;
 });
 
 
@@ -373,7 +377,9 @@ ipcMain.handle('get-service-variables', async (_, projectId, environmentId, serv
 // --------------------------------------------------
 
 ipcMain.handle('upsert-variable', async (_, projectId, environmentId, serviceId, name, value) => {
-  return await railwayService.upsertVariable(projectId, environmentId, serviceId, name, value);
+  const result = await railwayService.upsertVariable(projectId, environmentId, serviceId, name, value);
+  await supabaseService.logAction('Cambio Variable', `Se actualizó la variable ${name}`, 'variables', serviceId || projectId);
+  return result;
 });
 
 // --------------------------------------------------
@@ -438,15 +444,21 @@ ipcMain.handle('get-clients', async () => {
 });
 
 ipcMain.handle('create-client', async (_, clientData) => {
-  return await supabaseService.createClient(clientData);
+  const result = await supabaseService.createClient(clientData);
+  await supabaseService.logAction('Crear Cliente', `Se creó el cliente ${clientData.nombre}`, 'clientes', result.id);
+  return result;
 });
 
 ipcMain.handle('update-client', async (_, id, clientData) => {
-  return await supabaseService.updateClient(id, clientData);
+  const result = await supabaseService.updateClient(id, clientData);
+  await supabaseService.logAction('Actualizar Cliente', `Se actualizaron datos de ${clientData.nombre || 'cliente'}`, 'clientes', id);
+  return result;
 });
 
 ipcMain.handle('delete-client', async (_, id) => {
-  return await supabaseService.deleteClient(id);
+  const result = await supabaseService.deleteClient(id);
+  await supabaseService.logAction('Eliminar Cliente', `Se eliminó el cliente ID: ${id}`, 'clientes', id);
+  return result;
 });
 
 ipcMain.handle('link-project-client', async (_, railwayProjectId, clientId) => {
@@ -466,11 +478,16 @@ ipcMain.handle('get-tickets', async (_, filters) => {
 });
 
 ipcMain.handle('create-ticket', async (_, ticketData) => {
-  return await supabaseService.createTicket(ticketData);
+  const result = await supabaseService.createTicket(ticketData);
+  await supabaseService.logAction('Crear Ticket', `Nuevo ticket: ${ticketData.titulo}`, 'tickets', result.id);
+  return result;
 });
 
 ipcMain.handle('update-ticket', async (_, id, ticketData) => {
-  return await supabaseService.updateTicket(id, ticketData);
+  const result = await supabaseService.updateTicket(id, ticketData);
+  const statusMsg = ticketData.estado ? ` (Estado: ${ticketData.estado})` : "";
+  await supabaseService.logAction('Actualizar Ticket', `Ticket #${id} actualizado${statusMsg}`, 'tickets', id);
+  return result;
 });
 
 ipcMain.handle('delete-ticket', async (_, id) => {
@@ -479,6 +496,10 @@ ipcMain.handle('delete-ticket', async (_, id) => {
 
 ipcMain.handle('get-client-pending-tickets', async (_, clientId) => {
   return await supabaseService.getClientPendingTickets(clientId);
+});
+
+ipcMain.handle('get-audit-logs', async () => {
+  return await supabaseService.getAuditLogs();
 });
 
 // --------------------------------------------------
@@ -495,7 +516,9 @@ ipcMain.handle('get-all-payments', async () => {
 
 
 ipcMain.handle('create-payment', async (_, paymentData) => {
-  return await supabaseService.createPayment(paymentData);
+  const result = await supabaseService.createPayment(paymentData);
+  await supabaseService.logAction('Registrar Pago', `Pago de $${paymentData.monto} - ${paymentData.concepto}`, 'pagos', result.id);
+  return result;
 });
 
 ipcMain.handle('delete-payment', async (_, id) => {

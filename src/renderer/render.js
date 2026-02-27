@@ -161,8 +161,9 @@ function renderSidebar() {
   const isClientsActive = document.getElementById("clients-view").style.display === "block";
   const isTicketsActive = document.getElementById("tickets-view").style.display === "block";
   const isBillingActive = document.getElementById("billing-view").style.display === "block";
+  const isAuditActive = document.getElementById("audit-view").style.display === "block";
 
-  if (!selectedProjectId && assistants.length > 0 && !isDashboardActive && !isClientsActive && !isTicketsActive && !isBillingActive) {
+  if (!selectedProjectId && assistants.length > 0 && !isDashboardActive && !isClientsActive && !isTicketsActive && !isBillingActive && !isAuditActive) {
     setTimeout(() => {
       const first = list.querySelector('.assistant-item');
       if (first) first.click();
@@ -176,18 +177,21 @@ function renderSidebar() {
   const btnBill = document.getElementById("btn-open-billing");
 
   // Limpiar activos de navegación principal
-  [btnDash, btnCli, btnTkt, btnBill].forEach(b => b?.classList.remove("active"));
+  const btnAudit = document.getElementById("btn-open-audit");
+  [btnDash, btnCli, btnTkt, btnBill, btnAudit].forEach(b => b?.classList.remove("active"));
 
   if (!selectedProjectId) {
     const dashGlobal = document.getElementById("dashboard-global").style.display === "block";
     const clientsView = document.getElementById("clients-view").style.display === "block";
     const ticketsView = document.getElementById("tickets-view").style.display === "block";
     const billingView = document.getElementById("billing-view").style.display === "block";
+    const auditView = document.getElementById("audit-view").style.display === "block";
 
     if (dashGlobal) btnDash?.classList.add("active");
     if (clientsView) btnCli?.classList.add("active");
     if (ticketsView) btnTkt?.classList.add("active");
     if (billingView) btnBill?.classList.add("active");
+    if (auditView) btnAudit?.classList.add("active");
   }
 }
 
@@ -218,6 +222,7 @@ async function renderDetail(a) {
   document.getElementById("clients-view").style.display = "none";
   document.getElementById("tickets-view").style.display = "none";
   document.getElementById("billing-view").style.display = "none";
+  document.getElementById("audit-view").style.display = "none";
 
   const detailPanel = document.getElementById("assistant-detail");
   if (detailPanel) detailPanel.style.display = "block";
@@ -676,6 +681,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderSidebar();
     });
   }
+  const btnOpenAudit = document.getElementById("btn-open-audit");
+  if (btnOpenAudit) {
+    btnOpenAudit.addEventListener("click", () => {
+      renderAuditView();
+      renderSidebar();
+    });
+  }
 });
 
 /**
@@ -689,6 +701,7 @@ async function renderMainDashboard() {
   document.getElementById("clients-view").style.display = "none";
   document.getElementById("tickets-view").style.display = "none";
   document.getElementById("billing-view").style.display = "none";
+  document.getElementById("audit-view").style.display = "none";
 
   const dash = document.getElementById("dashboard-global");
   dash.style.display = "block";

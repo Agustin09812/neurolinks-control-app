@@ -159,6 +159,9 @@ contextBridge.exposeInMainWorld('api', {
   getClientPendingTickets: (clientId) =>
     ipcRenderer.invoke('get-client-pending-tickets', clientId),
 
+  getAuditLogs: () =>
+    ipcRenderer.invoke('get-audit-logs'),
+
   // --------------------------------------------------
   // NAVIGATION
   // -------------------------------------------------

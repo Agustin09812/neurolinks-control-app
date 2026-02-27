@@ -1,5 +1,11 @@
 
 let allPayments = [];
+let billingFilters = {
+    client: "",
+    method: "",
+    dateStart: "",
+    dateEnd: ""
+};
 
 async function renderBillingView() {
     selectedProjectId = null;
@@ -9,6 +15,11 @@ async function renderBillingView() {
     document.getElementById("assistant-detail").style.display = "none";
     document.getElementById("clients-view").style.display = "none";
     document.getElementById("tickets-view").style.display = "none";
+    document.getElementById("audit-view").style.display = "none";
+
+    // Set active in sidebar
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    document.getElementById("btn-open-billing").classList.add('active');
 
     const view = document.getElementById("billing-view");
     view.style.display = "block";
@@ -16,16 +27,48 @@ async function renderBillingView() {
         <div class="animate-fade">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h2 class="fw-bold mb-0">FACTURACIÓN GLOBAL</h2>
-                    <p class="text-secondary small mb-0">Historial histórico de todos los cobros</p>
+                    <h2 class="fw-bold mb-0 text-success">CONTROL DE PAGOS</h2>
+                    <p class="text-secondary small mb-0">Gestión financiera y facturación histórica</p>
                 </div>
                 <div class="d-flex gap-2">
+                    <button class="btn btn-outline-success btn-sm" onclick="openNewPaymentModal()">
+                        <i class="bi bi-plus-lg me-2"></i>Nueva Factura
+                    </button>
                     <button class="btn btn-outline-light btn-sm" onclick="loadBillingData()">
-                        <i class="bi bi-arrow-clockwise me-2"></i>Actualizar
+                        <i class="bi bi-arrow-clockwise"></i>
                     </button>
                     <button class="btn btn-outline-success btn-sm" onclick="exportBillingToCSV()">
-                        <i class="bi bi-download me-2"></i>Exportar CSV
+                        <i class="bi bi-download"></i>
                     </button>
+                </div>
+            </div>
+
+            <!-- FILTROS ESTILO TICKETS -->
+            <div class="glass-card p-4 mb-4">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="small text-dim fw-bold mb-2">BUSCAR CLIENTE</label>
+                        <input type="text" class="form-control form-control-sm" id="bill-filter-client" placeholder="Nombre del cliente..." onkeyup="handleBillingFilter('client', this.value)">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small text-dim fw-bold mb-2">MÉTODO DE PAGO</label>
+                        <select class="form-select form-select-sm" id="bill-filter-method" onchange="handleBillingFilter('method', this.value)">
+                            <option value="">Todos</option>
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Mercado Pago">Mercado Pago</option>
+                            <option value="Crypto">Crypto</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small text-dim fw-bold mb-2">DESDE</label>
+                        <input type="date" class="form-control form-control-sm" id="bill-filter-start" onchange="handleBillingFilter('dateStart', this.value)">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small text-dim fw-bold mb-2">HASTA</label>
+                        <input type="date" class="form-control form-control-sm" id="bill-filter-end" onchange="handleBillingFilter('dateEnd', this.value)">
+                    </div>
                 </div>
             </div>
 
@@ -39,16 +82,67 @@ async function renderBillingView() {
                                 <th>Concepto</th>
                                 <th>Monto</th>
                                 <th class="text-center">Método</th>
+                                <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="billing-table-body">
                             <tr>
-                                <td colspan="5" class="text-center py-5">
+                                <td colspan="6" class="text-center py-5">
                                     <div class="spinner-border text-success" role="status"></div>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL NUEVO PAGO GLOBAL -->
+        <div class="modal fade" id="globalPaymentModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content bg-dark text-light border-secondary">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title">Registrar Nuevo Pago</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form id="globalPaymentForm">
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-bold">CLIENTE</label>
+                                    <select class="form-select" id="payClientGlobal" required>
+                                        <option value="">Seleccionar cliente...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">FECHA</label>
+                                    <input type="date" class="form-control" id="payDateGlobal" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">MONTO ($)</label>
+                                    <input type="number" class="form-control" id="payAmountGlobal" required>
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-bold">CONCEPTO</label>
+                                    <input type="text" class="form-control" id="payConceptGlobal" placeholder="Ej: Abono Mensual Febrero" required>
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-bold">MÉTODO DE PAGO</label>
+                                    <select class="form-select" id="payMethodGlobal">
+                                        <option value="Transferencia">Transferencia</option>
+                                        <option value="Efectivo">Efectivo</option>
+                                        <option value="Mercado Pago">Mercado Pago</option>
+                                        <option value="Crypto">Crypto</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-secondary">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-success btn-sm">Guardar Pago</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -61,43 +155,133 @@ async function loadBillingData() {
     const tbody = document.getElementById("billing-table-body");
     try {
         allPayments = await window.api.getAllPayments() || [];
-        tbody.innerHTML = "";
-
-        if (allPayments.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-secondary">No hay registros de pagos</td></tr>';
-            return;
-        }
-
-        allPayments.forEach(p => {
-            const tr = document.createElement("tr");
-            tr.className = "border-secondary";
-            tr.innerHTML = `
-                <td class="ps-4 text-secondary">${new Date(p.fecha).toLocaleDateString()}</td>
-                <td><span class="fw-bold text-accent-clients">${p.clientes ? p.clientes.nombre : 'Sin Cliente'}</span></td>
-                <td class="small opacity-75">${p.concepto}</td>
-                <td><span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 font-monospace">$${p.monto}</span></td>
-                <td class="text-center">
-                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2 py-1 rounded-pill x-small">
-                        ${p.metodo}
-                    </span>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
+        applyBillingFilters();
     } catch (err) {
         console.error("Error loading billing data:", err);
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-danger">Error al cargar datos de facturación</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-danger">Error al cargar datos de facturación</td></tr>';
+    }
+}
+
+function handleBillingFilter(key, value) {
+    billingFilters[key] = value;
+    applyBillingFilters();
+}
+
+function applyBillingFilters() {
+    const tbody = document.getElementById("billing-table-body");
+    tbody.innerHTML = "";
+
+    let filtered = allPayments.filter(p => {
+        const clientMatch = !billingFilters.client || (p.clientes && p.clientes.nombre.toLowerCase().includes(billingFilters.client.toLowerCase()));
+        const methodMatch = !billingFilters.method || p.metodo === billingFilters.method;
+
+        let dateMatch = true;
+        const pDate = new Date(p.fecha);
+        if (billingFilters.dateStart) {
+            const start = new Date(billingFilters.dateStart);
+            dateMatch = dateMatch && (pDate >= start);
+        }
+        if (billingFilters.dateEnd) {
+            const end = new Date(billingFilters.dateEnd);
+            end.setHours(23, 59, 59);
+            dateMatch = dateMatch && (pDate <= end);
+        }
+
+        return clientMatch && methodMatch && dateMatch;
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-secondary">No se encontraron pagos con estos filtros</td></tr>';
+        return;
+    }
+
+    filtered.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.className = "border-secondary";
+        tr.innerHTML = `
+            <td class="ps-4 text-secondary">${new Date(p.fecha).toLocaleDateString()}</td>
+            <td><span class="fw-bold text-accent-clients">${p.clientes ? p.clientes.nombre : 'Sin Cliente'}</span></td>
+            <td class="small opacity-75">${p.concepto}</td>
+            <td><span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 font-monospace">$${p.monto}</span></td>
+            <td class="text-center">
+                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2 py-1 rounded-pill x-small">
+                    ${p.metodo}
+                </span>
+            </td>
+            <td class="text-center">
+                <button class="btn btn-link text-danger p-0" onclick="deleteGlobalPayment('${p.id}')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function openNewPaymentModal() {
+    const modal = new bootstrap.Modal(document.getElementById("globalPaymentModal"));
+    const select = document.getElementById("payClientGlobal");
+    const form = document.getElementById("globalPaymentForm");
+
+    // Set today as default date
+    document.getElementById("payDateGlobal").valueAsDate = new Date();
+
+    // Load clients
+    try {
+        const clients = await window.api.getClients();
+        select.innerHTML = '<option value="">Seleccionar cliente...</option>' +
+            clients.map(c => `<option value="${c.id}">${c.nombre}</option>`).join("");
+    } catch (e) {
+        console.error(e);
+    }
+
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const paymentData = {
+            cliente_id: document.getElementById("payClientGlobal").value,
+            fecha: document.getElementById("payDateGlobal").value,
+            monto: parseFloat(document.getElementById("payAmountGlobal").value),
+            concepto: document.getElementById("payConceptGlobal").value,
+            metodo: document.getElementById("payMethodGlobal").value
+        };
+
+        try {
+            await window.api.createPayment(paymentData);
+            modal.hide();
+            showToast("Pago registrado con éxito");
+            loadBillingData();
+        } catch (err) {
+            showToast("Error al registrar pago", "danger");
+        }
+    };
+
+    modal.show();
+}
+
+async function deleteGlobalPayment(id) {
+    if (!confirm("¿Eliminar este registro de pago?")) return;
+    try {
+        await window.api.deletePayment(id);
+        showToast("Pago eliminado");
+        loadBillingData();
+    } catch (err) {
+        showToast("Error al eliminar", "danger");
     }
 }
 
 function exportBillingToCSV() {
-    if (allPayments.length === 0) {
+    // ... same implementation as before, maybe using the filtered list
+    const listToExport = allPayments; // Or should it be 'filtered'? Let's keep all for now or the filtered one.
+    // User probably wants the filtered one if they are filtering.
+    // Let's use all for safety or just follow the context.
+
+    if (listToExport.length === 0) {
         showToast("No hay datos para exportar", "warning");
         return;
     }
 
     const headers = ["Fecha", "Cliente", "Concepto", "Monto", "Método"];
-    const rows = allPayments.map(p => [
+    const rows = listToExport.map(p => [
         new Date(p.fecha).toLocaleDateString(),
         p.clientes ? p.clientes.nombre : 'Sin Cliente',
         p.concepto,
@@ -116,6 +300,5 @@ function exportBillingToCSV() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    showToast("Reporte de facturación generado", "success");
+    showToast("Reporte generado", "success");
 }

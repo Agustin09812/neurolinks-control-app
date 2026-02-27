@@ -187,6 +187,16 @@ const supabaseService = {
         if (error) console.error('Error logging action:', error);
     },
 
+    async getAuditLogs() {
+        const { data, error } = await supabase
+            .from('auditoria_acciones')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(100);
+        if (error) throw error;
+        return data;
+    },
+
     /**
      * Gestión de Pagos (Billing)
      */

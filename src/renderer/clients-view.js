@@ -10,6 +10,7 @@ async function renderClientsView() {
     document.getElementById("assistant-detail").style.display = "none";
     document.getElementById("tickets-view").style.display = "none";
     document.getElementById("billing-view").style.display = "none";
+    document.getElementById("audit-view").style.display = "none";
 
     // Clear secondary views if any
     const secondary = document.getElementById("integrated-log-container");
@@ -114,7 +115,7 @@ async function renderClientsView() {
                                     <label class="form-label text-dim small fw-bold">TELÉFONO</label>
                                     <input type="text" class="form-control" id="clientPhone">
                                 </div>
-                                <div class="col-md-12">
+                                <div class="col-md-6">
                                     <label class="form-label text-dim small fw-bold">PLAN CONTRATADO</label>
                                     <select class="form-select" id="clientPlan">
                                         <option value="Standard">Standard</option>
@@ -122,6 +123,10 @@ async function renderClientsView() {
                                         <option value="Enterprise">Enterprise</option>
                                         <option value="Baja">Baja</option>
                                     </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-dim small fw-bold">PRÓX. VENCIMIENTO</label>
+                                    <input type="date" class="form-control" id="clientVencimiento">
                                 </div>
                             </div>
                         </div>
@@ -289,6 +294,20 @@ async function renderClientsList() {
                 <span class="badge ${c.plan === 'Premium' ? 'bg-danger text-white' : c.plan === 'Enterprise' ? 'bg-warning text-dark' : c.plan === 'Baja' ? 'bg-secondary' : 'border border-secondary text-dim'}">
                     ${c.plan || 'Standard'}
                 </span>
+                ${(() => {
+                if (!c.vencimiento) return '';
+                const vDate = new Date(c.vencimiento);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const isExpired = vDate < today;
+                return `
+                        <div class="x-small mt-1 ${isExpired ? 'text-danger fw-bold animate-pulse' : 'text-dim'}">
+                            <i class="bi ${isExpired ? 'bi-exclamation-triangle-fill' : 'bi-calendar-event'} me-1"></i>
+                            ${new Date(c.vencimiento).toLocaleDateString()}
+                            ${isExpired ? '<span class="ms-1">[VENCIDO]</span>' : ''}
+                        </div>
+                    `;
+            })()}
             </td>
             <td id="pending-tickets-${c.id}">
                 <div class="spinner-border spinner-border-sm text-dim" style="width: 12px; height: 12px;"></div>
@@ -411,6 +430,7 @@ async function openEditClient(id) {
     document.getElementById("clientEmail").value = client.email || "";
     document.getElementById("clientPhone").value = client.telefono || "";
     document.getElementById("clientPlan").value = client.plan || "Standard";
+    document.getElementById("clientVencimiento").value = client.vencimiento || "";
     document.getElementById("clientModalTitle").innerText = "Editar Cliente";
 
     new bootstrap.Modal(document.getElementById("clientModal")).show();
@@ -424,7 +444,8 @@ async function handleClientSubmit(e) {
         empresa: document.getElementById("clientCompany").value,
         email: document.getElementById("clientEmail").value,
         telefono: document.getElementById("clientPhone").value,
-        plan: document.getElementById("clientPlan").value
+        plan: document.getElementById("clientPlan").value,
+        vencimiento: document.getElementById("clientVencimiento").value || null
     };
 
     try {
