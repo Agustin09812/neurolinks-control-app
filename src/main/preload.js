@@ -45,6 +45,9 @@ contextBridge.exposeInMainWorld('api', {
   fetchDeploymentLogs: (deploymentId) =>
     ipcRenderer.invoke('fetch-deployment-logs', deploymentId),
 
+  downloadLogs: (deploymentId, serviceName) =>
+    ipcRenderer.invoke('download-logs', deploymentId, serviceName),
+
   onLoadLogs: (callback) => {
     ipcRenderer.on('load-logs', (_, deploymentId) => {
       callback(deploymentId);

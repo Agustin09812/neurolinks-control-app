@@ -40,9 +40,6 @@
         <a href="#" class="nav-link text-white" id="btn-open-tickets">
           <i class="bi bi-ticket-perforated me-2"></i> Tickets
         </a>
-        <a href="#" class="nav-link text-white" id="btn-open-logs">
-          <i class="bi bi-journal-text me-2"></i> Logs
-        </a>
       </nav>
 
       <div id="assistant-list" class="flex-grow-1 overflow-auto p-3">
@@ -53,12 +50,24 @@
     <!-- PANEL DERECHO -->
     <div class="flex-grow-1 overflow-hidden d-flex flex-column">
       <!-- DASHBOARD GLOBAL (NUEVO) -->
-      <div id="dashboard-global" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+      <div id="dashboard-global" class="flex-grow-1 overflow-auto p-4">
       </div>
 
       <!-- DETALLE DEL ASISTENTE (EXISTENTE) -->
-      <div id="assistant-detail" class="flex-grow-1 overflow-auto p-4">
+      <div id="assistant-detail" class="flex-grow-1 overflow-auto p-4" style="display:none;">
         <h5 class="text-secondary">Seleccioná un asistente</h5>
+      </div>
+
+      <!-- VISTA CLIENTES (NUEVA) -->
+      <div id="clients-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+      </div>
+
+      <!-- VISTA TICKETS (NUEVA) -->
+      <div id="tickets-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+      </div>
+
+      <!-- VISTA LOGS / VARIABLES (NUEVA INTEGRADA) -->
+      <div id="secondary-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
       </div>
     </div>
 
@@ -181,9 +190,23 @@
 
   <!-- JS -->
   <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="clients-view.js" defer></script>
+  <script src="tickets-view.js" defer></script>
+  <script src="logs-view.js" defer></script>
+  <script src="variables-view.js" defer></script>
   <script src="render.js" defer></script>
   <!-- Templates de despliegue -->
   <script src="deploy-template.js" defer></script>
+
+  <!-- Toast Container -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+    <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="toastMessage"></div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

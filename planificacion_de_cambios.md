@@ -49,8 +49,17 @@ Este documento sirve como hoja de ruta operativa para la transformación del pan
 
 ---
 
+## 🚀 Fase 5: Mantenimiento y Distribución
+*Objetivo: Facilitar la entrega al usuario final y el monitoreo profundo.*
+
+| Tarea | Prioridad | Estado | Test de Verificación |
+| :--- | :---: | :---: | :--- |
+| **Actualización Automática (Internal)** | Alta | ✅ Completado | Descarga y auto-instalación desde el splash screen. |
+| **Dashboard como Vista Inicial** | Media | ✅ Completado | El Dashboard Maestro es lo primero que ve el usuario. |
+| **Descarga de Logs por Proyecto** | Alta | ✅ Completado | Opción para descargar logs históricos de Railway dentro del detalle del proyecto. |
+
+---
+
 ## 📓 Notas de Progreso
-*   **[2026-02-26]**: Finalización de la integración CRM + Tickets.
-*   **Nueva Hoja de Ruta**: Se han priorizado el Dashboard Maestro, las Alertas de Escritorio y el control de Vencimientos/Planes para la siguiente etapa.
-base, IPC handlers, y UI para gestión de clientes y vinculación de proyectos.
-*   **Próximo paso sugerido**: Continuar con la **Fase 2: Rediseño Visual (UX/UI)** para unificar la estética del proyecto.
+*   **[2026-02-27]**: Implementación de **Actualización Automática** y **Descarga de Logs por Proyecto**. El Dashboard Maestro ahora es la vista inicial.
+*   **Próximo paso sugerido**: Pulir detalles de UI o avanzar con la exportación de otros datos si es necesario.

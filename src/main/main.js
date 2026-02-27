@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { app, BrowserWindow, shell, ipcMain, Menu, Notification } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, Menu, Notification, dialog } = require('electron');
 const path = require('path');
 const https = require("https");
 const fs = require('fs');
@@ -393,6 +393,35 @@ ipcMain.handle('get-service-domains', async (_, projectId, environmentId, servic
 });
 
 // --------------------------------------------------
+// LOGS
+// --------------------------------------------------
+
+ipcMain.handle('download-logs', async (_, deploymentId, serviceName) => {
+  try {
+    const logs = await railwayService.fetchDeploymentLogs(deploymentId);
+    if (!logs || logs.length === 0) return { success: false, message: "No se encontraron logs." };
+
+    const content = logs.map(l => `[${l.timestamp}] [${l.severity}] ${l.message}`).join('\n');
+
+    const { filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Guardar Logs de Servicio',
+      defaultPath: `${serviceName}-${new Date().toISOString().split('T')[0]}.txt`,
+      filters: [{ name: 'Text Files', extensions: ['txt'] }]
+    });
+
+    if (filePath) {
+      fs.writeFileSync(filePath, content);
+      return { success: true, path: filePath };
+    }
+    return { success: false, message: "Cancelado por el usuario" };
+
+  } catch (err) {
+    console.error("Error descargando logs:", err);
+    return { success: false, message: err.message };
+  }
+});
+
+// --------------------------------------------------
 // APP VERSION
 // --------------------------------------------------
 
@@ -473,7 +502,7 @@ async function startBackgroundMonitoring() {
 
   // Guardar estado inicial
   try {
-    const assistants = await railwayService.getProjects();
+    const assistants = await railwayService.getAssistants();
     assistants.forEach(a => {
       a.services.forEach(s => {
         lastAssistantsState.set(`${a.id}-${s.id}`, s.status);
@@ -486,7 +515,7 @@ async function startBackgroundMonitoring() {
   // Intervalo de chequeo (cada 1 minuto)
   setInterval(async () => {
     try {
-      const assistants = await railwayService.getProjects();
+      const assistants = await railwayService.getAssistants();
 
       assistants.forEach(a => {
         a.services.forEach(s => {

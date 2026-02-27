@@ -165,7 +165,7 @@ const railwayService = {
         }
       }
     `;
-    const result = await railwayQuery(query, { deploymentId, limit: 500 });
+    const result = await railwayQuery(query, { deploymentId, limit: 1000 });
     return result.data?.deploymentLogs || [];
   },
 

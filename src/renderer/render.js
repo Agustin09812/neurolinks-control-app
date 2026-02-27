@@ -1,6 +1,48 @@
 let assistants = [];
 let selectedProjectId = null;
 
+// --------------------------------------------------
+// TOAST NOTIFICATIONS (UNIFICADO)
+// --------------------------------------------------
+function showToast(message, type = "success") {
+  const container = document.querySelector(".toast-container");
+  if (!container) {
+    // Fallback por si no existe el contenedor (aunque debería estar en index.html)
+    alert(message);
+    return;
+  }
+
+  const toastId = "toast-" + Date.now();
+  const icon = type === "success" ? "bi-check-circle-fill" : (type === "warning" ? "bi-exclamation-triangle-fill" : "bi-exclamation-circle-fill");
+
+  // Mapeo de colores bootstrap
+  const bgClass = type === 'danger' ? 'bg-danger' : (type === 'warning' ? 'bg-warning text-dark' : 'bg-dark');
+
+  const toastHtml = `
+    <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body d-flex align-items-center gap-2">
+          <i class="bi ${icon}"></i>
+          <div>${message}</div>
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  `;
+
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = toastHtml;
+  const toastEl = wrapper.firstElementChild;
+  container.appendChild(toastEl);
+
+  const bsToast = new bootstrap.Toast(toastEl, { delay: 4000 });
+  bsToast.show();
+
+  toastEl.addEventListener("hidden.bs.toast", () => {
+    toastEl.remove();
+  });
+}
+
 
 // --------------------------------------------------
 // LOAD ASSISTANTS
@@ -21,6 +63,9 @@ async function loadAssistants(preserveSelection = true) {
   if (preserveSelection && currentSelected) {
     const item = document.querySelector(`[data-id="${currentSelected}"]`);
     if (item) item.click();
+  } else if (!selectedProjectId) {
+    // Si no hay selección, estamos en el dashboard, refrescarlo con la nueva data de bots
+    renderMainDashboard();
   }
 }
 
@@ -109,10 +154,12 @@ function renderSidebar() {
     updateAssistantBadge(a.id);
   });
 
-  // Solo click automático si no hay nada seleccionado Y no estamos en el Dashboard Maestro
+  // Solo click automático si no hay nada seleccionado Y no estamos en una vista global
   const isDashboardActive = document.getElementById("dashboard-global").style.display === "block";
+  const isClientsActive = document.getElementById("clients-view").style.display === "block";
+  const isTicketsActive = document.getElementById("tickets-view").style.display === "block";
 
-  if (!selectedProjectId && assistants.length > 0 && !isDashboardActive) {
+  if (!selectedProjectId && assistants.length > 0 && !isDashboardActive && !isClientsActive && !isTicketsActive) {
     setTimeout(() => {
       const first = list.querySelector('.assistant-item');
       if (first) first.click();
@@ -121,12 +168,20 @@ function renderSidebar() {
 
   // Actualizar estado del link dashboard en la sidebar
   const btnDash = document.getElementById("btn-reload");
-  if (btnDash) {
-    if (selectedProjectId) {
-      btnDash.classList.remove("active");
-    } else if (isDashboardActive) {
-      btnDash.classList.add("active");
-    }
+  const btnCli = document.getElementById("btn-open-clients");
+  const btnTkt = document.getElementById("btn-open-tickets");
+
+  // Limpiar activos de navegación principal
+  [btnDash, btnCli, btnTkt].forEach(b => b?.classList.remove("active"));
+
+  if (!selectedProjectId) {
+    const dashGlobal = document.getElementById("dashboard-global").style.display === "block";
+    const clientsView = document.getElementById("clients-view").style.display === "block";
+    const ticketsView = document.getElementById("tickets-view").style.display === "block";
+
+    if (dashGlobal) btnDash?.classList.add("active");
+    if (clientsView) btnCli?.classList.add("active");
+    if (ticketsView) btnTkt?.classList.add("active");
   }
 }
 
@@ -152,12 +207,19 @@ async function updateAssistantBadge(projectId) {
 
 async function renderDetail(a) {
 
-  // Ocultar dashboard si estaba activo
-  const dashGlobal = document.getElementById("dashboard-global");
-  if (dashGlobal) dashGlobal.style.display = "none";
+  // Ocultar todas las vistas posibles
+  document.getElementById("dashboard-global").style.display = "none";
+  document.getElementById("clients-view").style.display = "none";
+  document.getElementById("tickets-view").style.display = "none";
 
   const detailPanel = document.getElementById("assistant-detail");
   if (detailPanel) detailPanel.style.display = "block";
+
+  // Limpiar vistas integradas previas
+  const oldLog = document.getElementById("integrated-log-container");
+  if (oldLog) oldLog.remove();
+  const oldVar = document.getElementById("integrated-var-container");
+  if (oldVar) oldVar.remove();
 
   selectedProjectId = a.id;
 
@@ -183,7 +245,7 @@ async function renderDetail(a) {
       if (count > 0) {
         ticketsBadge = `
           <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 p-2 rounded animate-fade d-flex align-items-center gap-2" 
-               style="cursor:pointer" onclick="window.api.openTickets()">
+               style="cursor:pointer" onclick="renderTicketsView('${linkedClient.clientes.id}')">
             <i class="bi bi-ticket-perforated-fill"></i>
             <span>${count} Tickets Pendientes</span>
           </div>
@@ -223,10 +285,10 @@ async function renderDetail(a) {
         <div class="small text-secondary mb-3">Último deploy: ${formatDate(service.createdAt)}</div>
         <div class="d-flex justify-content-between align-items-center">
           <div class="d-flex gap-2">
-            <button class="btn btn-outline-info btn-sm" data-bs-toggle="tooltip" title="Logs" ${!service.deploymentId ? "disabled" : ""} onclick="window.api.openLogs('${service.deploymentId}')">
+            <button class="btn btn-outline-info btn-sm" data-bs-toggle="tooltip" title="Logs" ${!service.deploymentId ? "disabled" : ""} onclick="renderLogsView('${service.deploymentId}', '${service.name}')">
               <i class="bi bi-terminal"></i>
             </button>
-            <button class="btn btn-outline-warning btn-sm" data-bs-toggle="tooltip" title="Variables" onclick="window.api.openVariables('${service.projectId}','${service.environmentId}','${service.id}')">
+            <button class="btn btn-outline-warning btn-sm" data-bs-toggle="tooltip" title="Variables" onclick="renderVariablesView('${service.projectId}','${service.environmentId}','${service.id}', '${service.name}')">
               <i class="bi bi-sliders"></i>
             </button>
           </div>
@@ -241,6 +303,7 @@ async function renderDetail(a) {
               <button class="btn btn-sm btn-outline-light dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
               <ul class="dropdown-menu dropdown-menu-dark">
                 <li><button class="dropdown-item" onclick="handleRedeploy('${service.id}', '${service.environmentId}')"><i class="bi bi-arrow-clockwise me-2"></i>Redeploy</button></li>
+                <li><button class="dropdown-item" ${!service.deploymentId ? "disabled" : ""} onclick="handleDownloadLogs('${service.deploymentId}', \`${a.name}\`)"><i class="bi bi-download me-2"></i>Descargar Logs</button></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><button class="dropdown-item text-danger" onclick="handleDelete('${service.id}')"><i class="bi bi-trash me-2"></i>Remove</button></li>
               </ul>
@@ -270,7 +333,7 @@ async function renderDetail(a) {
         </div>
         <div id="client-badge-container" class="d-flex gap-2">
           ${linkedClient ? `
-            <div class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-20 p-2 d-flex align-items-center gap-2" 
+            <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 p-2 d-flex align-items-center gap-2" 
                  style="cursor:pointer" onclick="openLinkClient('${a.id}')">
               <i class="bi bi-person-fill"></i>
               <span>${linkedClient.clientes.nombre}</span>
@@ -336,6 +399,19 @@ async function handleRedeploy(serviceId, environmentId) {
 
   } catch (error) {
     console.error("Error redeploy:", error);
+  }
+}
+
+async function handleDownloadLogs(deploymentId, serviceName) {
+  try {
+    const result = await window.api.downloadLogs(deploymentId, serviceName);
+    if (!result.success) {
+      if (result.message !== "Cancelado por el usuario") {
+        alert("Error: " + result.message);
+      }
+    }
+  } catch (err) {
+    alert("Error al descargar logs: " + err.message);
   }
 }
 
@@ -573,21 +649,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnOpenClients = document.getElementById("btn-open-clients");
   if (btnOpenClients) {
     btnOpenClients.addEventListener("click", () => {
-      window.api.openClients();
+      renderClientsView();
+      renderSidebar();
     });
   }
 
   const btnOpenTickets = document.getElementById("btn-open-tickets");
   if (btnOpenTickets) {
     btnOpenTickets.addEventListener("click", () => {
-      window.api.openTickets();
-    });
-  }
-
-  const btnOpenLogs = document.getElementById("btn-open-logs");
-  if (btnOpenLogs) {
-    btnOpenLogs.addEventListener("click", () => {
-      // Implementación futura
+      renderTicketsView();
+      renderSidebar();
     });
   }
 });
@@ -600,6 +671,9 @@ async function renderMainDashboard() {
   document.querySelectorAll(".assistant-item").forEach(el => el.classList.remove("active-assistant"));
 
   document.getElementById("assistant-detail").style.display = "none";
+  document.getElementById("clients-view").style.display = "none";
+  document.getElementById("tickets-view").style.display = "none";
+
   const dash = document.getElementById("dashboard-global");
   dash.style.display = "block";
   dash.innerHTML = `
@@ -610,6 +684,7 @@ async function renderMainDashboard() {
 
   try {
     const clients = await window.api.getClients();
+    const activeClients = clients.filter(c => c.plan !== 'Baja');
     const tickets = await window.api.getTickets();
     const pendingTickets = tickets.filter(t => t.estado !== 'Cerrado');
 
@@ -644,18 +719,18 @@ async function renderMainDashboard() {
 
           <!-- CARD CLIENTES -->
           <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="window.api.openClients()">
-              <div class="display-5 fw-bold text-info">${clients.length}</div>
+            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="renderClientsView()">
+              <div class="display-5 fw-bold text-danger">${activeClients.length}</div>
               <div class="text-secondary text-uppercase small ls-1">Clientes Activos</div>
               <div class="mt-3">
-                 <button class="btn btn-sm btn-outline-info">Gestionar Clientes</button>
+                 <button class="btn btn-sm btn-outline-danger">Gestionar Clientes</button>
               </div>
             </div>
           </div>
 
           <!-- CARD TICKETS -->
           <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="window.api.openTickets()">
+            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="renderTicketsView()">
               <div class="display-5 fw-bold text-warning">${pendingTickets.length}</div>
               <div class="text-secondary text-uppercase small ls-1">Tickets Pendientes</div>
               <div class="mt-3">
@@ -697,10 +772,10 @@ async function renderMainDashboard() {
              <div class="glass-card p-4">
                <h5 class="mb-3">Quick Actions</h5>
                <div class="d-grid gap-2">
-                  <button class="btn btn-outline-light text-start btn-sm" onclick="window.api.openClients()">
+                  <button class="btn btn-outline-light text-start btn-sm" onclick="renderClientsView()">
                     <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
                   </button>
-                  <button class="btn btn-outline-light text-start btn-sm" onclick="window.api.openTickets()">
+                  <button class="btn btn-outline-light text-start btn-sm" onclick="renderTicketsView()">
                     <i class="bi bi-plus-circle me-2"></i> Crear Ticket
                   </button>
                   <button class="btn btn-outline-success text-start btn-sm" id="dashboard-refresh">
@@ -729,11 +804,11 @@ async function init() {
   const el = document.getElementById("app-version");
   if (el) el.textContent = "v" + version;
 
-  // Cargar asistentes sin auto-click
-  await loadAssistants(false);
-
-  // Mostrar dashboard por defecto al arrancar
+  // 1. Mostrar dashboard inmediatamente (con spinner interno)
   renderMainDashboard();
+
+  // 2. Cargar datos en segundo plano
+  await loadAssistants(false);
 }
 
 init();
