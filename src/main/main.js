@@ -2,6 +2,7 @@ require('dotenv').config();
 const { app, BrowserWindow, shell, ipcMain, Menu, Notification } = require('electron');
 const path = require('path');
 const https = require("https");
+const fs = require('fs');
 
 const railwayService = require('../services/railwayService');
 const supabaseService = require('../services/supabaseService');
@@ -155,6 +156,42 @@ function isNewerVersion(remote, local) {
 
   return false;
 }
+
+// Handler para descarga automática de actualizaciones
+ipcMain.on('start-download-update', async (event, downloadUrl) => {
+  const tempPath = path.join(app.getPath('temp'), 'update-neurolinks.exe');
+  const file = fs.createWriteStream(tempPath);
+
+  https.get(downloadUrl, (response) => {
+    // Manejar redirecciones de GitHub
+    if (response.statusCode === 302 || response.statusCode === 301) {
+      return ipcMain.emit('start-download-update', event, response.headers.location);
+    }
+
+    const totalSize = parseInt(response.headers['content-length'], 10);
+    let downloadedSize = 0;
+
+    response.on('data', (chunk) => {
+      downloadedSize += chunk.length;
+      if (totalSize) {
+        const progress = Math.round((downloadedSize / totalSize) * 100);
+        event.reply('download-progress', progress);
+      }
+    });
+
+    response.pipe(file);
+
+    file.on('finish', () => {
+      file.close();
+      shell.openPath(tempPath).then(() => {
+        app.quit();
+      });
+    });
+  }).on('error', (err) => {
+    fs.unlink(tempPath, () => { });
+    console.error("Error en descarga:", err.message);
+  });
+});
 
 // =======================================================
 

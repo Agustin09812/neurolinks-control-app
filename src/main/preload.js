@@ -103,6 +103,16 @@ contextBridge.exposeInMainWorld('api', {
     });
   },
 
+  startDownloadUpdate: (url) => {
+    ipcRenderer.send('start-download-update', url);
+  },
+
+  onDownloadProgress: (callback) => {
+    ipcRenderer.on('download-progress', (_, progress) => {
+      callback(progress);
+    });
+  },
+
   // --------------------------------------------------
   // SUPABASE / CRM
   // --------------------------------------------------
