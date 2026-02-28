@@ -17,6 +17,12 @@ async function renderBillingView() {
     document.getElementById("tickets-view").style.display = "none";
     document.getElementById("audit-view").style.display = "none";
 
+    // Limpiar contenedores secundarios
+    ["integrated-log-container", "integrated-var-container", "integrated-chat-container"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    });
+
     // Set active in sidebar
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     document.getElementById("btn-open-billing").classList.add('active');

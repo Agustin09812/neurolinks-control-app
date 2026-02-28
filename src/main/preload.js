@@ -32,6 +32,9 @@ contextBridge.exposeInMainWorld('api', {
   redeployService: (serviceId, environmentId) =>
     ipcRenderer.invoke('redeploy-service', serviceId, environmentId),
 
+  deployServiceUpdate: (serviceId, environmentId) =>
+    ipcRenderer.invoke('deploy-service-update', serviceId, environmentId),
+
   deleteService: (serviceId) =>
     ipcRenderer.invoke('delete-service', serviceId),
 

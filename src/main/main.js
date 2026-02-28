@@ -272,6 +272,11 @@ ipcMain.handle('redeploy-service', async (_, serviceId, environmentId) => {
   await supabaseService.logAction('Reiniciar Servicio', `Reinicio de servicio ID: ${serviceId}`, 'servicios', serviceId);
   return result;
 });
+ipcMain.handle('deploy-service-update', async (_, serviceId, environmentId) => {
+  const result = await railwayService.deployServiceUpdate(serviceId, environmentId);
+  await supabaseService.logAction('Deploy Update', `Deploy de actualización disponible para servicio ID: ${serviceId}`, 'servicios', serviceId);
+  return result;
+});
 
 
 // --------------------------------------------------

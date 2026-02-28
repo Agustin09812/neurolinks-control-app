@@ -53,6 +53,14 @@ const railwayService = {
                         }
                       }
                     }
+                    serviceInstances {
+                      edges {
+                        node {
+                          environmentId
+                          isUpdatable
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -77,7 +85,13 @@ const railwayService = {
         const deployment = service.deployments?.edges[0]?.node;
         const deployStatus = deployment?.status || "UNKNOWN";
         const createdAt = deployment?.createdAt || null;
-        const defaultEnvironment = project.environments?.edges[0]?.node?.id || null;
+        const defaultEnvironmentIdx = project.environments?.edges.findIndex(e => e.node.name === "production") || 0;
+        const defaultEnvironment = project.environments?.edges[defaultEnvironmentIdx > -1 ? defaultEnvironmentIdx : 0]?.node?.id || null;
+
+        // Find if this service has an update available in the default environment
+        const instances = service.serviceInstances?.edges || [];
+        const currentInstance = instances.find(edge => edge.node.environmentId === defaultEnvironment);
+        const isUpdatable = currentInstance?.node?.isUpdatable || false;
 
         let status = "offline";
         if (deployStatus === "SUCCESS") status = "online";
@@ -92,7 +106,8 @@ const railwayService = {
           createdAt,
           deploymentId: deployment?.id || null,
           projectId: project.id,
-          environmentId: defaultEnvironment
+          environmentId: defaultEnvironment,
+          isUpdatable
         };
       });
 
@@ -111,7 +126,8 @@ const railwayService = {
         createdAt: project.createdAt,
         services: services || [],
         railwayUrl: `https://railway.com/project/${project.id}`,
-        status: projectStatus
+        status: projectStatus,
+        isUpdatable: services.some(s => s.isUpdatable)
       };
     });
   },
@@ -120,6 +136,15 @@ const railwayService = {
     const query = `
       mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) {
         serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
+      }
+    `;
+    return await railwayQuery(query, { serviceId, environmentId });
+  },
+
+  async deployServiceUpdate(serviceId, environmentId) {
+    const query = `
+      mutation serviceInstanceDeployV2($serviceId: String!, $environmentId: String!) {
+        serviceInstanceDeployV2(serviceId: $serviceId, environmentId: $environmentId)
       }
     `;
     return await railwayQuery(query, { serviceId, environmentId });
