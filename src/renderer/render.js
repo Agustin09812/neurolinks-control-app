@@ -142,6 +142,7 @@ function renderSidebar() {
       <div class="d-flex align-items-center justify-content-between w-100">
         <div class="sidebar-name d-flex align-items-center">
           <span class="text-truncate" style="max-width: 140px;">${a.name}</span>
+          ${a.isUpdatable ? `<span class="badge bg-warning text-dark ms-2" title="Update Available" style="font-size: 0.6rem; animation: pulse 2s infinite;">UPDATE</span>` : ""}
           <span id="badge-${a.id}"></span>
         </div>
         <div class="ms-2">
@@ -322,9 +323,15 @@ async function renderDetail(a, isRefresh = false) {
             <button class="btn btn-primary btn-sm" data-bs-toggle="tooltip" title="Webchat" onclick="openWebchat('${service.projectId}','${service.environmentId}','${service.id}', '${service.name}')">
               <i class="bi bi-chat-dots"></i>
             </button>
+            ${service.isUpdatable ? `
+            <button class="btn btn-warning btn-sm" data-bs-toggle="tooltip" title="Deploy Update" onclick="handleDeployUpdate('${service.id}', '${service.environmentId}')">
+              <i class="bi bi-cloud-arrow-up"></i>
+            </button>
+            ` : ""}
             <div class="dropdown">
               <button class="btn btn-sm btn-outline-light dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
               <ul class="dropdown-menu dropdown-menu-dark">
+                ${service.isUpdatable ? `<li><button class="dropdown-item text-warning" onclick="handleDeployUpdate('${service.id}', '${service.environmentId}')"><i class="bi bi-cloud-arrow-up me-2"></i>Deploy Update</button></li>` : ""}
                 <li><button class="dropdown-item" onclick="handleRedeploy('${service.id}', '${service.environmentId}')"><i class="bi bi-arrow-clockwise me-2"></i>Redeploy</button></li>
                 <li><button class="dropdown-item" ${!service.deploymentId ? "disabled" : ""} onclick="handleDownloadLogs('${service.deploymentId}', \`${a.name}\`)"><i class="bi bi-download me-2"></i>Descargar Logs</button></li>
                 <li><hr class="dropdown-divider"></li>
@@ -356,6 +363,12 @@ async function renderDetail(a, isRefresh = false) {
           <button class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="handleDeleteProject('${a.id}')">
             <i class="bi bi-trash"></i>
           </button>
+          ${a.isUpdatable ? `
+          <div class="ms-3 d-flex align-items-center gap-2 text-warning fw-bold small animate-fade">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Update Available</span>
+          </div>
+          ` : ""}
         </div>
         <div id="client-badge-container" class="d-flex gap-2">
           ${linkedClient ? `
@@ -415,16 +428,30 @@ async function handleDelete(serviceId) {
 // --------------------------------------------------
 
 async function handleRedeploy(serviceId, environmentId) {
-
+  if (!confirm("¿Deseas reiniciar este servicio?")) return;
   try {
-
     await window.api.redeployService(serviceId, environmentId);
-
-    // refresco inmediato
+    showToast("Reinicio solicitado correctamente", "success");
     await loadAssistants(true);
-
   } catch (error) {
     console.error("Error redeploy:", error);
+    showToast("Error al solicitar reinicio", "danger");
+  }
+}
+
+async function handleDeployUpdate(serviceId, environmentId) {
+  if (!confirm("¿Deseas aplicar la nueva versión disponible para este servicio?")) return;
+  try {
+    const res = await window.api.deployServiceUpdate(serviceId, environmentId);
+    if (res.data?.serviceInstanceDeployV2) {
+      showToast("Redeploy de actualización iniciado correctamente", "success");
+      await loadAssistants(true);
+    } else {
+      showToast("Error al iniciar actualización", "danger");
+    }
+  } catch (error) {
+    console.error("Error deploy update:", error);
+    showToast("Error de conexión al Railway", "danger");
   }
 }
 
