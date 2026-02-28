@@ -63,8 +63,15 @@ async function loadAssistants(preserveSelection = true) {
   const isDashboardActive = document.getElementById("dashboard-global").style.display === "block";
 
   if (preserveSelection && currentSelected) {
-    const item = document.querySelector(`[data-id="${currentSelected}"]`);
-    if (item) item.click();
+    const updatedProject = assistants.find(p => p.id === currentSelected);
+    if (updatedProject) {
+      // Actualizar la vista de detalle de forma silenciosa (sin resetear componentes integrados)
+      renderDetail(updatedProject, true);
+
+      // Asegurarse que el item en el sidebar esté visualmente activo
+      const item = document.querySelector(`[data-id="${currentSelected}"]`);
+      if (item) item.classList.add("active-assistant");
+    }
   } else if (!selectedProjectId && isDashboardActive) {
     // Si no hay selección y estamos en el dashboard, lo refrescamos
     renderMainDashboard();
@@ -215,23 +222,27 @@ async function updateAssistantBadge(projectId) {
 // DETAIL PANEL
 // --------------------------------------------------
 
-async function renderDetail(a) {
+async function renderDetail(a, isRefresh = false) {
 
-  // Ocultar todas las vistas posibles
-  document.getElementById("dashboard-global").style.display = "none";
-  document.getElementById("clients-view").style.display = "none";
-  document.getElementById("tickets-view").style.display = "none";
-  document.getElementById("billing-view").style.display = "none";
-  document.getElementById("audit-view").style.display = "none";
+  if (!isRefresh) {
+    // Ocultar todas las vistas posibles
+    document.getElementById("dashboard-global").style.display = "none";
+    document.getElementById("clients-view").style.display = "none";
+    document.getElementById("tickets-view").style.display = "none";
+    document.getElementById("billing-view").style.display = "none";
+    document.getElementById("audit-view").style.display = "none";
 
-  const detailPanel = document.getElementById("assistant-detail");
-  if (detailPanel) detailPanel.style.display = "block";
+    const detailPanel = document.getElementById("assistant-detail");
+    if (detailPanel) detailPanel.style.display = "block";
 
-  // Limpiar vistas integradas previas
-  const oldLog = document.getElementById("integrated-log-container");
-  if (oldLog) oldLog.remove();
-  const oldVar = document.getElementById("integrated-var-container");
-  if (oldVar) oldVar.remove();
+    // Limpiar vistas integradas previas SOLO si no es refresh
+    const oldLog = document.getElementById("integrated-log-container");
+    if (oldLog) oldLog.remove();
+    const oldVar = document.getElementById("integrated-var-container");
+    if (oldVar) oldVar.remove();
+    const oldChat = document.getElementById("integrated-chat-container");
+    if (oldChat) oldChat.remove();
+  }
 
   selectedProjectId = a.id;
 
@@ -308,7 +319,7 @@ async function renderDetail(a) {
             <button class="btn btn-success btn-sm" data-bs-toggle="tooltip" title="Dashboard" onclick="openDashboard('${service.projectId}','${service.environmentId}','${service.id}')">
               <i class="bi bi-speedometer2"></i>
             </button>
-            <button class="btn btn-primary btn-sm" data-bs-toggle="tooltip" title="Webchat" onclick="openWebchat('${service.projectId}','${service.environmentId}','${service.id}')">
+            <button class="btn btn-primary btn-sm" data-bs-toggle="tooltip" title="Webchat" onclick="openWebchat('${service.projectId}','${service.environmentId}','${service.id}', '${service.name}')">
               <i class="bi bi-chat-dots"></i>
             </button>
             <div class="dropdown">
@@ -326,7 +337,10 @@ async function renderDetail(a) {
     `).join("");
   }
 
-  detail.innerHTML = `
+  const baseContent = document.getElementById("detail-base-content");
+  const target = baseContent || document.getElementById("assistant-detail");
+
+  target.innerHTML = `
     <div class="animate-fade">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <div class="d-flex align-items-center gap-3">
@@ -578,10 +592,9 @@ async function openDashboard(projectId, environmentId, serviceId) {
 // WEBCHAT
 // --------------------------------------------------
 
-async function openWebchat(projectId, environmentId, serviceId) {
+async function openWebchat(projectId, environmentId, serviceId, serviceName) {
 
   try {
-
     const domains = await window.api.getServiceDomains(
       projectId,
       environmentId,
@@ -598,7 +611,7 @@ async function openWebchat(projectId, environmentId, serviceId) {
     }
 
     if (!domain) {
-      alert("Este servicio no tiene dominio público.");
+      showToast("Este servicio no tiene dominio público.", "warning");
       return;
     }
 
@@ -606,10 +619,12 @@ async function openWebchat(projectId, environmentId, serviceId) {
       domain = "https://" + domain;
     }
 
-    window.api.openExternal(`${domain}/webchat`);
+    // Usar el nuevo componente integrado
+    renderWebchatView(domain, serviceName);
 
   } catch (err) {
     console.error("Error abriendo webchat:", err);
+    showToast("Error al cargar webchat", "danger");
   }
 }
 
@@ -702,6 +717,12 @@ async function renderMainDashboard() {
   document.getElementById("tickets-view").style.display = "none";
   document.getElementById("billing-view").style.display = "none";
   document.getElementById("audit-view").style.display = "none";
+
+  // Limpiar contenedores secundarios
+  ["integrated-log-container", "integrated-var-container", "integrated-chat-container"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
 
   const dash = document.getElementById("dashboard-global");
   dash.style.display = "block";
