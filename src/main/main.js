@@ -94,7 +94,7 @@ async function checkForUpdates() {
       method: "GET",
       headers: {
         "User-Agent": "Neurolinks-Control",
-        "Authorization": "Bearer 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",
+        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
         "Accept": "application/vnd.github+json"
       }
     };
@@ -259,7 +259,12 @@ ipcMain.handle('open-tickets-window', async () => {
 // --------------------------------------------------
 
 ipcMain.handle('get-assistants', async () => {
-  return await railwayService.getAssistants();
+  try {
+    return await railwayService.getAssistants();
+  } catch (error) {
+    console.error("Error en get-assistants:", error);
+    throw error;
+  }
 });
 
 
@@ -268,14 +273,25 @@ ipcMain.handle('get-assistants', async () => {
 // --------------------------------------------------
 
 ipcMain.handle('redeploy-service', async (_, serviceId, environmentId) => {
-  const result = await railwayService.redeployService(serviceId, environmentId);
-  await supabaseService.logAction('Reiniciar Servicio', `Reinicio de servicio ID: ${serviceId}`, 'servicios', serviceId);
-  return result;
+  try {
+    const result = await railwayService.redeployService(serviceId, environmentId);
+    await supabaseService.logAction('Reiniciar Servicio', `Reinicio de servicio ID: ${serviceId}`, 'servicios', serviceId);
+    return result;
+  } catch (error) {
+    console.error("Error en redeploy-service:", error);
+    throw error;
+  }
 });
+
 ipcMain.handle('deploy-service-update', async (_, serviceId, environmentId) => {
-  const result = await railwayService.deployServiceUpdate(serviceId, environmentId);
-  await supabaseService.logAction('Deploy Update', `Deploy de actualización disponible para servicio ID: ${serviceId}`, 'servicios', serviceId);
-  return result;
+  try {
+    const result = await railwayService.deployServiceUpdate(serviceId, environmentId);
+    await supabaseService.logAction('Deploy Update', `Deploy de actualización disponible para servicio ID: ${serviceId}`, 'servicios', serviceId);
+    return result;
+  } catch (error) {
+    console.error("Error en deploy-service-update:", error);
+    throw error;
+  }
 });
 
 
@@ -284,9 +300,14 @@ ipcMain.handle('deploy-service-update', async (_, serviceId, environmentId) => {
 // --------------------------------------------------
 
 ipcMain.handle('delete-service', async (_, serviceId) => {
-  const result = await railwayService.deleteService(serviceId);
-  await supabaseService.logAction('Eliminar Servicio', `Eliminación de servicio ID: ${serviceId}`, 'servicios', serviceId);
-  return result;
+  try {
+    const result = await railwayService.deleteService(serviceId);
+    await supabaseService.logAction('Eliminar Servicio', `Eliminación de servicio ID: ${serviceId}`, 'servicios', serviceId);
+    return result;
+  } catch (error) {
+    console.error("Error en delete-service:", error);
+    throw error;
+  }
 });
 
 
@@ -349,7 +370,12 @@ ipcMain.handle('open-variables-window', async (_, projectId, environmentId, serv
 // --------------------------------------------------
 
 ipcMain.handle('update-project-name', async (_, projectId, newName) => {
-  return await railwayService.updateProjectName(projectId, newName);
+  try {
+    return await railwayService.updateProjectName(projectId, newName);
+  } catch (error) {
+    console.error("Error en update-project-name:", error);
+    throw error;
+  }
 });
 
 
@@ -358,7 +384,12 @@ ipcMain.handle('update-project-name', async (_, projectId, newName) => {
 // --------------------------------------------------
 
 ipcMain.handle('delete-project', async (_, projectId) => {
-  return await railwayService.deleteProject(projectId);
+  try {
+    return await railwayService.deleteProject(projectId);
+  } catch (error) {
+    console.error("Error en delete-project:", error);
+    throw error;
+  }
 });
 
 // --------------------------------------------------
@@ -382,9 +413,14 @@ ipcMain.handle('get-service-variables', async (_, projectId, environmentId, serv
 // --------------------------------------------------
 
 ipcMain.handle('upsert-variable', async (_, projectId, environmentId, serviceId, name, value) => {
-  const result = await railwayService.upsertVariable(projectId, environmentId, serviceId, name, value);
-  await supabaseService.logAction('Cambio Variable', `Se actualizó la variable ${name}`, 'variables', serviceId || projectId);
-  return result;
+  try {
+    const result = await railwayService.upsertVariable(projectId, environmentId, serviceId, name, value);
+    await supabaseService.logAction('Cambio Variable', `Se actualizó la variable ${name}`, 'variables', serviceId || projectId);
+    return result;
+  } catch (error) {
+    console.error("Error en upsert-variable:", error);
+    throw error;
+  }
 });
 
 // --------------------------------------------------
@@ -392,7 +428,12 @@ ipcMain.handle('upsert-variable', async (_, projectId, environmentId, serviceId,
 // --------------------------------------------------
 
 ipcMain.handle('delete-variable', async (_, projectId, environmentId, serviceId, name) => {
-  return await railwayService.deleteVariable(projectId, environmentId, serviceId, name);
+  try {
+    return await railwayService.deleteVariable(projectId, environmentId, serviceId, name);
+  } catch (error) {
+    console.error("Error en delete-variable:", error);
+    throw error;
+  }
 });
 
 // --------------------------------------------------
@@ -467,7 +508,14 @@ ipcMain.handle('delete-client', async (_, id) => {
 });
 
 ipcMain.handle('link-project-client', async (_, railwayProjectId, clientId) => {
-  return await supabaseService.linkProjectToClient(railwayProjectId, clientId);
+  try {
+    const result = await supabaseService.linkProjectToClient(railwayProjectId, clientId);
+    await supabaseService.logAction('Vincular Proyecto', `Se vinculó el proyecto ${railwayProjectId} al cliente ID: ${clientId}`, 'clientes', clientId);
+    return result;
+  } catch (error) {
+    console.error("Error en link-project-client:", error);
+    throw error;
+  }
 });
 
 ipcMain.handle('get-project-client', async (_, railwayProjectId) => {
