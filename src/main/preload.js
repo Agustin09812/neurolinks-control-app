@@ -25,6 +25,9 @@ contextBridge.exposeInMainWorld('api', {
   deleteProject: (projectId) =>
     ipcRenderer.invoke('delete-project', projectId),
 
+  getWhatsAppStatus: (projectId) =>
+    ipcRenderer.invoke('get-whatsapp-status', projectId),
+
   // --------------------------------------------------
   // SERVICES
   // --------------------------------------------------

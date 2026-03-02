@@ -285,6 +285,29 @@ async function renderDetail(a, isRefresh = false) {
     } catch (e) { }
   }
 
+  // Obtener Info de WhatsApp Session
+  let whatsappBadge = "";
+  try {
+    const wsStatus = await window.api.getWhatsAppStatus(a.id);
+    if (wsStatus && wsStatus.connected) {
+      whatsappBadge = `
+        <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 p-2 rounded animate-fade d-flex align-items-center gap-2" title="Sesión activa en Supabase">
+          <i class="bi bi-whatsapp"></i>
+          <span>WhatsApp Conectado</span>
+        </div>
+      `;
+    } else {
+      whatsappBadge = `
+        <div class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20 p-2 rounded animate-fade d-flex align-items-center gap-2" title="${wsStatus.message || 'Sin sesión activa'}">
+          <i class="bi bi-whatsapp"></i>
+          <span>WhatsApp Desconectado</span>
+        </div>
+      `;
+    }
+  } catch (e) {
+    console.error("Error al obtener estado de WhatsApp:", e);
+  }
+
   // SERVICES HTML
   let servicesHtml = "";
   if (!a.services || a.services.length === 0) {
@@ -383,6 +406,7 @@ async function renderDetail(a, isRefresh = false) {
             </button>
           `}
           ${ticketsBadge}
+          ${whatsappBadge}
         </div>
       </div>
 

@@ -235,7 +235,7 @@ ipcMain.handle('open-clients-window', async () => {
     }
   });
 
-  clientsWindow.loadFile(path.join(__dirname, '../renderer/clients.html'));
+  clientsWindow.loadFile(path.join(__dirname, '../renderer/pages/clients.html'));
 });
 
 ipcMain.handle('open-tickets-window', async () => {
@@ -250,7 +250,7 @@ ipcMain.handle('open-tickets-window', async () => {
     }
   });
 
-  ticketsWindow.loadFile(path.join(__dirname, '../renderer/tickets.html'));
+  ticketsWindow.loadFile(path.join(__dirname, '../renderer/pages/tickets.html'));
 });
 
 
@@ -328,7 +328,7 @@ ipcMain.handle('open-logs-window', async (_, deploymentId) => {
     }
   });
 
-  logsWindow.loadFile(path.join(__dirname, '../renderer/logs.html'));
+  logsWindow.loadFile(path.join(__dirname, '../renderer/pages/logs.html'));
 
   logsWindow.webContents.on('did-finish-load', () => {
     logsWindow.webContents.send('load-logs', deploymentId);
@@ -353,7 +353,7 @@ ipcMain.handle('open-variables-window', async (_, projectId, environmentId, serv
     }
   });
 
-  variablesWindow.loadFile(path.join(__dirname, '../renderer/variables.html'));
+  variablesWindow.loadFile(path.join(__dirname, '../renderer/pages/variables.html'));
 
   variablesWindow.webContents.on('did-finish-load', () => {
     variablesWindow.webContents.send('load-variables', {
@@ -522,6 +522,10 @@ ipcMain.handle('get-project-client', async (_, railwayProjectId) => {
   return await supabaseService.getProjectClient(railwayProjectId);
 });
 
+ipcMain.handle('get-whatsapp-status', async (_, railwayProjectId) => {
+  return await supabaseService.getWhatsAppSessionStatus(railwayProjectId);
+});
+
 ipcMain.handle('get-client-projects', async (_, clientId) => {
   return await supabaseService.getClientProjects(clientId);
 });
@@ -615,14 +619,21 @@ async function startBackgroundMonitoring() {
       const assistants = await railwayService.getAssistants();
 
       assistants.forEach(a => {
-        a.services.forEach(s => {
+        a.services.forEach(async (s) => {
           const key = `${a.id}-${s.id}`;
           const oldStatus = lastAssistantsState.get(key);
           const newStatus = s.status;
 
-          // Si cambia a error y antes no lo estaba
-          if (newStatus === 'error' && oldStatus !== 'error') {
-            showErrorNotification(a.name, s.name, a.id);
+          // Si entra en error
+          if (newStatus === 'error') {
+            // Notificación visual si es la primera vez que lo detectamos
+            if (oldStatus !== 'error') {
+              showErrorNotification(a.name, s.name, a.id);
+            }
+
+            // Intentar auto-recuperación (redeploy automático)
+            // Se pasa el objeto proyecto 'a' y servicio 's'
+            await tryAutoRedeploy(a, s);
           }
 
           lastAssistantsState.set(key, newStatus);
@@ -632,6 +643,51 @@ async function startBackgroundMonitoring() {
       console.error("Error en monitoreo background:", err.message);
     }
   }, 60000);
+}
+
+/**
+ * Lógica de auto-recuperación coordinada
+ */
+async function tryAutoRedeploy(project, service) {
+  try {
+    // 1. Desincronizar ligeramente para evitar colisiones si hay varios usuarios
+    const delay = Math.floor(Math.random() * 5000); // 0-5 segundos
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    // 2. Consultar historial global en Supabase
+    const attempts = await supabaseService.getRecentAutoRedeployCount(service.id);
+
+    if (attempts < 2) {
+      console.log(`[Auto-Recovery] Detectado error en ${service.name}. Intento #${attempts + 1}`);
+
+      // 3. Registrar ANTES para "bloquear" a otros usuarios
+      await supabaseService.logAction(
+        'Auto-Redeploy',
+        `Sistema automático detectó fallo. Iniciando intento #${attempts + 1} de recuperación.`,
+        'servicios',
+        service.id
+      );
+
+      // 4. Disparar redeploy en Railway
+      await railwayService.redeployService(service.id, service.environmentId);
+
+      // 5. Notificar éxito del disparo de recuperación
+      showAutoRecoveryNotification(project.name, service.name, attempts + 1);
+    }
+  } catch (error) {
+    console.error("Error en proceso de auto-recuperación:", error.message);
+  }
+}
+
+function showAutoRecoveryNotification(projectName, serviceName, attempt) {
+  if (Notification.isSupported()) {
+    new Notification({
+      title: `🔄 Auto-Recuperación: ${projectName}`,
+      body: `Se ha iniciado un re-despliegue automático de "${serviceName}" (Intento ${attempt}/2).`,
+      icon: path.join(__dirname, "../../assets/icons/icon.ico"),
+      silent: true
+    }).show();
+  }
 }
 
 function showErrorNotification(projectName, serviceName, projectId) {
