@@ -1,16 +1,19 @@
 const RAILWAY_TOKEN = process.env.RAILWAY_TOKEN;
+const RAILWAY_TOKEN_TEMPLATE = process.env.RAILWAY_TOKEN_TEMPLATE || RAILWAY_TOKEN;
+const RAILWAY_TEMPLATE_WORKSPACE_ID = process.env.RAILWAY_TEMPLATE_WORKSPACE_ID;
 const RAILWAY_API = process.env.RAILWAY_API || "https://backboard.railway.com/graphql/v2";
 
 /**
  * Función genérica para realizar peticiones a la API de Railway
  */
-async function railwayQuery(query, variables = {}) {
+async function railwayQuery(query, variables = {}, customToken = null) {
   try {
+    const token = customToken || RAILWAY_TOKEN;
     const response = await fetch(RAILWAY_API, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${RAILWAY_TOKEN}`
+        "Authorization": `Bearer ${token}`
       },
       body: JSON.stringify({ query, variables })
     });
@@ -264,6 +267,128 @@ const railwayService = {
     `;
     const result = await railwayQuery(query, { projectId, environmentId, serviceId });
     return result.data?.domains || null;
+  },
+
+  async searchTemplates(queryText) {
+    try {
+      if (!RAILWAY_TEMPLATE_WORKSPACE_ID) {
+        console.warn("RAILWAY_TEMPLATE_WORKSPACE_ID no está definido en .env");
+        return [];
+      }
+
+      // Obtenemos los templates asociados al Workspace del usuario
+      const query = `
+        query workspaceTemplates($workspaceId: String!) {
+          workspaceTemplates(workspaceId: $workspaceId) {
+            edges {
+              node {
+                id
+                name
+                description
+                category
+              }
+            }
+          }
+        }
+      `;
+
+      const result = await railwayQuery(query, { workspaceId: RAILWAY_TEMPLATE_WORKSPACE_ID }, RAILWAY_TOKEN_TEMPLATE);
+      const allTemplates = result.data?.workspaceTemplates?.edges.map(e => e.node) || [];
+
+      // Ya no necesitamos filtrar por palabras clave porque estamos pidiendo solo los templates de este workspace
+      let filtered = allTemplates;
+
+      // Si se especificó una búsqueda adicional por el usuario, filtramos sobre lo encontrado
+      if (queryText && queryText.trim()) {
+        const lowerQuery = queryText.toLowerCase();
+        filtered = filtered.filter(t =>
+          (t.name && t.name.toLowerCase().includes(lowerQuery)) ||
+          (t.description && t.description.toLowerCase().includes(lowerQuery))
+        );
+      }
+
+      return filtered;
+    } catch (error) {
+      console.error("Error en searchTemplates (workspace-list):", error);
+      return [];
+    }
+  },
+
+  async searchGlobalTemplates(queryText) {
+    const query = `
+      query templates($query: String, $first: Int) {
+        templates(query: $query, first: $first) {
+          edges {
+            node {
+              id
+              name
+              description
+              category
+              config
+            }
+          }
+        }
+      }
+    `;
+    const result = await railwayQuery(query, { query: queryText || "", first: 20 }, RAILWAY_TOKEN_TEMPLATE);
+    return result.data?.templates?.edges.map(e => e.node) || [];
+  },
+
+  async deployTemplate(templateId) {
+    try {
+      // 1. Primero obtenemos la configuración serializada del template
+      const getConfigQuery = `
+        query template($id: String!) {
+          template(id: $id) {
+            id
+            name
+            serializedConfig
+          }
+        }
+      `;
+      const configRes = await railwayQuery(getConfigQuery, { id: templateId }, RAILWAY_TOKEN_TEMPLATE);
+      const template = configRes.data?.template;
+
+      if (!template || !template.serializedConfig) {
+        throw new Error("No se pudo obtener la configuración del template.");
+      }
+
+      // 2. Ejecutamos la mutación de despliegue V2
+      // El campo serializedConfig devuelto por el query suele ser el objeto que espera la mutación
+      const deployMutation = `
+        mutation templateDeployV2($input: TemplateDeployV2Input!) {
+          templateDeployV2(input: $input) {
+            projectId
+          }
+        }
+      `;
+
+      const variables = {
+        input: {
+          templateId: template.id,
+          serializedConfig: template.serializedConfig
+        }
+      };
+
+      // Se usa el token principal (RAILWAY_TOKEN) para que el despliegue se realice en la cuenta/workspace original
+      const result = await railwayQuery(deployMutation, variables);
+
+      if (result.errors) {
+        throw new Error(result.errors[0].message);
+      }
+
+      return {
+        success: true,
+        projectId: result.data?.templateDeployV2?.projectId,
+        templateName: template.name
+      };
+    } catch (error) {
+      console.error("Error en deployTemplate:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   }
 };
 

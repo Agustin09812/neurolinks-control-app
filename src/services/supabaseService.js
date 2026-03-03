@@ -150,22 +150,35 @@ const supabaseService = {
                 .from('whatsapp_sessions')
                 .select('updated_at, data')
                 .eq('project_id', railwayProjectId)
+                .eq('key_id', 'full_backup') // Always target the unified backup
+                .order('updated_at', { ascending: false }) // Take the latest one
+                .limit(1)
                 .maybeSingle();
 
             if (error) throw error;
             if (!data) return { connected: false, message: 'No session found' };
 
-            // Verificamos si tiene el archivo creds.json (indicativo de sesión activa)
-            const hasCreds = data.data && data.data['creds.json'];
+            // Verificamos el contenido de data (puede venir como objeto o string)
+            let sessionData = data.data;
+            if (typeof sessionData === 'string') {
+                try {
+                    sessionData = JSON.parse(sessionData);
+                } catch (e) {
+                    console.error('Error parsing session data string:', e);
+                }
+            }
+
+            const hasCreds = sessionData && sessionData['creds.json'];
 
             // Consideramos "desconectado" si no tiene creds o si el backup es muy viejo (> 24h)
-            // aunque el bot suele actualizar cada 1h si está vivo.
             const lastUpdate = new Date(data.updated_at);
-            const isFresh = (Date.now() - lastUpdate.getTime()) < 24 * 60 * 60 * 1000;
+            const diffMs = Date.now() - lastUpdate.getTime();
+            const isFresh = diffMs < 24 * 60 * 60 * 1000;
 
             return {
                 connected: !!hasCreds && isFresh,
-                lastUpdate: data.updated_at
+                lastUpdate: data.updated_at,
+                message: !hasCreds ? 'Faltan credenciales' : (!isFresh ? 'Sesión expirada' : 'OK')
             };
         } catch (error) {
             console.error('Error getting WhatsApp status:', error.message);

@@ -133,6 +133,14 @@
         <div class="modal-body">
 
           <div id="deploy-step-1">
+            <div class="row mb-3 px-3">
+              <div class="input-group">
+                <input type="text" id="template-search-input" class="form-control bg-dark text-light border-secondary" placeholder="Buscar entre mis templates..." value="">
+                <button class="btn btn-primary" id="btn-search-templates">
+                  <i class="bi bi-search"></i> Buscar
+                </button>
+              </div>
+            </div>
             <div class="row g-3" id="templates-container">
             </div>
           </div>
@@ -144,9 +152,9 @@
 
               <h5 id="confirm-template-name"></h5>
 
-              <p class="text-secondary mt-3">
-                Se abrirá Railway para completar el despliegue del asistente.
-                Luego podrás volver a Neurolinks Control para monitorearlo.
+              <p class="text-secondary mt-3 px-4">
+                Esto creará un nuevo proyecto en Railway con la configuración predeterminada del template.
+                Podrás configurar las variables adicionales desde la sección de Variables después del despliegue.
               </p>
 
               <div class="d-flex justify-content-center gap-3 mt-4">

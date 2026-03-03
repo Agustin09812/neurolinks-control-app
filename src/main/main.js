@@ -267,6 +267,36 @@ ipcMain.handle('get-assistants', async () => {
   }
 });
 
+// --------------------------------------------------
+// TEMPLATES (Search & Deploy)
+// --------------------------------------------------
+
+ipcMain.handle('search-templates', async (_, query) => {
+  try {
+    return await railwayService.searchTemplates(query);
+  } catch (error) {
+    console.error("Error en search-templates:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle('deploy-template', async (_, templateId) => {
+  try {
+    const result = await railwayService.deployTemplate(templateId);
+
+    if (result.success) {
+      const projectId = result.projectId;
+      await supabaseService.logAction('Deploy Template', `Nuevo proyecto creado vía template: ${result.templateName || templateId}`, 'proyectos', projectId);
+      return { success: true, projectId };
+    } else {
+      return { success: false, error: result.error || "Error desconocido en el despliegue" };
+    }
+  } catch (error) {
+    console.error("Error en deploy-template:", error);
+    return { success: false, error: error.message };
+  }
+});
+
 
 // --------------------------------------------------
 // REDEPLOY SERVICE

@@ -29,6 +29,16 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('get-whatsapp-status', projectId),
 
   // --------------------------------------------------
+  // TEMPLATES
+  // --------------------------------------------------
+
+  searchTemplates: (query) =>
+    ipcRenderer.invoke('search-templates', query),
+
+  deployTemplate: (templateId) =>
+    ipcRenderer.invoke('deploy-template', templateId),
+
+  // --------------------------------------------------
   // SERVICES
   // --------------------------------------------------
 

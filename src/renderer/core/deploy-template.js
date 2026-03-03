@@ -2,151 +2,44 @@
 // DEPLOY TEMPLATE SYSTEM
 // --------------------------------------------------
 
-let selectedTemplateLink = null;
-
-const assistantTemplates = [
-
-  // -----------------------------------------
-  // META YCLOUD (PRIORIDAD ALTA)
-  // -----------------------------------------
-
-  {
-    name: "Bot MonoAgente Meta Ycloud",
-    description: "Integración Meta + Ycloud (monoagente).",
-    link: "https://railway.com/deploy/bot-railway-meta",
-    required: [],
-    notes: ""
-  },
-
-  {
-    name: "Bot MultiAgente Meta Ycloud",
-    description: "Multiagente con integración Meta + Ycloud.",
-    link: "https://railway.com/deploy/bot-railway-multiagente-meta-5",
-    required: [],
-    notes: ""
-  },
-
-  // -----------------------------------------
-  // UTILIDAD
-  // -----------------------------------------
-
-  {
-    name: "Obtener ID Grupo",
-    description: "Bot para listar JID de grupos. Responde únicamente al mensaje #LISTAR_GRUPOS#.",
-    link: "https://railway.com/deploy/capable-celebration?referralCode=yO-oOz",
-    required: [],
-    notes: ""
-  },
-
-  // -----------------------------------------
-  // RESTO DE TEMPLATES
-  // -----------------------------------------
-
-  {
-    name: "Ejemplo Básico Test",
-    description: "Bot para test, funciones básicas estilo Neurolinks. Ideal para pruebas en entorno real.",
-    link: "https://railway.com/deploy/pleasant-simplicity?referralCode=yO-oOz",
-    required: [
-      "ID ASISTENTE",
-      "ID ASISTENTE IMAGEN",
-      "APIKEY OPENAI",
-      "APIKEY OPENAI IMAGEN",
-      "JID GRUPO WHATSAPP"
-    ],
-    notes: "Incluye reconocimiento de imágenes y requiere asistente especializado."
-  },
-
-  {
-    name: "Ejemplo MultiAgente Test",
-    description: "Bot multiagente con recepcionista + 4 asistentes.",
-    link: "https://railway.com/deploy/botmultiagente5?referralCode=yO-oOz",
-    required: [
-      "ID ASISTENTE",
-      "APIKEY OPENAI",
-      "JID GRUPO WHATSAPP"
-    ],
-    notes: "Respetar número de asistentes definido en el prompt."
-  },
-
-  {
-    name: "Ejemplo Analizador de Imágenes",
-    description: "Bot con reconocimiento y análisis de imágenes.",
-    link: "https://railway.com/deploy/bot-img-test?referralCode=yO-oOz",
-    required: [
-      "ID ASISTENTE",
-      "ID ASISTENTE IMAGEN",
-      "APIKEY OPENAI",
-      "APIKEY OPENAI IMAGEN",
-      "JID GRUPO WHATSAPP"
-    ],
-    notes: ""
-  },
-
-  {
-    name: "Bot Restaurant API Riservi",
-    description: "Gestiona reservas del restaurante RESTO-TEST.",
-    link: "https://railway.com/deploy/bot-restaurant-api-riservi-muestra",
-    required: [
-      "ID ASISTENTE",
-      "APIKEY OPENAI",
-      "APIKEY RISERVI"
-    ],
-    notes: ""
-  },
-
-  {
-    name: "Bot API Commit",
-    description: "Bot para integración con API commit.",
-    link: "https://railway.com/deploy/bot-rialway-api-commit",
-    required: [],
-    notes: ""
-  },
-
-  {
-    name: "Bot Empresas Agua API SWS",
-    description: "Bot para empresas de agua con API SWS.",
-    link: "https://railway.com/deploy/bot-apisws",
-    required: [],
-    notes: ""
-  }
-
-];
+let selectedTemplateId = null;
+let currentTemplates = [];
 
 // --------------------------------------------------
 // RENDER TEMPLATES
 // --------------------------------------------------
 
-function renderTemplates() {
+function renderTemplates(templates) {
 
   const container = document.getElementById("templates-container");
   if (!container) return;
 
-  container.innerHTML = assistantTemplates.map(template => {
+  if (!templates || templates.length === 0) {
+    container.innerHTML = `<div class="col-12 text-center py-5 text-secondary">No se encontraron templates. Intentá con otra búsqueda.</div>`;
+    return;
+  }
 
-    const requiredList = template.required.length > 0
-      ? `<ul class="mb-1">${template.required.map(r => `<li>${r}</li>`).join("")}</ul>`
-      : `<div class="text-muted">No requiere configuración inicial</div>`;
+  currentTemplates = templates;
+
+  container.innerHTML = templates.map(template => {
 
     return `
       <div class="col-md-6">
-        <div class="border border-secondary rounded p-3 h-100 d-flex flex-column">
+        <div class="border border-secondary rounded p-3 h-100 d-flex flex-column bg-dark">
 
-          <h6 class="fw-bold">${template.name}</h6>
+          <h6 class="fw-bold text-success">${template.name}</h6>
 
-          <p class="small text-secondary">
-            ${template.description}
+          <p class="small text-secondary mb-3" style="min-height: 40px;">
+            ${template.description || "Sin descripción disponible."}
           </p>
 
-          <div class="small mb-2">
-            <strong>Datos requeridos:</strong>
-            ${requiredList}
+          <div class="small mb-3">
+             <span class="badge bg-secondary">${template.category || "Desconocido"}</span>
           </div>
 
-          ${template.notes ? `<div class="small text-muted mb-3">${template.notes}</div>` : ""}
-
           <div class="mt-auto">
-            <button class="btn btn-success btn-sm w-100"
-              onclick="selectTemplate('${template.name}', '${template.link}')">
+            <button class="btn btn-outline-success btn-sm w-100"
+              onclick="selectTemplate('${template.id}')">
               Seleccionar
             </button>
           </div>
@@ -160,62 +53,114 @@ function renderTemplates() {
 }
 
 // --------------------------------------------------
+// API ACTIONS
+// --------------------------------------------------
+
+async function performSearch() {
+  const input = document.getElementById("template-search-input");
+  const query = input ? input.value : "";
+
+  const container = document.getElementById("templates-container");
+  container.innerHTML = `<div class="col-12 text-center py-5"><div class="spinner-border text-success" role="status"></div><div class="mt-2">Buscando en Railway...</div></div>`;
+
+  try {
+    const results = await window.api.searchTemplates(query);
+    renderTemplates(results);
+  } catch (error) {
+    console.error("Error buscando templates:", error);
+    container.innerHTML = `<div class="col-12 text-center py-5 text-danger">Error al conectar con Railway.</div>`;
+  }
+}
+
+// --------------------------------------------------
 // STEP CONTROL
 // --------------------------------------------------
 
-function selectTemplate(name, link) {
+function selectTemplate(templateId) {
+  const template = currentTemplates.find(t => t.id === templateId);
+  if (!template) return;
 
-  selectedTemplateLink = link;
+  selectedTemplateId = templateId;
 
   document.getElementById("deploy-step-1").style.display = "none";
   document.getElementById("deploy-step-2").style.display = "block";
 
-  document.getElementById("confirm-template-name").textContent =
-    `Estás por desplegar: ${name}`;
+  document.getElementById("confirm-template-name").innerHTML = `
+    <span class="text-success fs-4 fw-bold">${template.name}</span><br>
+    <small class="text-secondary">${template.description || ""}</small>
+  `;
 }
 
 function backToSelection() {
-
   document.getElementById("deploy-step-1").style.display = "block";
   document.getElementById("deploy-step-2").style.display = "none";
 }
 
-function confirmDeploy() {
+async function confirmDeploy() {
+  if (!selectedTemplateId) return;
 
-  if (!selectedTemplateLink) return;
+  const btnConfirm = document.querySelector("#deploy-step-2 .btn-success");
+  const originalText = btnConfirm.textContent;
+  btnConfirm.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Desplegando...`;
+  btnConfirm.disabled = true;
 
-  window.api.openExternal(selectedTemplateLink);
+  try {
+    const result = await window.api.deployTemplate(selectedTemplateId);
 
-  const modal = bootstrap.Modal.getInstance(
-    document.getElementById("deployAssistantModal")
-  );
+    if (result.success) {
+      alert("¡Despliegue iniciado correctamente! El nuevo proyecto ha sido creado en Railway. Podrás verlo en la lista de asistentes en unos momentos.");
 
-  modal.hide();
+      const modal = bootstrap.Modal.getInstance(document.getElementById("deployAssistantModal"));
+      modal.hide();
 
-  selectedTemplateLink = null;
+      // Recargar lista de asistentes
+      if (typeof loadAssistants === 'function') {
+        loadAssistants(false);
+      }
+    } else {
+      alert("Error al desplegar: " + (result.error || "Respuesta desconocida"));
+    }
+  } catch (error) {
+    console.error("Error en confirmDeploy:", error);
+    alert("Error crítico al intentar desplegar el template.");
+  } finally {
+    btnConfirm.textContent = originalText;
+    btnConfirm.disabled = false;
 
-  document.getElementById("deploy-step-1").style.display = "block";
-  document.getElementById("deploy-step-2").style.display = "none";
+    // Resetear visualmente para la próxima vez
+    selectedTemplateId = null;
+    document.getElementById("deploy-step-1").style.display = "block";
+    document.getElementById("deploy-step-2").style.display = "none";
+  }
 }
 
 // --------------------------------------------------
-// OPEN MODAL
+// INITIALIZATION
 // --------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
-
   const btn = document.getElementById("btnDeployAssistant");
   if (!btn) return;
 
   btn.onclick = () => {
-
-    renderTemplates();
-
-    const modal = new bootstrap.Modal(
-      document.getElementById("deployAssistantModal")
-    );
-
+    const modal = new bootstrap.Modal(document.getElementById("deployAssistantModal"));
     modal.show();
+
+    // Auto-búsqueda inicial si no hay resultados
+    if (currentTemplates.length === 0) {
+      performSearch();
+    }
   };
 
+  const btnSearch = document.getElementById("btn-search-templates");
+  if (btnSearch) {
+    btnSearch.onclick = performSearch;
+  }
+
+  const inputSearch = document.getElementById("template-search-input");
+  if (inputSearch) {
+    inputSearch.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") performSearch();
+    });
+  }
 });
