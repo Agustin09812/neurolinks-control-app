@@ -94,7 +94,7 @@ async function checkForUpdates() {
       method: "GET",
       headers: {
         "User-Agent": "Neurolinks-Control",
-        "Authorization": "Bearer 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",
+        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
         "Accept": "application/vnd.github+json"
       }
     };
@@ -235,7 +235,7 @@ ipcMain.handle('open-clients-window', async () => {
     }
   });
 
-  clientsWindow.loadFile(path.join(__dirname, '../renderer/clients.html'));
+  clientsWindow.loadFile(path.join(__dirname, '../renderer/pages/clients.html'));
 });
 
 ipcMain.handle('open-tickets-window', async () => {
@@ -250,7 +250,7 @@ ipcMain.handle('open-tickets-window', async () => {
     }
   });
 
-  ticketsWindow.loadFile(path.join(__dirname, '../renderer/tickets.html'));
+  ticketsWindow.loadFile(path.join(__dirname, '../renderer/pages/tickets.html'));
 });
 
 
@@ -259,7 +259,42 @@ ipcMain.handle('open-tickets-window', async () => {
 // --------------------------------------------------
 
 ipcMain.handle('get-assistants', async () => {
-  return await railwayService.getAssistants();
+  try {
+    return await railwayService.getAssistants();
+  } catch (error) {
+    console.error("Error en get-assistants:", error);
+    throw error;
+  }
+});
+
+// --------------------------------------------------
+// TEMPLATES (Search & Deploy)
+// --------------------------------------------------
+
+ipcMain.handle('search-templates', async (_, query) => {
+  try {
+    return await railwayService.searchTemplates(query);
+  } catch (error) {
+    console.error("Error en search-templates:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle('deploy-template', async (_, templateId) => {
+  try {
+    const result = await railwayService.deployTemplate(templateId);
+
+    if (result.success) {
+      const projectId = result.projectId;
+      await supabaseService.logAction('Deploy Template', `Nuevo proyecto creado vía template: ${result.templateName || templateId}`, 'proyectos', projectId);
+      return { success: true, projectId };
+    } else {
+      return { success: false, error: result.error || "Error desconocido en el despliegue" };
+    }
+  } catch (error) {
+    console.error("Error en deploy-template:", error);
+    return { success: false, error: error.message };
+  }
 });
 
 
@@ -268,9 +303,25 @@ ipcMain.handle('get-assistants', async () => {
 // --------------------------------------------------
 
 ipcMain.handle('redeploy-service', async (_, serviceId, environmentId) => {
-  const result = await railwayService.redeployService(serviceId, environmentId);
-  await supabaseService.logAction('Reiniciar Servicio', `Reinicio de servicio ID: ${serviceId}`, 'servicios', serviceId);
-  return result;
+  try {
+    const result = await railwayService.redeployService(serviceId, environmentId);
+    await supabaseService.logAction('Reiniciar Servicio', `Reinicio de servicio ID: ${serviceId}`, 'servicios', serviceId);
+    return result;
+  } catch (error) {
+    console.error("Error en redeploy-service:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle('deploy-service-update', async (_, serviceId, environmentId) => {
+  try {
+    const result = await railwayService.deployServiceUpdate(serviceId, environmentId);
+    await supabaseService.logAction('Deploy Update', `Deploy de actualización disponible para servicio ID: ${serviceId}`, 'servicios', serviceId);
+    return result;
+  } catch (error) {
+    console.error("Error en deploy-service-update:", error);
+    throw error;
+  }
 });
 
 
@@ -279,9 +330,14 @@ ipcMain.handle('redeploy-service', async (_, serviceId, environmentId) => {
 // --------------------------------------------------
 
 ipcMain.handle('delete-service', async (_, serviceId) => {
-  const result = await railwayService.deleteService(serviceId);
-  await supabaseService.logAction('Eliminar Servicio', `Eliminación de servicio ID: ${serviceId}`, 'servicios', serviceId);
-  return result;
+  try {
+    const result = await railwayService.deleteService(serviceId);
+    await supabaseService.logAction('Eliminar Servicio', `Eliminación de servicio ID: ${serviceId}`, 'servicios', serviceId);
+    return result;
+  } catch (error) {
+    console.error("Error en delete-service:", error);
+    throw error;
+  }
 });
 
 
@@ -302,7 +358,7 @@ ipcMain.handle('open-logs-window', async (_, deploymentId) => {
     }
   });
 
-  logsWindow.loadFile(path.join(__dirname, '../renderer/logs.html'));
+  logsWindow.loadFile(path.join(__dirname, '../renderer/pages/logs.html'));
 
   logsWindow.webContents.on('did-finish-load', () => {
     logsWindow.webContents.send('load-logs', deploymentId);
@@ -327,7 +383,7 @@ ipcMain.handle('open-variables-window', async (_, projectId, environmentId, serv
     }
   });
 
-  variablesWindow.loadFile(path.join(__dirname, '../renderer/variables.html'));
+  variablesWindow.loadFile(path.join(__dirname, '../renderer/pages/variables.html'));
 
   variablesWindow.webContents.on('did-finish-load', () => {
     variablesWindow.webContents.send('load-variables', {
@@ -344,7 +400,12 @@ ipcMain.handle('open-variables-window', async (_, projectId, environmentId, serv
 // --------------------------------------------------
 
 ipcMain.handle('update-project-name', async (_, projectId, newName) => {
-  return await railwayService.updateProjectName(projectId, newName);
+  try {
+    return await railwayService.updateProjectName(projectId, newName);
+  } catch (error) {
+    console.error("Error en update-project-name:", error);
+    throw error;
+  }
 });
 
 
@@ -353,7 +414,12 @@ ipcMain.handle('update-project-name', async (_, projectId, newName) => {
 // --------------------------------------------------
 
 ipcMain.handle('delete-project', async (_, projectId) => {
-  return await railwayService.deleteProject(projectId);
+  try {
+    return await railwayService.deleteProject(projectId);
+  } catch (error) {
+    console.error("Error en delete-project:", error);
+    throw error;
+  }
 });
 
 // --------------------------------------------------
@@ -377,9 +443,14 @@ ipcMain.handle('get-service-variables', async (_, projectId, environmentId, serv
 // --------------------------------------------------
 
 ipcMain.handle('upsert-variable', async (_, projectId, environmentId, serviceId, name, value) => {
-  const result = await railwayService.upsertVariable(projectId, environmentId, serviceId, name, value);
-  await supabaseService.logAction('Cambio Variable', `Se actualizó la variable ${name}`, 'variables', serviceId || projectId);
-  return result;
+  try {
+    const result = await railwayService.upsertVariable(projectId, environmentId, serviceId, name, value);
+    await supabaseService.logAction('Cambio Variable', `Se actualizó la variable ${name}`, 'variables', serviceId || projectId);
+    return result;
+  } catch (error) {
+    console.error("Error en upsert-variable:", error);
+    throw error;
+  }
 });
 
 // --------------------------------------------------
@@ -387,7 +458,12 @@ ipcMain.handle('upsert-variable', async (_, projectId, environmentId, serviceId,
 // --------------------------------------------------
 
 ipcMain.handle('delete-variable', async (_, projectId, environmentId, serviceId, name) => {
-  return await railwayService.deleteVariable(projectId, environmentId, serviceId, name);
+  try {
+    return await railwayService.deleteVariable(projectId, environmentId, serviceId, name);
+  } catch (error) {
+    console.error("Error en delete-variable:", error);
+    throw error;
+  }
 });
 
 // --------------------------------------------------
@@ -462,11 +538,22 @@ ipcMain.handle('delete-client', async (_, id) => {
 });
 
 ipcMain.handle('link-project-client', async (_, railwayProjectId, clientId) => {
-  return await supabaseService.linkProjectToClient(railwayProjectId, clientId);
+  try {
+    const result = await supabaseService.linkProjectToClient(railwayProjectId, clientId);
+    await supabaseService.logAction('Vincular Proyecto', `Se vinculó el proyecto ${railwayProjectId} al cliente ID: ${clientId}`, 'clientes', clientId);
+    return result;
+  } catch (error) {
+    console.error("Error en link-project-client:", error);
+    throw error;
+  }
 });
 
 ipcMain.handle('get-project-client', async (_, railwayProjectId) => {
   return await supabaseService.getProjectClient(railwayProjectId);
+});
+
+ipcMain.handle('get-whatsapp-status', async (_, railwayProjectId) => {
+  return await supabaseService.getWhatsAppSessionStatus(railwayProjectId);
 });
 
 ipcMain.handle('get-client-projects', async (_, clientId) => {
@@ -562,14 +649,21 @@ async function startBackgroundMonitoring() {
       const assistants = await railwayService.getAssistants();
 
       assistants.forEach(a => {
-        a.services.forEach(s => {
+        a.services.forEach(async (s) => {
           const key = `${a.id}-${s.id}`;
           const oldStatus = lastAssistantsState.get(key);
           const newStatus = s.status;
 
-          // Si cambia a error y antes no lo estaba
-          if (newStatus === 'error' && oldStatus !== 'error') {
-            showErrorNotification(a.name, s.name, a.id);
+          // Si entra en error
+          if (newStatus === 'error') {
+            // Notificación visual si es la primera vez que lo detectamos
+            if (oldStatus !== 'error') {
+              showErrorNotification(a.name, s.name, a.id);
+            }
+
+            // Intentar auto-recuperación (redeploy automático)
+            // Se pasa el objeto proyecto 'a' y servicio 's'
+            await tryAutoRedeploy(a, s);
           }
 
           lastAssistantsState.set(key, newStatus);
@@ -579,6 +673,51 @@ async function startBackgroundMonitoring() {
       console.error("Error en monitoreo background:", err.message);
     }
   }, 60000);
+}
+
+/**
+ * Lógica de auto-recuperación coordinada
+ */
+async function tryAutoRedeploy(project, service) {
+  try {
+    // 1. Desincronizar ligeramente para evitar colisiones si hay varios usuarios
+    const delay = Math.floor(Math.random() * 5000); // 0-5 segundos
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    // 2. Consultar historial global en Supabase
+    const attempts = await supabaseService.getRecentAutoRedeployCount(service.id);
+
+    if (attempts < 2) {
+      console.log(`[Auto-Recovery] Detectado error en ${service.name}. Intento #${attempts + 1}`);
+
+      // 3. Registrar ANTES para "bloquear" a otros usuarios
+      await supabaseService.logAction(
+        'Auto-Redeploy',
+        `Sistema automático detectó fallo. Iniciando intento #${attempts + 1} de recuperación.`,
+        'servicios',
+        service.id
+      );
+
+      // 4. Disparar redeploy en Railway
+      await railwayService.redeployService(service.id, service.environmentId);
+
+      // 5. Notificar éxito del disparo de recuperación
+      showAutoRecoveryNotification(project.name, service.name, attempts + 1);
+    }
+  } catch (error) {
+    console.error("Error en proceso de auto-recuperación:", error.message);
+  }
+}
+
+function showAutoRecoveryNotification(projectName, serviceName, attempt) {
+  if (Notification.isSupported()) {
+    new Notification({
+      title: `🔄 Auto-Recuperación: ${projectName}`,
+      body: `Se ha iniciado un re-despliegue automático de "${serviceName}" (Intento ${attempt}/2).`,
+      icon: path.join(__dirname, "../../assets/icons/icon.ico"),
+      silent: true
+    }).show();
+  }
 }
 
 function showErrorNotification(projectName, serviceName, projectId) {

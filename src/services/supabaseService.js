@@ -144,6 +144,48 @@ const supabaseService = {
         return data;
     },
 
+    async getWhatsAppSessionStatus(railwayProjectId) {
+        try {
+            const { data, error } = await supabase
+                .from('whatsapp_sessions')
+                .select('updated_at, data')
+                .eq('project_id', railwayProjectId)
+                .eq('key_id', 'full_backup') // Always target the unified backup
+                .order('updated_at', { ascending: false }) // Take the latest one
+                .limit(1)
+                .maybeSingle();
+
+            if (error) throw error;
+            if (!data) return { connected: false, message: 'No session found' };
+
+            // Verificamos el contenido de data (puede venir como objeto o string)
+            let sessionData = data.data;
+            if (typeof sessionData === 'string') {
+                try {
+                    sessionData = JSON.parse(sessionData);
+                } catch (e) {
+                    console.error('Error parsing session data string:', e);
+                }
+            }
+
+            const hasCreds = sessionData && sessionData['creds.json'];
+
+            // Consideramos "desconectado" si no tiene creds o si el backup es muy viejo (> 24h)
+            const lastUpdate = new Date(data.updated_at);
+            const diffMs = Date.now() - lastUpdate.getTime();
+            const isFresh = diffMs < 24 * 60 * 60 * 1000;
+
+            return {
+                connected: !!hasCreds && isFresh,
+                lastUpdate: data.updated_at,
+                message: !hasCreds ? 'Faltan credenciales' : (!isFresh ? 'Sesión expirada' : 'OK')
+            };
+        } catch (error) {
+            console.error('Error getting WhatsApp status:', error.message);
+            return { connected: false, error: error.message };
+        }
+    },
+
     async deleteTicket(id) {
         const { error } = await supabase
             .from('tickets')
@@ -185,6 +227,25 @@ const supabaseService = {
                 entidad_id: entityId
             }]);
         if (error) console.error('Error logging action:', error);
+    },
+
+    async getRecentAutoRedeployCount(serviceId) {
+        try {
+            // Buscamos intentos en los últimos 30 minutos para no saturar
+            const thirtyMinutesAgo = new Date(Date.now() - 30 * 60000).toISOString();
+            const { count, error } = await supabase
+                .from('auditoria_acciones')
+                .select('*', { count: 'exact', head: true })
+                .eq('entidad_id', serviceId)
+                .eq('accion', 'Auto-Redeploy')
+                .gte('created_at', thirtyMinutesAgo);
+
+            if (error) throw error;
+            return count || 0;
+        } catch (error) {
+            console.error('Error checking recent redeploys:', error.message);
+            return 99; // Por seguridad, si falla la base de datos, no reintentamos
+        }
     },
 
     async getAuditLogs() {

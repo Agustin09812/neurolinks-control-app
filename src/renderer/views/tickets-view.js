@@ -21,6 +21,8 @@ async function renderTicketsView(filterClientId = "") {
     if (secondary) secondary.remove();
     const secondaryVar = document.getElementById("integrated-var-container");
     if (secondaryVar) secondaryVar.remove();
+    const secondaryChat = document.getElementById("integrated-chat-container");
+    if (secondaryChat) secondaryChat.remove();
 
     if (filterClientId) {
         ticketFilters.client = filterClientId;
