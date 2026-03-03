@@ -63,8 +63,15 @@ async function loadAssistants(preserveSelection = true) {
   const isDashboardActive = document.getElementById("dashboard-global").style.display === "block";
 
   if (preserveSelection && currentSelected) {
-    const item = document.querySelector(`[data-id="${currentSelected}"]`);
-    if (item) item.click();
+    const updatedProject = assistants.find(p => p.id === currentSelected);
+    if (updatedProject) {
+      // Actualizar la vista de detalle de forma silenciosa (sin resetear componentes integrados)
+      renderDetail(updatedProject, true);
+
+      // Asegurarse que el item en el sidebar esté visualmente activo
+      const item = document.querySelector(`[data-id="${currentSelected}"]`);
+      if (item) item.classList.add("active-assistant");
+    }
   } else if (!selectedProjectId && isDashboardActive) {
     // Si no hay selección y estamos en el dashboard, lo refrescamos
     renderMainDashboard();
@@ -135,6 +142,7 @@ function renderSidebar() {
       <div class="d-flex align-items-center justify-content-between w-100">
         <div class="sidebar-name d-flex align-items-center">
           <span class="text-truncate" style="max-width: 140px;">${a.name}</span>
+          ${a.isUpdatable ? `<span class="badge bg-warning text-dark ms-2" title="Update Available" style="font-size: 0.6rem; animation: pulse 2s infinite;">UPDATE</span>` : ""}
           <span id="badge-${a.id}"></span>
         </div>
         <div class="ms-2">
@@ -215,23 +223,27 @@ async function updateAssistantBadge(projectId) {
 // DETAIL PANEL
 // --------------------------------------------------
 
-async function renderDetail(a) {
+async function renderDetail(a, isRefresh = false) {
 
-  // Ocultar todas las vistas posibles
-  document.getElementById("dashboard-global").style.display = "none";
-  document.getElementById("clients-view").style.display = "none";
-  document.getElementById("tickets-view").style.display = "none";
-  document.getElementById("billing-view").style.display = "none";
-  document.getElementById("audit-view").style.display = "none";
+  if (!isRefresh) {
+    // Ocultar todas las vistas posibles
+    document.getElementById("dashboard-global").style.display = "none";
+    document.getElementById("clients-view").style.display = "none";
+    document.getElementById("tickets-view").style.display = "none";
+    document.getElementById("billing-view").style.display = "none";
+    document.getElementById("audit-view").style.display = "none";
 
-  const detailPanel = document.getElementById("assistant-detail");
-  if (detailPanel) detailPanel.style.display = "block";
+    const detailPanel = document.getElementById("assistant-detail");
+    if (detailPanel) detailPanel.style.display = "block";
 
-  // Limpiar vistas integradas previas
-  const oldLog = document.getElementById("integrated-log-container");
-  if (oldLog) oldLog.remove();
-  const oldVar = document.getElementById("integrated-var-container");
-  if (oldVar) oldVar.remove();
+    // Limpiar vistas integradas previas SOLO si no es refresh
+    const oldLog = document.getElementById("integrated-log-container");
+    if (oldLog) oldLog.remove();
+    const oldVar = document.getElementById("integrated-var-container");
+    if (oldVar) oldVar.remove();
+    const oldChat = document.getElementById("integrated-chat-container");
+    if (oldChat) oldChat.remove();
+  }
 
   selectedProjectId = a.id;
 
@@ -273,6 +285,29 @@ async function renderDetail(a) {
     } catch (e) { }
   }
 
+  // Obtener Info de WhatsApp Session
+  let whatsappBadge = "";
+  try {
+    const wsStatus = await window.api.getWhatsAppStatus(a.id);
+    if (wsStatus && wsStatus.connected) {
+      whatsappBadge = `
+        <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 p-2 rounded animate-fade d-flex align-items-center gap-2" title="Sesión activa en Supabase">
+          <i class="bi bi-whatsapp"></i>
+          <span>WhatsApp Conectado</span>
+        </div>
+      `;
+    } else {
+      whatsappBadge = `
+        <div class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20 p-2 rounded animate-fade d-flex align-items-center gap-2" title="${wsStatus.message || 'Sin sesión activa'}">
+          <i class="bi bi-whatsapp"></i>
+          <span>WhatsApp Desconectado</span>
+        </div>
+      `;
+    }
+  } catch (e) {
+    console.error("Error al obtener estado de WhatsApp:", e);
+  }
+
   // SERVICES HTML
   let servicesHtml = "";
   if (!a.services || a.services.length === 0) {
@@ -308,12 +343,18 @@ async function renderDetail(a) {
             <button class="btn btn-success btn-sm" data-bs-toggle="tooltip" title="Dashboard" onclick="openDashboard('${service.projectId}','${service.environmentId}','${service.id}')">
               <i class="bi bi-speedometer2"></i>
             </button>
-            <button class="btn btn-primary btn-sm" data-bs-toggle="tooltip" title="Webchat" onclick="openWebchat('${service.projectId}','${service.environmentId}','${service.id}')">
+            <button class="btn btn-primary btn-sm" data-bs-toggle="tooltip" title="Webchat" onclick="openWebchat('${service.projectId}','${service.environmentId}','${service.id}', '${service.name}')">
               <i class="bi bi-chat-dots"></i>
             </button>
+            ${service.isUpdatable ? `
+            <button class="btn btn-warning btn-sm" data-bs-toggle="tooltip" title="Deploy Update" onclick="handleDeployUpdate('${service.id}', '${service.environmentId}')">
+              <i class="bi bi-cloud-arrow-up"></i>
+            </button>
+            ` : ""}
             <div class="dropdown">
               <button class="btn btn-sm btn-outline-light dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
               <ul class="dropdown-menu dropdown-menu-dark">
+                ${service.isUpdatable ? `<li><button class="dropdown-item text-warning" onclick="handleDeployUpdate('${service.id}', '${service.environmentId}')"><i class="bi bi-cloud-arrow-up me-2"></i>Deploy Update</button></li>` : ""}
                 <li><button class="dropdown-item" onclick="handleRedeploy('${service.id}', '${service.environmentId}')"><i class="bi bi-arrow-clockwise me-2"></i>Redeploy</button></li>
                 <li><button class="dropdown-item" ${!service.deploymentId ? "disabled" : ""} onclick="handleDownloadLogs('${service.deploymentId}', \`${a.name}\`)"><i class="bi bi-download me-2"></i>Descargar Logs</button></li>
                 <li><hr class="dropdown-divider"></li>
@@ -326,7 +367,10 @@ async function renderDetail(a) {
     `).join("");
   }
 
-  detail.innerHTML = `
+  const baseContent = document.getElementById("detail-base-content");
+  const target = baseContent || document.getElementById("assistant-detail");
+
+  target.innerHTML = `
     <div class="animate-fade">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <div class="d-flex align-items-center gap-3">
@@ -342,6 +386,12 @@ async function renderDetail(a) {
           <button class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="handleDeleteProject('${a.id}')">
             <i class="bi bi-trash"></i>
           </button>
+          ${a.isUpdatable ? `
+          <div class="ms-3 d-flex align-items-center gap-2 text-warning fw-bold small animate-fade">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Update Available</span>
+          </div>
+          ` : ""}
         </div>
         <div id="client-badge-container" class="d-flex gap-2">
           ${linkedClient ? `
@@ -356,6 +406,7 @@ async function renderDetail(a) {
             </button>
           `}
           ${ticketsBadge}
+          ${whatsappBadge}
         </div>
       </div>
 
@@ -401,16 +452,30 @@ async function handleDelete(serviceId) {
 // --------------------------------------------------
 
 async function handleRedeploy(serviceId, environmentId) {
-
+  if (!confirm("¿Deseas reiniciar este servicio?")) return;
   try {
-
     await window.api.redeployService(serviceId, environmentId);
-
-    // refresco inmediato
+    showToast("Reinicio solicitado correctamente", "success");
     await loadAssistants(true);
-
   } catch (error) {
     console.error("Error redeploy:", error);
+    showToast("Error al solicitar reinicio", "danger");
+  }
+}
+
+async function handleDeployUpdate(serviceId, environmentId) {
+  if (!confirm("¿Deseas aplicar la nueva versión disponible para este servicio?")) return;
+  try {
+    const res = await window.api.deployServiceUpdate(serviceId, environmentId);
+    if (res.data?.serviceInstanceDeployV2) {
+      showToast("Redeploy de actualización iniciado correctamente", "success");
+      await loadAssistants(true);
+    } else {
+      showToast("Error al iniciar actualización", "danger");
+    }
+  } catch (error) {
+    console.error("Error deploy update:", error);
+    showToast("Error de conexión al Railway", "danger");
   }
 }
 
@@ -578,10 +643,9 @@ async function openDashboard(projectId, environmentId, serviceId) {
 // WEBCHAT
 // --------------------------------------------------
 
-async function openWebchat(projectId, environmentId, serviceId) {
+async function openWebchat(projectId, environmentId, serviceId, serviceName) {
 
   try {
-
     const domains = await window.api.getServiceDomains(
       projectId,
       environmentId,
@@ -598,7 +662,7 @@ async function openWebchat(projectId, environmentId, serviceId) {
     }
 
     if (!domain) {
-      alert("Este servicio no tiene dominio público.");
+      showToast("Este servicio no tiene dominio público.", "warning");
       return;
     }
 
@@ -606,10 +670,12 @@ async function openWebchat(projectId, environmentId, serviceId) {
       domain = "https://" + domain;
     }
 
-    window.api.openExternal(`${domain}/webchat`);
+    // Usar el nuevo componente integrado
+    renderWebchatView(domain, serviceName);
 
   } catch (err) {
     console.error("Error abriendo webchat:", err);
+    showToast("Error al cargar webchat", "danger");
   }
 }
 
@@ -702,6 +768,12 @@ async function renderMainDashboard() {
   document.getElementById("tickets-view").style.display = "none";
   document.getElementById("billing-view").style.display = "none";
   document.getElementById("audit-view").style.display = "none";
+
+  // Limpiar contenedores secundarios
+  ["integrated-log-container", "integrated-var-container", "integrated-chat-container"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
 
   const dash = document.getElementById("dashboard-global");
   dash.style.display = "block";

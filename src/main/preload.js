@@ -25,12 +25,28 @@ contextBridge.exposeInMainWorld('api', {
   deleteProject: (projectId) =>
     ipcRenderer.invoke('delete-project', projectId),
 
+  getWhatsAppStatus: (projectId) =>
+    ipcRenderer.invoke('get-whatsapp-status', projectId),
+
+  // --------------------------------------------------
+  // TEMPLATES
+  // --------------------------------------------------
+
+  searchTemplates: (query) =>
+    ipcRenderer.invoke('search-templates', query),
+
+  deployTemplate: (templateId) =>
+    ipcRenderer.invoke('deploy-template', templateId),
+
   // --------------------------------------------------
   // SERVICES
   // --------------------------------------------------
 
   redeployService: (serviceId, environmentId) =>
     ipcRenderer.invoke('redeploy-service', serviceId, environmentId),
+
+  deployServiceUpdate: (serviceId, environmentId) =>
+    ipcRenderer.invoke('deploy-service-update', serviceId, environmentId),
 
   deleteService: (serviceId) =>
     ipcRenderer.invoke('delete-service', serviceId),

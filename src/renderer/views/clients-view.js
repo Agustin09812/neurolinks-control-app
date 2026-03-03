@@ -17,6 +17,8 @@ async function renderClientsView() {
     if (secondary) secondary.remove();
     const secondaryVar = document.getElementById("integrated-var-container");
     if (secondaryVar) secondaryVar.remove();
+    const secondaryChat = document.getElementById("integrated-chat-container");
+    if (secondaryChat) secondaryChat.remove();
 
     const view = document.getElementById("clients-view");
     view.style.display = "block";

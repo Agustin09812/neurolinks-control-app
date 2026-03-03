@@ -10,6 +10,12 @@ async function renderAuditView() {
     document.getElementById("tickets-view").style.display = "none";
     document.getElementById("billing-view").style.display = "none";
 
+    // Limpiar contenedores secundarios
+    ["integrated-log-container", "integrated-var-container", "integrated-chat-container"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    });
+
     // Set sidebar active
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     const btnAudit = document.getElementById("btn-open-audit");
