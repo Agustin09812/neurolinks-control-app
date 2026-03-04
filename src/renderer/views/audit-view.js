@@ -28,7 +28,7 @@ async function renderAuditView() {
         <div class="animate-fade mt-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h2 class="fw-bold mb-0">LOGS DE ACTIVIDAD</h2>
+                    <h2 class="fw-bold mb-0">REGISTRO DE ACTIVIDAD</h2>
                     <p class="text-secondary small mb-0">Auditoría en tiempo real de acciones del sistema</p>
                 </div>
                 <div class="d-flex gap-2">
@@ -57,7 +57,7 @@ async function renderAuditView() {
                         <tbody id="audit-table-body">
                             <tr>
                                 <td colspan="5" class="text-center py-5">
-                                    <div class="spinner-border text-info" role="status"></div>
+                                    <div class="spinner-border text-light" role="status"></div>
                                 </td>
                             </tr>
                         </tbody>
@@ -92,7 +92,7 @@ async function loadAuditLogs() {
         tbody.innerHTML = `
             <tr>
                 <td colspan="5" class="text-center py-5">
-                    <div class="spinner-border text-info" role="status"></div>
+                    <div class="spinner-border text-light" role="status"></div>
                 </td>
             </tr>
         `;

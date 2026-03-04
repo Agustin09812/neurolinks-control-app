@@ -70,10 +70,23 @@ body {
 
 .nav-top {
   position: relative;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.5px;
   transition: all 0.25s ease;
   color: var(--text-dim) !important;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+#btnNotifications {
+  color: var(--text-dim) !important;
+  transition: all 0.25s ease;
+}
+
+#btnNotifications:hover {
+  color: var(--text-main) !important;
+  transform: translateY(-1px);
 }
 
 /* Hover */
@@ -259,8 +272,8 @@ body {
 }
 
 #detail-side-panel {
-  min-height: 500px;
-  border-radius: var(--radius-lg);
+  height: calc(100vh - 220px);
+  max-height: calc(100vh - 220px);
   overflow-wrap: break-word;
   word-break: break-word;
 }
@@ -535,4 +548,21 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* =========================================================
+   16. VARIABLES-VIEW
+========================================================= */
+
+.variable-name {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.variable-value {
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  text-wrap: balance;
 }

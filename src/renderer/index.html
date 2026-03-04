@@ -14,48 +14,75 @@
 
   <!-- HEADER -->
   <div class="border-bottom border-secondary py-3 px-4">
-    <h1 class="mb-0 fw-bold text-center">NEUROLINKS CONTROL</h1>
+    <!-- <h3 class="mb-0 fw-bold text-center">NEUROLINKS CONTROL</h3> -->
     <div class="text-center">
-      <small id="app-version" class="text-secondary"></small>
+      <!-- <small id="app-version" class="text-secondary"></small> -->
     </div>
   </div>
 
-  <!-- NAVBAR SUPERIOR -->
+
+  <!-- NAVBAR PRINCIPAL -->
   <div class="border-bottom border-secondary bg-black bg-opacity-50">
-    <div class="container-fluid px-4">
-      <div class="d-flex align-items-center gap-3 py-2">
+    <div class="container-fluid px-4 py-3">
 
-        <button class="btn btn-success btn-sm" id="btnDeployAssistant">
-          <i class="bi bi-plus-lg"></i> NUEVO
-        </button>
+      <div class="d-flex justify-content-between align-items-center">
 
-        <div class="vr text-secondary"></div>
+        <!-- IZQUIERDA -->
+        <div class="d-flex flex-column">
+          <p class="fw-bold mb-0">NEUROLINKS CONTROL</p>
+          <small id="app-version" class="text-secondary"></small>
+        </div>
 
-        <button class="btn btn-link text-light nav-top active" style="text-decoration: none;" data-view="dashboard">
-          DASHBOARD
-        </button>
+        <!-- DERECHA -->
+        <div class="d-flex align-items-center gap-3">
 
-        <button class="btn btn-link text-light nav-top" style="text-decoration: none;" data-view="clients">
-          CLIENTES
-        </button>
+          <button class="btn btn-outline-info btn-sm" id="btnDeployAssistant">
+            <i class="bi bi-plus-lg"></i> NUEVO
+          </button>
 
-        <button class="btn btn-link text-light nav-top" style="text-decoration: none;" data-view="tickets">
-          TICKETS
-        </button>
+          <div class="vr text-secondary"></div>
 
-        <button class="btn btn-link text-light nav-top" style="text-decoration: none;" data-view="billing">
-          FACTURACIÓN
-        </button>
+          <button class="btn btn-link text-light nav-top active" data-view="dashboard" style="text-decoration: none;">
+            DASHBOARD
+          </button>
 
-        <button class="btn btn-link text-light nav-top" style="text-decoration: none;" data-view="audit">
-          AUDITORÍA
-        </button>
+          <button class="btn btn-link text-light nav-top" data-view="clients" style="text-decoration: none;">
+            CLIENTES
+          </button>
 
-        <button class="btn btn-link text-light nav-top" style="text-decoration: none;" data-view="assistants">
-          ASISTENTES
-        </button>
+          <button class="btn btn-link text-light nav-top" data-view="tickets" style="text-decoration: none;">
+            TICKETS
+          </button>
+
+          <button class="btn btn-link text-light nav-top" data-view="billing" style="text-decoration: none;">
+            FACTURACIÓN
+          </button>
+
+          <button class="btn btn-link text-light nav-top" data-view="audit" style="text-decoration: none;">
+            AUDITORÍA
+          </button>
+
+          <button class="btn btn-link text-light nav-top" data-view="assistants" style="text-decoration: none;">
+            ASISTENTES
+          </button>
+
+          <div class="ms-auto d-flex align-items-center">
+
+            <button class="btn btn-link text-light position-relative" id="btnNotifications"
+              style="text-decoration:none; font-size:18px;" onclick="navigate('notifications')">
+              <i class="bi bi-bell"></i>
+              <span id="notifications-badge"
+                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                style="display:none;">
+                0
+              </span>
+            </button>
+          </div>
+
+        </div>
 
       </div>
+
     </div>
   </div>
 
@@ -91,6 +118,10 @@
 
     <!-- AUDITORÍA -->
     <div id="audit-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+    </div>
+
+    <!-- NOTIFICACIONES -->
+    <div id="notifications-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
     </div>
 
   </div>
@@ -144,9 +175,9 @@
             <div class="row mb-3 px-3">
               <div class="input-group">
                 <input type="text" id="template-search-input" class="form-control bg-dark text-light border-secondary"
-                  placeholder="Buscar entre mis templates..." value="">
+                  value="">
                 <button class="btn btn-primary" id="btn-search-templates">
-                  <i class="bi bi-search"></i> Buscar
+                  <i class="bi bi-search text-light"></i> Buscar
                 </button>
               </div>
             </div>
@@ -240,6 +271,8 @@
   <script src="views/logs-view.js" defer></script>
   <script src="views/variables-view.js" defer></script>
   <script src="views/webchat-view.js" defer></script>
+  <script src="views/dashboard-view.js" defer></script>
+  <script src="views/notifications-view.js" defer></script>
   <script src="core/render.js" defer></script>
   <!-- Templates de despliegue -->
   <script src="core/deploy-template.js" defer></script>

@@ -124,12 +124,48 @@ const supabaseService = {
     },
 
     async createTicket(ticketData) {
+
+        // Normalizar ESTADO para evitar violar constraint
+        const estadoMap = {
+            "abierto": "Abierto",
+            "en progreso": "En progreso",
+            "en progreso ": "En progreso",
+            "enprogreso": "En progreso",
+            "cerrado": "Cerrado"
+        };
+
+        if (ticketData.estado) {
+            const normalized = ticketData.estado.toLowerCase().trim();
+            ticketData.estado = estadoMap[normalized] || "Abierto";
+        } else {
+            ticketData.estado = "Abierto";
+        }
+
+        // Normalizar PRIORIDAD también (por seguridad)
+        const prioridadMap = {
+            "baja": "Baja",
+            "media": "Media",
+            "alta": "Alta"
+        };
+
+        if (ticketData.prioridad) {
+            const normalized = ticketData.prioridad.toLowerCase().trim();
+            ticketData.prioridad = prioridadMap[normalized] || "Media";
+        } else {
+            ticketData.prioridad = "Media";
+        }
+
         const { data, error } = await supabase
             .from('tickets')
             .insert([ticketData])
             .select()
             .single();
-        if (error) throw error;
+
+        if (error) {
+            console.error("Error creating ticket:", error);
+            throw error;
+        }
+
         return data;
     },
 

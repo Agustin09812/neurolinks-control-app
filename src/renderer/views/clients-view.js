@@ -23,13 +23,13 @@ async function renderClientsView() {
     const view = document.getElementById("clients-view");
     view.style.display = "block";
     view.innerHTML = `
-        <div class="animate-fade mt-4">
-            <div class="d-flex justify-content-center align-items-center h-100" id="clients-loading">
-                <div class="spinner-border text-accent-clients" role="status"></div>
+    <div class="d-flex justify-content-center align-items-center h-100" id="clients-loading">
+                <div class="spinner-border text-light" role="status"></div>
             </div>
+        <div class="animate-fade mt-4">
             <div id="clients-content" style="display:none;">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="fw-bold mb-0">GESTIÓN DE <span class="text-accent-clients">CLIENTES</span></h2>
+                    <h2 class="fw-bold mb-0">GESTIÓN DE <span class="text-light">CLIENTES</span></h2>
                     <div class="d-flex gap-2">
                         <button class="btn btn-outline-light btn-sm" onclick="openNewClientModal()">
                             <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
@@ -157,11 +157,11 @@ async function renderClientsView() {
                                         <input type="hidden" id="paymentClientId">
                                         <div class="mb-3">
                                             <label class="form-label small text-dim">CONCEPTO</label>
-                                            <input type="text" class="form-control form-control-sm" id="payConcept" required placeholder="Ej: Abono Marzo">
+                                            <input type="text" class="form-control form-control-sm text-light" id="payConcept" required>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label small text-dim">MONTO ($)</label>
-                                            <input type="number" step="0.01" class="form-control form-control-sm" id="payAmount" required placeholder="0.00">
+                                            <input type="number" step="0.01" class="form-control form-control-sm text-light" id="payAmount" required>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label small text-dim">MÉTODO</label>
@@ -176,7 +176,7 @@ async function renderClientsView() {
                                             <label class="form-label small text-dim">FECHA</label>
                                             <input type="date" class="form-control form-control-sm text-light" id="payDate" required>
                                         </div>
-                                        <button type="submit" class="btn btn-premium btn-sm w-100">
+                                        <button type="submit" class="btn btn-outline-light btn-sm w-100">
                                             <i class="bi bi-plus-circle me-2"></i>Agregar Pago
                                         </button>
                                     </form>
@@ -188,10 +188,10 @@ async function renderClientsView() {
                                         <table class="table table-hover table-sm">
                                             <thead>
                                                 <tr>
-                                                    <th>Fecha</th>
-                                                    <th>Concepto</th>
-                                                    <th>Monto</th>
-                                                    <th class="text-end"></th>
+                                                    <th style="color: var(--bg-deep) !important">Fecha</th>
+                                                    <th style="color: var(--bg-deep) !important">Concepto</th>
+                                                    <th style="color: var(--bg-deep) !important">Monto</th>
+                                                    <th style="color: var(--bg-deep) !important" class="text-end"></th>
                                                 </tr>
                                             </thead>
                                             <tbody id="payments-table-body">
@@ -329,17 +329,17 @@ async function renderClientsList() {
                     <div class="border-start border-secondary ps-4">
                         <h6 class="text-accent-clients fw-bold mb-3"><i class="bi bi-gear me-2"></i>ACCIONES RÁPIDAS</h6>
                         <div class="d-grid gap-2">
-                            <button class="btn btn-outline-custom btn-sm text-start" onclick="openEditClient('${c.id}')">
+                            <button class="btn btn-outline-light btn-sm text-start" onclick="openEditClient('${c.id}')">
                                 <i class="bi bi-pencil me-2"></i> Editar Perfil
                             </button>
-                            <button class="btn btn-outline-custom btn-sm text-start" onclick="openClientsTickets('${c.id}')">
+                            <button class="btn btn-outline-light btn-sm text-start" onclick="openClientsTickets('${c.id}')">
                                 <i class="bi bi-ticket-perforated me-2"></i> Ver Tickets
                             </button>
-                            <button class="btn btn-outline-warning btn-sm text-start" onclick="openPaymentsModal('${c.id}', '${c.nombre}')">
+                            <button class="btn btn-outline-light btn-sm text-start" onclick="openPaymentsModal('${c.id}', '${c.nombre}')">
                                 <i class="bi bi-credit-card me-2"></i> Pagos/Historial
                             </button>
                             <hr class="my-1 border-secondary">
-                            <button class="btn btn-danger-soft btn-sm text-start" onclick="handleDeleteClient('${c.id}')">
+                            <button class="btn btn-outline-danger btn-sm text-start" onclick="handleDeleteClient('${c.id}')">
                                 <i class="bi bi-trash me-2"></i> Eliminar Cliente
                             </button>
                         </div>
@@ -525,7 +525,7 @@ async function openPaymentsModal(clientId, clientName) {
 
 async function loadPaymentsData(clientId) {
     const tbody = document.getElementById("payments-table-body");
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-light"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
 
     try {
         const payments = await window.api.getClientPayments(clientId);

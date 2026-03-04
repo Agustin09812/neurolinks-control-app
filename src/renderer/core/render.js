@@ -1,11 +1,16 @@
 let assistants = [];
 let selectedProjectId = null;
+let lastAssistantsHash = "" // Hash system for optimized refreshing
+let isRefreshing = false; // Avoid glitch while refreshing
+let notifications = []; // Notifications system in app
+const notificationMemory = new Map(); // Notifications memory
+let renderToken = 0;
 
 // ========================================
 // ROUTER CENTRAL DE NAVEGACIÓN
 // ========================================
 
-function navigate(view) {
+async function navigate(view) {
 
   localStorage.setItem("activeView", view);
 
@@ -16,7 +21,8 @@ function navigate(view) {
     "clients-view",
     "tickets-view",
     "billing-view",
-    "audit-view"
+    "audit-view",
+    "notifications-view"
   ];
 
   const activeViewEl = document.getElementById(`${view}-view`)
@@ -52,8 +58,21 @@ function navigate(view) {
       break;
 
     case "assistants":
+
+      // reset detail panel si estaba abierto
+      const detail = document.getElementById("assistant-detail");
+      if (detail) {
+        detail.dataset.initialized = "";
+        detail.dataset.projectId = "";
+        detail.style.display = "none";
+      }
+
+      await loadAssistants(false);
+
       document.getElementById("assistants-view").style.display = "block";
+
       renderAssistantsGrid?.();
+
       break;
 
     case "clients":
@@ -74,6 +93,11 @@ function navigate(view) {
     case "audit":
       document.getElementById("audit-view").style.display = "block";
       renderAuditView?.();
+      break;
+
+    case "notifications":
+      document.getElementById("notifications-view").style.display = "block";
+      renderNotificationsView?.();
       break;
 
   }
@@ -122,6 +146,87 @@ function showToast(message, type = "success") {
   });
 }
 
+// --------------------------------------------------
+// NOTIFICATIONS IN APP
+// --------------------------------------------------
+
+const NOTIFICATION_TTL = 60000; // 60 segundos
+
+function addNotification(type, title, message, key = null) {
+
+  const notificationKey = key || `${type}-${message}`;
+
+  if (notificationMemory.has(notificationKey)) {
+
+    const lastTime = notificationMemory.get(notificationKey);
+
+    if (Date.now() - lastTime < NOTIFICATION_TTL) {
+      return;
+    }
+
+  }
+
+  notificationMemory.set(notificationKey, Date.now());
+
+  const notification = {
+    id: crypto.randomUUID(),
+    type,
+    title,
+    message,
+    date: new Date(),
+    read: false
+  };
+
+  notifications.unshift(notification);
+
+  updateNotificationsBadge();
+
+  showNotificationToast(notification);
+
+  console.log("Nueva notificación:", notification);
+}
+
+function showNotificationToast(notification) {
+
+  const icon =
+    notification.type === "ticket" ? "bi-ticket-perforated" :
+      notification.type === "deploy" ? "bi-arrow-repeat" :
+        notification.type === "deploy-error" ? "bi-exclamation-triangle-fill" :
+          notification.type === "error" ? "bi-exclamation-triangle-fill" :
+            "bi-bell";
+
+  showToast(
+    `<i class="bi ${icon} me-2"></i>${notification.title}`,
+    "info"
+  );
+
+}
+
+function getNotifications() {
+  return notifications;
+}
+
+function markAllNotificationsRead() {
+  notifications.forEach(n => n.read = true);
+  updateNotificationsBadge();
+}
+
+function updateNotificationsBadge() {
+
+  const badge = document.getElementById("notifications-badge");
+
+  if (!badge) return;
+
+  const unread = notifications.filter(n => !n.read).length;
+
+  if (unread === 0) {
+    badge.style.display = "none";
+    return;
+  }
+
+  badge.style.display = "block";
+  badge.innerText = unread;
+}
 
 // --------------------------------------------------
 // LOAD ASSISTANTS
@@ -132,12 +237,14 @@ async function loadAssistants(preserveSelection = true) {
   const currentSelected = selectedProjectId;
 
   const data = await window.api.getAssistants();
+  if (!Array.isArray(data)) return;
 
   data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   assistants = data;
 
-  const isDetailOpen = document.getElementById("assistant-detail").style.display === "block";
+  const detailEl = document.getElementById("assistant-detail");
+  const isDetailOpen = detailEl && detailEl.style.display === "block";
 
   if (isDetailOpen && preserveSelection && currentSelected) {
 
@@ -209,16 +316,18 @@ function renderAssistantsGrid() {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h2 class="fw-bold mb-0">MIS <span class="text-success">ASISTENTES</span></h2>
-        <p class="text-secondary small mb-0">
-          Gestión técnica de proyectos desplegados en Railway
-        </p>
+    <div class="mt-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="fw-bold text-light mb-0">MIS ASISTENTES</h2>
+          <p class="text-secondary small mb-0">
+            Gestión técnica de proyectos desplegados en Railway
+          </p>
+        </div>
       </div>
+  
+      <div id="assistants-grid" class="row g-4"></div>
     </div>
-
-    <div id="assistants-grid" class="row g-4"></div>
   `;
 
   const grid = document.getElementById("assistants-grid");
@@ -273,11 +382,20 @@ function renderAssistantsGrid() {
       </div>
     `;
 
-    col.querySelector(".assistant-card").addEventListener("click", () => {
+    col.querySelector(".assistant-card").addEventListener("click", async () => {
+
       selectedProjectId = project.id;
-      // navigate("assistants-detail");
+
       document.getElementById("assistants-view").style.display = "none";
-      renderDetail(project);
+
+      // fetch fresh data
+      await loadAssistants(true);
+
+      const fresh = assistants.find(a => a.id === project.id);
+
+      if (!fresh) return;
+
+      renderDetail(fresh);
     });
 
     grid.appendChild(col);
@@ -291,6 +409,9 @@ function renderAssistantsGrid() {
 async function renderDetail(project, isRefresh = false) {
 
   const detailPanel = document.getElementById("assistant-detail");
+  if (!detailPanel) return;
+
+  const token = ++renderToken;
 
   const isDifferentProject =
     detailPanel.dataset.projectId &&
@@ -298,14 +419,14 @@ async function renderDetail(project, isRefresh = false) {
 
   selectedProjectId = project.id;
 
-  // ===== SI CAMBIA PROYECTO → RESET TOTAL CONTROLADO
+  // RESET SI CAMBIA PROYECTO
   if (isDifferentProject) {
     detailPanel.dataset.initialized = "";
     detailPanel.dataset.projectId = "";
     detailPanel.innerHTML = "";
   }
 
-  // ===== PRIMER RENDER
+  // ===== RENDER INICIAL (NUNCA ABORTAR)
   if (!detailPanel.dataset.initialized) {
 
     renderDetailStructure(project);
@@ -313,19 +434,40 @@ async function renderDetail(project, isRefresh = false) {
     detailPanel.dataset.initialized = "true";
     detailPanel.dataset.projectId = project.id;
 
+    // SOLO abortar async
     await updateDetailHeader(project);
+
+    if (token !== renderToken) return;
+
     renderServices(project);
+
     return;
   }
 
-  // ===== REFRESH INCREMENTAL
+  // ===== REFRESH
   if (isRefresh) {
+
     await updateDetailHeader(project);
+
+    if (token !== renderToken) return;
+
     patchServices(project);
+
   }
 }
 
 function renderDetailStructure(project) {
+
+  const servicesContainer = document.getElementById("services-container");
+
+  if (servicesContainer) {
+    servicesContainer.innerHTML = `
+    <div class="text-center py-4 text-secondary">
+      <div class="spinner-border spinner-border-sm"></div>
+      Cargando servicios...
+    </div>
+  `;
+  }
 
   document.getElementById("dashboard-global").style.display = "none";
   document.getElementById("clients-view").style.display = "none";
@@ -408,12 +550,19 @@ function renderDetailStructure(project) {
 
   // Eventos header
 
-  document.getElementById("btnBackToGrid").addEventListener("click", () => {
+  document.getElementById("btnBackToGrid").addEventListener("click", async () => {
     selectedProjectId = null;
+
     detail.dataset.initialized = "";
     detail.dataset.projectId = "";
+
     detail.style.display = "none";
+
     document.getElementById("assistants-view").style.display = "block";
+
+    // refresh assistants
+    await loadAssistants(false);
+
     renderAssistantsGrid();
   });
 
@@ -431,6 +580,8 @@ function renderDetailStructure(project) {
 }
 
 async function updateDetailHeader(project) {
+
+  const currentProjectId = project.id;
 
   const badgesContainer = document.getElementById("header-badges");
   const statusContainer = document.getElementById("header-status-row");
@@ -467,6 +618,7 @@ async function updateDetailHeader(project) {
 
   try {
     const linkedClient = await window.api.getProjectClient(project.id);
+    if (selectedProjectId !== currentProjectId) return;
 
     if (!linkedClient || !linkedClient.clientes) {
 
@@ -487,6 +639,7 @@ async function updateDetailHeader(project) {
       `;
 
       const count = await window.api.getClientPendingTickets(linkedClient.clientes.id);
+      if (selectedProjectId !== currentProjectId) return;
 
       if (count > 0) {
         ticketsBadge = `
@@ -516,6 +669,7 @@ async function updateDetailHeader(project) {
 
   try {
     const wsStatus = await window.api.getWhatsAppStatus(project.id);
+    if (selectedProjectId !== currentProjectId) return;
 
     if (wsStatus?.connected) {
       whatsappBadge = `
@@ -558,13 +712,28 @@ async function updateDetailHeader(project) {
 
 function renderServices(project) {
 
+  if (isRefreshing) return;
+
+  if (project.id !== selectedProjectId) return;
+
   const container = document.getElementById("services-container");
   if (!container) return;
 
   container.innerHTML = "";
 
-  project.services.forEach(service => {
-    const card = createServiceCard(service, project);
+  const freshProject = assistants.find(a => a.id === project.id);
+
+  if (!freshProject || !freshProject.services) {
+    container.innerHTML = `
+      <div class="text-center text-secondary py-4">
+        Cargando servicios...
+      </div>
+    `;
+    return;
+  }
+
+  freshProject.services.forEach(service => {
+    const card = createServiceCard(service, freshProject);
     container.appendChild(card);
   });
 }
@@ -674,6 +843,10 @@ function createServiceCard(service, project) {
 
 function patchServices(project) {
 
+  if (isRefreshing) return;
+
+  if (project.id !== selectedProjectId) return;
+
   const container = document.getElementById("services-container");
   if (!container) return;
 
@@ -723,31 +896,89 @@ async function handleDelete(serviceId) {
 // --------------------------------------------------
 
 async function handleRedeploy(serviceId, environmentId) {
+
   if (!confirm("¿Deseas reiniciar este servicio?")) return;
+
+  addNotification(
+    "deploy",
+    "Reinicio solicitado",
+    `Se solicitó reinicio del servicio`,
+    `redeploy-${serviceId}`
+  );
+
   try {
+
     await window.api.redeployService(serviceId, environmentId);
+
     showToast("Reinicio solicitado correctamente", "success");
+
     await loadAssistants(true);
+
   } catch (error) {
+
     console.error("Error redeploy:", error);
+
+    addNotification(
+      "deploy-error",
+      "Error al reiniciar servicio",
+      `No se pudo reiniciar el servicio`,
+      `redeploy-error-${serviceId}`
+    );
+
     showToast("Error al solicitar reinicio", "danger");
+
   }
 }
 
 async function handleDeployUpdate(serviceId, environmentId) {
+
   if (!confirm("¿Deseas aplicar la nueva versión disponible para este servicio?")) return;
+
+  addNotification(
+    "deploy",
+    "Deploy iniciado",
+    `Se inició actualización del servicio`,
+    `deploy-${serviceId}`
+  );
+
   try {
+
     const res = await window.api.deployServiceUpdate(serviceId, environmentId);
+
     if (res.data?.serviceInstanceDeployV2) {
-      showToast("Redeploy de actualización iniciado correctamente", "success");
+
+      showToast("Deploy iniciado correctamente", "success");
+
       await loadAssistants(true);
+
     } else {
+
+      addNotification(
+        "deploy-error",
+        "Error en deploy",
+        `No se pudo iniciar el deploy`,
+        `deploy-error-${serviceId}`
+      );
+
       showToast("Error al iniciar actualización", "danger");
+
     }
+
   } catch (error) {
+
     console.error("Error deploy update:", error);
+
+    addNotification(
+      "deploy-error",
+      "Error de conexión",
+      `Railway no respondió`,
+      `deploy-error-${serviceId}`
+    );
+
     showToast("Error de conexión al Railway", "danger");
+
   }
+
 }
 
 async function handleDownloadLogs(deploymentId, serviceName) {
@@ -813,7 +1044,20 @@ async function handleDeleteProject(projectId) {
 
   selectedProjectId = null;
 
+  // reset detail panel
+  const detail = document.getElementById("assistant-detail");
+  if (detail) {
+    detail.dataset.initialized = "";
+    detail.dataset.projectId = "";
+    detail.style.display = "none";
+  }
+
+  // refrescar lista
   await loadAssistants(false);
+
+  // ir a vista asistentes
+  navigate("assistants");
+
 }
 
 // --------------------------------------------------
@@ -880,16 +1124,11 @@ async function openDashboard(projectId, environmentId, serviceId) {
       serviceId
     );
 
-    console.log("Domains:", domains);
-
     let domain = null;
 
-    // Primero intentamos custom domain
     if (domains?.customDomains?.length > 0) {
       domain = domains.customDomains[0].domain;
     }
-
-    // Si no hay custom, usamos railway.app
     else if (domains?.serviceDomains?.length > 0) {
       domain = domains.serviceDomains[0].domain;
     }
@@ -903,7 +1142,7 @@ async function openDashboard(projectId, environmentId, serviceId) {
       domain = "https://" + domain;
     }
 
-    window.api.openExternal(`${domain}/dashboard`);
+    renderDashboardView(domain);
 
   } catch (err) {
     console.error("Error abriendo dashboard:", err);
@@ -952,27 +1191,134 @@ async function openWebchat(projectId, environmentId, serviceId, serviceName) {
 
 
 // --------------------------------------------------
-// APP TIMER FETCH (SMART)
+// SMART REFRESH AND HASH SYSTEM
 // --------------------------------------------------
 
 let autoRefreshTimeout = null;
-let refreshRate = 30000; // 30s default
+
+let refreshRate = 30000;
+
+let userActive = true;
+let idleMode = false;
+
+let lastInteraction = Date.now();
+
+function registerActivity() {
+
+  lastInteraction = Date.now();
+
+  if (idleMode) {
+    idleMode = false;
+    console.log("Usuario activo nuevamente");
+  }
+
+}
+
+["mousemove", "keydown", "click"].forEach(evt => {
+  window.addEventListener(evt, registerActivity);
+});
+
+function generateAssistantsHash() {
+
+  if (!assistants) return ""
+
+  return assistants.map(project =>
+
+    project.services.map(service =>
+      `${service.id}-${service.status}-${service.deploymentId || ""}`
+    ).join("|")
+
+  ).join("#")
+
+}
 
 async function smartRefresh() {
 
-  const previous = JSON.stringify(assistants);
+  if (isRefreshing) return;
 
-  await loadAssistants(true);
+  try {
 
-  const current = JSON.stringify(assistants);
+    isRefreshing = true;
 
-  const hasBuilding = assistants.some(project =>
-    project.services.some(service => service.status === "checking")
-  );
+    const previousHash = lastAssistantsHash;
 
-  refreshRate = hasBuilding ? 5000 : 30000;
+    await loadAssistants(true);
 
-  autoRefreshTimeout = setTimeout(smartRefresh, refreshRate);
+    const currentHash = generateAssistantsHash();
+
+    if (currentHash !== previousHash) {
+
+      console.log("Cambios detectados en servicios");
+
+      lastAssistantsHash = currentHash;
+
+      if (selectedProjectId) {
+
+        const project = assistants.find(p => p.id === selectedProjectId);
+
+        if (project) {
+          patchServices(project);
+        }
+
+      }
+
+    }
+
+    const hasBuilding = assistants.some(project =>
+      project.services.some(service => service.status === "checking")
+    );
+
+    const hasError = assistants.some(project =>
+      project.services.some(service => service.status === "error")
+    );
+
+    assistants.forEach(project => {
+      project.services.forEach(service => {
+
+
+
+        if (service.status === "error") {
+          addNotification(
+            "deploy-error",
+            "Error en deploy",
+            `El servicio ${service.name} falló`,
+            `deploy-error-${service.id}`
+          );
+        }
+
+      });
+    });
+
+    const now = Date.now();
+    const inactiveTime = now - lastInteraction;
+
+    if (inactiveTime > 60000) {
+      idleMode = true;
+    }
+
+    if (idleMode) {
+      refreshRate = 10000;
+    } else if (hasBuilding) {
+      refreshRate = 2000;
+    } else if (hasError) {
+      refreshRate = 3000;
+    } else if (selectedProjectId) {
+      refreshRate = 3000;
+    } else {
+      refreshRate = 4000;
+    }
+
+  } catch (err) {
+
+    console.error("Smart refresh error:", err);
+
+  } finally {
+
+    isRefreshing = false;
+
+    autoRefreshTimeout = setTimeout(smartRefresh, refreshRate);
+
+  }
 }
 
 function startAutoRefresh() {
@@ -982,8 +1328,14 @@ function startAutoRefresh() {
   smartRefresh();
 }
 
-window.addEventListener("focus", () => {
-  loadAssistants(true);
+window.addEventListener("focus", async () => {
+
+  console.log("App volvió al foco");
+
+  idleMode = false;
+
+  await loadAssistants(true);
+
 });
 
 startAutoRefresh();
@@ -1000,6 +1352,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (view === "assistants" && assistants.length === 0) {
         await loadAssistants(false);
+        lastAssistantsHash = generateAssistantsHash(); // Al cargar la app, inicializamos el HASH
       }
 
       navigate(view);
@@ -1039,7 +1392,7 @@ async function renderDashboard() {
   dash.style.display = "block";
   dash.innerHTML = `
     <div class="d-flex justify-content-center align-items-center h-100">
-      <div class="spinner-border text-success" role="status"></div>
+      <div class="spinner-border text-light" role="status"></div>
     </div>
   `;
 

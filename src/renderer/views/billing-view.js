@@ -36,7 +36,7 @@ async function renderBillingView() {
                     <button class="btn btn-outline-light btn-sm" onclick="openNewPaymentModal()">
                         <i class="bi bi-plus-lg me-2"></i>Nueva Factura
                     </button>
-                    <button class="btn btn-outline-light btn-sm" onclick="loadBillingData()">
+                    <button class="btn btn-outline-light btn-sm" onclick="refreshBilling()">
                         <i class="bi bi-arrow-clockwise"></i> Actualizar
                     </button>
                     <button class="btn btn-outline-light btn-sm" onclick="exportBillingToCSV()">
@@ -90,7 +90,7 @@ async function renderBillingView() {
                         <tbody id="billing-table-body">
                             <tr>
                                 <td colspan="6" class="text-center py-5">
-                                    <div class="spinner-border text-success" role="status"></div>
+                                    <div class="spinner-border text-light" role="status"></div>
                                 </td>
                             </tr>
                         </tbody>
@@ -162,6 +162,23 @@ async function loadBillingData() {
         console.error("Error loading billing data:", err);
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-danger">Error al cargar datos de facturación</td></tr>';
     }
+}
+
+async function refreshBilling() {
+
+    const tbody = document.getElementById("billing-table-body");
+
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-5">
+                    <div class="spinner-border text-light" role="status"></div>
+                </td>
+            </tr>
+        `;
+    }
+
+    await loadBillingData();
 }
 
 function handleBillingFilter(key, value) {

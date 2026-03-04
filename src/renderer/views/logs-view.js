@@ -9,7 +9,7 @@ async function renderLogsView(deploymentId, serviceName) {
     if (logInterval) clearInterval(logInterval);
 
     panel.innerHTML = `
-        <div class="glass-card p-4 border-top border-info border-3 animate-fade-up">
+        <div class="glass-card p-4 border-top border-info border-3 animate-fade-up" style="height: calc(100% - 30px);">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0 text-info">
                     <i class="bi bi-terminal me-2"></i> Logs: ${serviceName}
@@ -27,7 +27,7 @@ async function renderLogsView(deploymentId, serviceName) {
 
             <div id="log-terminal"
                 class="bg-black text-success p-3 rounded font-monospace small overflow-auto"
-                style="height: 500px; line-height: 1.4; border: 1px solid #333;">
+                style="height: calc(100% - 30px); line-height: 1.4; border: 1px solid #333;">
                 <div class="text-secondary">Cargando logs...</div>
             </div>
         </div>

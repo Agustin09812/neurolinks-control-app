@@ -10,7 +10,7 @@ async function renderWebchatView(serviceDomain, serviceName) {
 
     panel.innerHTML = `
         <div class="glass-card p-0 border-top border-primary border-3 overflow-hidden shadow-lg animate-fade-up"
-            style="height: 700px; border-radius: 15px;">
+            style="height: 100%; border-radius: 15px;">
 
             <div class="d-flex justify-content-between align-items-center p-3
                         bg-dark bg-opacity-50 border-bottom border-secondary border-opacity-20">
@@ -31,7 +31,7 @@ async function renderWebchatView(serviceDomain, serviceName) {
             </div>
 
             <iframe src="${url}"
-                style="width: 100%; height: calc(700px - 62px); border: none; background: #f8f9fa;"
+                style="width: 100%; height: calc(100% - 62px); border: none; background: #f8f9fa;"
                 allow="clipboard-read; clipboard-write; microphone; camera">
             </iframe>
 

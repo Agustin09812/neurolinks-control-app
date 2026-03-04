@@ -5,7 +5,7 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
     if (!panel) return;
 
     panel.innerHTML = `
-        <div class="glass-card p-4 border-top border-warning border-3 animate-fade-up">
+        <div class="glass-card p-4 border-top border-warning border-3 animate-fade-up" style="height: calc(100% - 30px);">
 
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5 class="mb-0 text-warning">
@@ -37,7 +37,7 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
                 </div>
             </div>
 
-            <div id="vars-grid" class="d-grid gap-3">
+            <div id="vars-grid" class="d-grid gap-3" style="overflow-y:auto; height:calc(100% - 170px); min-height:0;">
                 <div class="text-center text-secondary py-4">
                     Cargando variables...
                 </div>

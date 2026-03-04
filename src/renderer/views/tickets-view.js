@@ -1,5 +1,6 @@
 
 let allTicketsView = [];
+let lastTicketsCount = 0;
 let ticketFilters = {
     status: "",
     type: "",
@@ -31,10 +32,10 @@ async function renderTicketsView(filterClientId = "") {
     const view = document.getElementById("tickets-view");
     view.style.display = "block";
     view.innerHTML = `
-        <div class="animate-fade mt-4">
-            <div class="d-flex justify-content-center align-items-center h-100" id="tickets-loading">
-                <div class="spinner-border text-warning" role="status"></div>
+    <div class="d-flex justify-content-center align-items-center h-100" id="tickets-loading">
+                <div class="spinner-border text-light" role="status"></div>
             </div>
+        <div class="animate-fade mt-4">
             <div id="tickets-content" style="display:none;">
                  <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="fw-bold mb-0" style="color: var(--text-main)">SISTEMA DE TICKETS</h2>
@@ -205,8 +206,29 @@ async function loadTicketsData() {
     if (!loadingDiv || !contentDiv) return;
 
     try {
+
+        const previousCount = lastTicketsCount;
+
         allTicketsView = await window.api.getTickets() || [];
+
+        // Detectar nuevos tickets
+        if (previousCount !== 0 && allTicketsView.length > previousCount) {
+
+            addNotification(
+                "ticket",
+                "Nuevo ticket recibido",
+                "Se recibió un nuevo ticket",
+                `ticket-${ticket.id}`
+            );
+
+            showToast("Nuevo ticket recibido", "info");
+
+        }
+
+        lastTicketsCount = allTicketsView.length;
+
         renderTicketsList();
+
     } catch (err) {
         console.error("Error loading tickets:", err);
         showToast("Error al conectar con el servidor de tickets", "danger");
@@ -242,7 +264,7 @@ function renderTicketsList() {
     const filtered = allTicketsView.filter(t => {
         const matchStatus = !ticketFilters.status || t.estado === ticketFilters.status;
         const matchPriority = !ticketFilters.priority || t.prioridad === ticketFilters.priority;
-        const matchClient = !ticketFilters.client || t.id_cliente === ticketFilters.client;
+        const matchClient = !ticketFilters.client || t.cliente_id === ticketFilters.client;
 
         // Filtro de fecha
         let matchDate = true;
@@ -300,7 +322,7 @@ function openEditTicket(id) {
 
     document.getElementById("ticketIdView").value = tick.id;
     document.getElementById("ticketTitleView").value = tick.titulo;
-    document.getElementById("ticketClientView").value = tick.id_cliente;
+    document.getElementById("ticketClientView").value = tick.cliente_id;
     document.getElementById("ticketTypeView").value = tick.tipo;
     document.getElementById("ticketStatusView").value = tick.estado;
     document.getElementById("ticketPriorityView").value = tick.prioridad;
@@ -315,7 +337,7 @@ async function handleTicketSubmit(e) {
     const id = document.getElementById("ticketIdView").value;
     const data = {
         titulo: document.getElementById("ticketTitleView").value,
-        id_cliente: document.getElementById("ticketClientView").value,
+        cliente_id: document.getElementById("ticketClientView").value,
         tipo: document.getElementById("ticketTypeView").value,
         estado: document.getElementById("ticketStatusView").value,
         prioridad: document.getElementById("ticketPriorityView").value,
