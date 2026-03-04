@@ -23,28 +23,24 @@ async function renderBillingView() {
         if (el) el.remove();
     });
 
-    // Set active in sidebar
-    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    document.getElementById("btn-open-billing").classList.add('active');
-
     const view = document.getElementById("billing-view");
     view.style.display = "block";
     view.innerHTML = `
-        <div class="animate-fade">
+        <div class="animate-fade mt-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h2 class="fw-bold mb-0 text-success">CONTROL DE PAGOS</h2>
+                    <h2 class="fw-bold mb-0 text-light" style="color: var(--text-main)">CONTROL DE PAGOS</h2>
                     <p class="text-secondary small mb-0">Gestión financiera y facturación histórica</p>
                 </div>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-success btn-sm" onclick="openNewPaymentModal()">
+                    <button class="btn btn-outline-light btn-sm" onclick="openNewPaymentModal()">
                         <i class="bi bi-plus-lg me-2"></i>Nueva Factura
                     </button>
                     <button class="btn btn-outline-light btn-sm" onclick="loadBillingData()">
-                        <i class="bi bi-arrow-clockwise"></i>
+                        <i class="bi bi-arrow-clockwise"></i> Actualizar
                     </button>
-                    <button class="btn btn-outline-success btn-sm" onclick="exportBillingToCSV()">
-                        <i class="bi bi-download"></i>
+                    <button class="btn btn-outline-light btn-sm" onclick="exportBillingToCSV()">
+                        <i class="bi bi-download"></i> Descargar
                     </button>
                 </div>
             </div>
@@ -54,7 +50,7 @@ async function renderBillingView() {
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="small text-dim fw-bold mb-2">BUSCAR CLIENTE</label>
-                        <input type="text" class="form-control form-control-sm" id="bill-filter-client" placeholder="Nombre del cliente..." onkeyup="handleBillingFilter('client', this.value)">
+                        <input type="text" class="form-control form-control-sm text-light" id="bill-filter-client" onkeyup="handleBillingFilter('client', this.value)">
                     </div>
                     <div class="col-md-3">
                         <label class="small text-dim fw-bold mb-2">MÉTODO DE PAGO</label>
@@ -69,26 +65,26 @@ async function renderBillingView() {
                     </div>
                     <div class="col-md-3">
                         <label class="small text-dim fw-bold mb-2">DESDE</label>
-                        <input type="date" class="form-control form-control-sm" id="bill-filter-start" onchange="handleBillingFilter('dateStart', this.value)">
+                        <input type="date" class="form-control form-control-sm text-light" id="bill-filter-start" onchange="handleBillingFilter('dateStart', this.value)">
                     </div>
                     <div class="col-md-3">
                         <label class="small text-dim fw-bold mb-2">HASTA</label>
-                        <input type="date" class="form-control form-control-sm" id="bill-filter-end" onchange="handleBillingFilter('dateEnd', this.value)">
+                        <input type="date" class="form-control form-control-sm text-light" id="bill-filter-end" onchange="handleBillingFilter('dateEnd', this.value)">
                     </div>
                 </div>
             </div>
 
             <div class="glass-card p-0 overflow-hidden shadow-lg border-secondary">
                 <div class="table-responsive">
-                    <table class="table table-dark table-hover mb-0 align-middle">
-                        <thead class="bg-dark-light">
-                            <tr class="border-secondary">
-                                <th class="ps-4">Fecha</th>
-                                <th>Cliente</th>
-                                <th>Concepto</th>
-                                <th>Monto</th>
-                                <th class="text-center">Método</th>
-                                <th class="text-center">Acciones</th>
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th class="ps-4" style="color: var(--bg-deep) !important">Fecha</th>
+                                <th style="color: var(--bg-deep) !important">Cliente</th>
+                                <th style="color: var(--bg-deep) !important">Concepto</th>
+                                <th style="color: var(--bg-deep) !important">Monto</th>
+                                <th class="text-center" style="color: var(--bg-deep) !important">Método</th>
+                                <th class="text-center" style="color: var(--bg-deep) !important">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="billing-table-body">
@@ -122,15 +118,15 @@ async function renderBillingView() {
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold">FECHA</label>
-                                    <input type="date" class="form-control" id="payDateGlobal" required>
+                                    <input type="date" class="form-control text-light" id="payDateGlobal" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold">MONTO ($)</label>
-                                    <input type="number" class="form-control" id="payAmountGlobal" required>
+                                    <input type="number" class="form-control text-light" id="payAmountGlobal" required>
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label small fw-bold">CONCEPTO</label>
-                                    <input type="text" class="form-control" id="payConceptGlobal" placeholder="Ej: Abono Mensual Febrero" required>
+                                    <input type="text" class="form-control text-light" id="payConceptGlobal" placeholder="Ej: Abono Mensual Febrero" required>
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label small fw-bold">MÉTODO DE PAGO</label>

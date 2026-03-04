@@ -1,6 +1,85 @@
 let assistants = [];
 let selectedProjectId = null;
 
+// ========================================
+// ROUTER CENTRAL DE NAVEGACIÓN
+// ========================================
+
+function navigate(view) {
+
+  localStorage.setItem("activeView", view);
+
+  const views = [
+    "dashboard-global",
+    "assistants-view",
+    "assistant-detail",
+    "clients-view",
+    "tickets-view",
+    "billing-view",
+    "audit-view"
+  ];
+
+  const activeViewEl = document.getElementById(`${view}-view`)
+    || document.getElementById("dashboard-global");
+
+  if (activeViewEl) {
+    activeViewEl.classList.add("view-transition");
+    setTimeout(() => {
+      activeViewEl.classList.remove("view-transition");
+    }, 300);
+  }
+
+  views.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+
+  // Reset active state del navbar
+  document.querySelectorAll(".nav-top").forEach(btn => {
+    btn.classList.remove("active");
+  });
+
+  // Activar botón correcto
+  const activeBtn = document.querySelector(`.nav-top[data-view="${view}"]`);
+  if (activeBtn) activeBtn.classList.add("active");
+
+  // Mostrar vista correcta
+  switch (view) {
+
+    case "dashboard":
+      document.getElementById("dashboard-global").style.display = "block";
+      renderDashboard?.();
+      break;
+
+    case "assistants":
+      document.getElementById("assistants-view").style.display = "block";
+      renderAssistantsGrid?.();
+      break;
+
+    case "clients":
+      document.getElementById("clients-view").style.display = "block";
+      renderClientsView?.();
+      break;
+
+    case "tickets":
+      document.getElementById("tickets-view").style.display = "block";
+      renderTicketsView?.();
+      break;
+
+    case "billing":
+      document.getElementById("billing-view").style.display = "block";
+      renderBillingView?.();
+      break;
+
+    case "audit":
+      document.getElementById("audit-view").style.display = "block";
+      renderAuditView?.();
+      break;
+
+  }
+
+}
+
 // --------------------------------------------------
 // TOAST NOTIFICATIONS (UNIFICADO)
 // --------------------------------------------------
@@ -52,29 +131,27 @@ async function loadAssistants(preserveSelection = true) {
 
   const currentSelected = selectedProjectId;
 
-  assistants = await window.api.getAssistants();
+  const data = await window.api.getAssistants();
 
-  assistants.sort((a, b) => {
-    return new Date(b.createdAt) - new Date(a.createdAt);
-  }); // createdAt orden
+  data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  renderSidebar();
+  assistants = data;
 
-  const isDashboardActive = document.getElementById("dashboard-global").style.display === "block";
+  const isDetailOpen = document.getElementById("assistant-detail").style.display === "block";
 
-  if (preserveSelection && currentSelected) {
+  if (isDetailOpen && preserveSelection && currentSelected) {
+
     const updatedProject = assistants.find(p => p.id === currentSelected);
     if (updatedProject) {
-      // Actualizar la vista de detalle de forma silenciosa (sin resetear componentes integrados)
       renderDetail(updatedProject, true);
-
-      // Asegurarse que el item en el sidebar esté visualmente activo
-      const item = document.querySelector(`[data-id="${currentSelected}"]`);
-      if (item) item.classList.add("active-assistant");
+      return;
     }
-  } else if (!selectedProjectId && isDashboardActive) {
-    // Si no hay selección y estamos en el dashboard, lo refrescamos
-    renderMainDashboard();
+  }
+
+  const isAssistantsView = document.getElementById("assistants-view").style.display === "block";
+
+  if (isAssistantsView) {
+    renderAssistantsGrid();
   }
 }
 
@@ -122,315 +199,509 @@ function getStatusIcon(status) {
   }
 }
 
+// ========================================
+// ASISTANTS GRID VIEW
+// ========================================
 
-// --------------------------------------------------
-// SIDEBAR
-// --------------------------------------------------
+function renderAssistantsGrid() {
 
-function renderSidebar() {
-  const list = document.getElementById("assistant-list");
-  list.innerHTML = "";
+  const container = document.getElementById("assistants-view");
+  if (!container) return;
 
-  assistants.forEach(a => {
-    const item = document.createElement("div");
-    item.className = "assistant-item d-flex align-items-center justify-content-between px-3 py-2 rounded text-light mb-1";
-    if (a.id === selectedProjectId) item.classList.add("active-assistant");
-    item.style.cursor = "pointer";
-    item.dataset.id = a.id;
+  container.innerHTML = `
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="fw-bold mb-0">MIS <span class="text-success">ASISTENTES</span></h2>
+        <p class="text-secondary small mb-0">
+          Gestión técnica de proyectos desplegados en Railway
+        </p>
+      </div>
+    </div>
 
-    item.innerHTML = `
-      <div class="d-flex align-items-center justify-content-between w-100">
-        <div class="sidebar-name d-flex align-items-center">
-          <span class="text-truncate" style="max-width: 140px;">${a.name}</span>
-          ${a.isUpdatable ? `<span class="badge bg-warning text-dark ms-2" title="Update Available" style="font-size: 0.6rem; animation: pulse 2s infinite;">UPDATE</span>` : ""}
-          <span id="badge-${a.id}"></span>
+    <div id="assistants-grid" class="row g-4"></div>
+  `;
+
+  const grid = document.getElementById("assistants-grid");
+
+  if (!assistants.length) {
+    grid.innerHTML = `
+      <div class="col-12 text-center text-secondary py-5">
+        No hay asistentes desplegados.
+      </div>
+    `;
+    return;
+  }
+
+  assistants.forEach(project => {
+
+    const statusColor =
+      project.status === "online" ? "success" :
+        project.status === "error" ? "danger" :
+          project.status === "checking" ? "warning" :
+            "secondary";
+
+    const col = document.createElement("div");
+    col.className = "col-xl-3 col-lg-4 col-md-6";
+    const hasUpdate = project.services.some(s => s.isUpdatable);
+
+    col.innerHTML = `
+      <div class="glass-card p-4 h-100 assistant-card hover-lift" style="cursor:pointer;">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <h5 class="fw-bold mb-0 text-truncate" style="max-width: 75%;">
+            ${project.name}
+          </h5>
+          <span class="badge bg-${statusColor} bg-opacity-10 text-${statusColor} 
+            border border-${statusColor} border-opacity-25">
+            ${project.status.toUpperCase()}
+          </span>
         </div>
-        <div class="ms-2">
-          ${getStatusIcon(a.status)}
+
+        <div class="small text-secondary mb-3">
+          ID: ${project.id.substring(0, 8)}
         </div>
+
+        <div class="small text-dim gap-2">
+          Servicios: ${project.services.length}
+
+           ${hasUpdate ? `
+          <span class="badge bg-warning text-dark small px-2 py-1">
+           <i class="bi bi-arrow-repeat"></i> Actualización disponible
+             </span>
+           ` : ""}
+        </div>
+        
       </div>
     `;
 
-    item.onclick = () => {
-      selectedProjectId = a.id;
-      document.querySelectorAll(".assistant-item").forEach(el => el.classList.remove("active-assistant"));
-      item.classList.add("active-assistant");
-      renderDetail(a);
-    };
+    col.querySelector(".assistant-card").addEventListener("click", () => {
+      selectedProjectId = project.id;
+      // navigate("assistants-detail");
+      document.getElementById("assistants-view").style.display = "none";
+      renderDetail(project);
+    });
 
-    list.appendChild(item);
-
-    // Cargar badges en background
-    updateAssistantBadge(a.id);
+    grid.appendChild(col);
   });
-
-  // Solo click automático si no hay nada seleccionado Y no estamos en una vista global
-  const isDashboardActive = document.getElementById("dashboard-global").style.display === "block";
-  const isClientsActive = document.getElementById("clients-view").style.display === "block";
-  const isTicketsActive = document.getElementById("tickets-view").style.display === "block";
-  const isBillingActive = document.getElementById("billing-view").style.display === "block";
-  const isAuditActive = document.getElementById("audit-view").style.display === "block";
-
-  if (!selectedProjectId && assistants.length > 0 && !isDashboardActive && !isClientsActive && !isTicketsActive && !isBillingActive && !isAuditActive) {
-    setTimeout(() => {
-      const first = list.querySelector('.assistant-item');
-      if (first) first.click();
-    }, 100);
-  }
-
-  // Actualizar estado del link dashboard en la sidebar
-  const btnDash = document.getElementById("btn-reload");
-  const btnCli = document.getElementById("btn-open-clients");
-  const btnTkt = document.getElementById("btn-open-tickets");
-  const btnBill = document.getElementById("btn-open-billing");
-
-  // Limpiar activos de navegación principal
-  const btnAudit = document.getElementById("btn-open-audit");
-  [btnDash, btnCli, btnTkt, btnBill, btnAudit].forEach(b => b?.classList.remove("active"));
-
-  if (!selectedProjectId) {
-    const dashGlobal = document.getElementById("dashboard-global").style.display === "block";
-    const clientsView = document.getElementById("clients-view").style.display === "block";
-    const ticketsView = document.getElementById("tickets-view").style.display === "block";
-    const billingView = document.getElementById("billing-view").style.display === "block";
-    const auditView = document.getElementById("audit-view").style.display === "block";
-
-    if (dashGlobal) btnDash?.classList.add("active");
-    if (clientsView) btnCli?.classList.add("active");
-    if (ticketsView) btnTkt?.classList.add("active");
-    if (billingView) btnBill?.classList.add("active");
-    if (auditView) btnAudit?.classList.add("active");
-  }
 }
-
-async function updateAssistantBadge(projectId) {
-  try {
-    const clientWrapper = await window.api.getProjectClient(projectId);
-    if (clientWrapper && clientWrapper.clientes) {
-      const count = await window.api.getClientPendingTickets(clientWrapper.clientes.id);
-      if (count > 0) {
-        const badgeEl = document.getElementById(`badge-${projectId}`);
-        if (badgeEl) {
-          badgeEl.innerHTML = `<span class="badge-ticket ms-2 animate-fade">${count}</span>`;
-        }
-      }
-    }
-  } catch (e) { }
-}
-
 
 // --------------------------------------------------
 // DETAIL PANEL
 // --------------------------------------------------
 
-async function renderDetail(a, isRefresh = false) {
+async function renderDetail(project, isRefresh = false) {
 
-  if (!isRefresh) {
-    // Ocultar todas las vistas posibles
-    document.getElementById("dashboard-global").style.display = "none";
-    document.getElementById("clients-view").style.display = "none";
-    document.getElementById("tickets-view").style.display = "none";
-    document.getElementById("billing-view").style.display = "none";
-    document.getElementById("audit-view").style.display = "none";
+  const detailPanel = document.getElementById("assistant-detail");
 
-    const detailPanel = document.getElementById("assistant-detail");
-    if (detailPanel) detailPanel.style.display = "block";
+  const isDifferentProject =
+    detailPanel.dataset.projectId &&
+    detailPanel.dataset.projectId !== project.id;
 
-    // Limpiar vistas integradas previas SOLO si no es refresh
-    const oldLog = document.getElementById("integrated-log-container");
-    if (oldLog) oldLog.remove();
-    const oldVar = document.getElementById("integrated-var-container");
-    if (oldVar) oldVar.remove();
-    const oldChat = document.getElementById("integrated-chat-container");
-    if (oldChat) oldChat.remove();
+  selectedProjectId = project.id;
+
+  // ===== SI CAMBIA PROYECTO → RESET TOTAL CONTROLADO
+  if (isDifferentProject) {
+    detailPanel.dataset.initialized = "";
+    detailPanel.dataset.projectId = "";
+    detailPanel.innerHTML = "";
   }
 
-  selectedProjectId = a.id;
+  // ===== PRIMER RENDER
+  if (!detailPanel.dataset.initialized) {
 
-  // Obtener cliente vinculado
-  let linkedClient = null;
-  try {
-    linkedClient = await window.api.getProjectClient(a.id);
-  } catch (err) {
-    console.error("Error al obtener cliente del proyecto:", err);
+    renderDetailStructure(project);
+
+    detailPanel.dataset.initialized = "true";
+    detailPanel.dataset.projectId = project.id;
+
+    await updateDetailHeader(project);
+    renderServices(project);
+    return;
   }
+
+  // ===== REFRESH INCREMENTAL
+  if (isRefresh) {
+    await updateDetailHeader(project);
+    patchServices(project);
+  }
+}
+
+function renderDetailStructure(project) {
+
+  document.getElementById("dashboard-global").style.display = "none";
+  document.getElementById("clients-view").style.display = "none";
+  document.getElementById("tickets-view").style.display = "none";
+  document.getElementById("billing-view").style.display = "none";
+  document.getElementById("audit-view").style.display = "none";
 
   const detail = document.getElementById("assistant-detail");
+  detail.style.display = "block";
 
-  const online = a.services.filter(s => s.status === "online").length;
-  const error = a.services.filter(s => s.status === "error").length;
-  const building = a.services.filter(s => s.status === "checking").length;
+  detail.innerHTML = `
+  <div class="animate-fade">
 
-  // Obtener Info de Tickets
+    <!-- BOTÓN VOLVER -->
+    <div class="mb-4">
+      <button class="btn btn-outline-light btn-sm" id="btnBackToGrid">
+        <i class="bi bi-arrow-left me-2"></i> Volver a Asistentes
+      </button>
+    </div>
+
+    <!-- HEADER -->
+    <div class="mb-5">
+
+      <!-- FILA 1: TITULO + BOTONES -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <!-- IZQUIERDA -->
+        <h2 class="fw-bold mb-0">${project.name}</h2>
+
+        <!-- DERECHA -->
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-light btn-rename">
+            <i class="bi bi-pencil"></i> Renombrar
+          </button>
+
+          <button class="btn btn-sm btn-outline-light btn-railway">
+            <i class="bi bi-folder2-open"></i> Abrir Railway
+          </button>
+
+          <button class="btn btn-sm btn-outline-danger btn-delete-project">
+            <i class="bi bi-trash"></i> Eliminar
+          </button>
+        </div>
+
+      </div>
+
+      <!-- FILA 2: ESTADOS + BADGES -->
+      <div class="d-flex justify-content-between align-items-center">
+
+        <!-- IZQUIERDA: CONTADORES -->
+        <div id="header-status-row"
+             class="d-flex gap-4 small align-items-center">
+        </div>
+
+        <!-- DERECHA: BADGES -->
+        <div id="header-badges"
+             class="d-flex gap-2 flex-wrap">
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- LAYOUT PRINCIPAL -->
+    <div class="detail-layout">
+
+      <div class="services-column">
+        <div id="services-container" class="d-grid gap-3"></div>
+      </div>
+
+      <div class="side-panel-column">
+        <div id="detail-side-panel" class="side-panel-placeholder">
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+`;
+
+  // Eventos header
+
+  document.getElementById("btnBackToGrid").addEventListener("click", () => {
+    selectedProjectId = null;
+    detail.dataset.initialized = "";
+    detail.dataset.projectId = "";
+    detail.style.display = "none";
+    document.getElementById("assistants-view").style.display = "block";
+    renderAssistantsGrid();
+  });
+
+  detail.querySelector(".btn-rename").addEventListener("click", () => {
+    openRenameProject(project.id, project.name);
+  });
+
+  detail.querySelector(".btn-railway").addEventListener("click", () => {
+    window.api.openExternal(project.railwayUrl);
+  });
+
+  detail.querySelector(".btn-delete-project").addEventListener("click", () => {
+    handleDeleteProject(project.id);
+  });
+}
+
+async function updateDetailHeader(project) {
+
+  const badgesContainer = document.getElementById("header-badges");
+  const statusContainer = document.getElementById("header-status-row");
+  const titleEl = document.querySelector("#assistant-detail h2");
+
+  if (!badgesContainer || !statusContainer) return;
+
+  // =========================
+  // ACTUALIZAR TÍTULO (SI CAMBIÓ)
+  // =========================
+  if (titleEl && titleEl.textContent !== project.name) {
+    titleEl.textContent = project.name;
+  }
+
+  // =========================
+  // CONTADORES
+  // =========================
+  const online = project.services.filter(s => s.status === "online").length;
+  const error = project.services.filter(s => s.status === "error").length;
+  const building = project.services.filter(s => s.status === "checking").length;
+
+  statusContainer.innerHTML = `
+    <span><i class="bi bi-check-circle-fill text-success"></i> ${online}</span>
+    <span><i class="bi bi-x-circle-fill text-danger"></i> ${error}</span>
+    <span><i class="bi bi-arrow-repeat text-warning"></i> ${building}</span>
+  `;
+
+  // =========================
+  // CLIENTE
+  // =========================
+  let clientBadge = "";
   let ticketsBadge = "";
-  if (linkedClient && linkedClient.clientes) {
-    try {
+  let linkButton = "";
+
+  try {
+    const linkedClient = await window.api.getProjectClient(project.id);
+
+    if (!linkedClient || !linkedClient.clientes) {
+
+      linkButton = `
+        <button class="btn btn-outline-info btn-sm btn-link-client">
+          <i class="bi bi-link-45deg"></i> Vincular Cliente
+        </button>
+      `;
+
+    } else {
+
+      clientBadge = `
+        <button 
+          class="badge badge-client-btn bg-info bg-opacity-10 text-info border border-info border-opacity-20 p-2 d-flex align-items-center gap-2">
+          <i class="bi bi-person-fill"></i>
+          <span>${linkedClient.clientes.nombre}</span>
+        </button>
+      `;
+
       const count = await window.api.getClientPendingTickets(linkedClient.clientes.id);
+
       if (count > 0) {
         ticketsBadge = `
-          <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 p-2 rounded animate-fade d-flex align-items-center gap-2" 
-               style="cursor:pointer" onclick="renderTicketsView('${linkedClient.clientes.id}')">
+          <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 p-2 d-flex align-items-center gap-2">
             <i class="bi bi-ticket-perforated-fill"></i>
-            <span>${count} Tickets Pendientes</span>
+            <span>${count} Tickets</span>
           </div>
         `;
       } else {
         ticketsBadge = `
-          <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 p-2 rounded animate-fade d-flex align-items-center gap-2">
+          <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 p-2 d-flex align-items-center gap-2">
             <i class="bi bi-check-circle-fill"></i>
             <span>Sin pendientes</span>
           </div>
         `;
       }
-    } catch (e) { }
+    }
+
+  } catch (err) {
+    console.error("Client header error:", err);
   }
 
-  // Obtener Info de WhatsApp Session
+  // =========================
+  // WHATSAPP
+  // =========================
   let whatsappBadge = "";
+
   try {
-    const wsStatus = await window.api.getWhatsAppStatus(a.id);
-    if (wsStatus && wsStatus.connected) {
+    const wsStatus = await window.api.getWhatsAppStatus(project.id);
+
+    if (wsStatus?.connected) {
       whatsappBadge = `
-        <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 p-2 rounded animate-fade d-flex align-items-center gap-2" title="Sesión activa en Supabase">
+        <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 p-2 d-flex align-items-center gap-2">
           <i class="bi bi-whatsapp"></i>
-          <span>WhatsApp Conectado</span>
+          <span>Conectado</span>
         </div>
       `;
     } else {
       whatsappBadge = `
-        <div class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20 p-2 rounded animate-fade d-flex align-items-center gap-2" title="${wsStatus.message || 'Sin sesión activa'}">
+        <div class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20 p-2 d-flex align-items-center gap-2">
           <i class="bi bi-whatsapp"></i>
-          <span>WhatsApp Desconectado</span>
+          <span>Desconectado</span>
         </div>
       `;
     }
-  } catch (e) {
-    console.error("Error al obtener estado de WhatsApp:", e);
+
+  } catch (err) {
+    console.error("WhatsApp header error:", err);
   }
 
-  // SERVICES HTML
-  let servicesHtml = "";
-  if (!a.services || a.services.length === 0) {
-    servicesHtml = `
-      <div class="service-card p-5 rounded d-flex align-items-center justify-content-center text-center"
-           style="cursor:pointer; border:1px dashed #444;"
-           onclick="window.api.openExternal('${a.railwayUrl}')">
-        <div>
-          <i class="bi bi-plus-circle fs-1 text-secondary"></i>
-          <div class="mt-3 fw-bold text-secondary">Crear Servicio</div>
-          <div class="small text-muted mt-1">Crear servicio en Railway</div>
-        </div>
-      </div>
-    `;
-  } else {
-    servicesHtml = a.services.map(service => `
-      <div class="service-card p-4 rounded">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <div class="fw-bold">${service.name}</div>
+  // =========================
+  // RENDER FINAL
+  // =========================
+  badgesContainer.innerHTML = `
+    ${linkButton}
+    ${clientBadge}
+    ${ticketsBadge}
+    ${whatsappBadge}
+
+  `;
+
+  // Re-attach eventos después de render
+  const linkBtn = badgesContainer.querySelector(".btn-link-client");
+  if (linkBtn) linkBtn.onclick = () => openLinkClient(project.id);
+
+  const clientEl = badgesContainer.querySelector(".badge-client-btn");
+  if (clientEl) clientEl.onclick = () => openLinkClient(project.id);
+}
+
+function renderServices(project) {
+
+  const container = document.getElementById("services-container");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  project.services.forEach(service => {
+    const card = createServiceCard(service, project);
+    container.appendChild(card);
+  });
+}
+
+function createServiceCard(service, project) {
+
+  const div = document.createElement("div");
+  div.className = "service-card p-4 rounded";
+  div.dataset.serviceId = service.id;
+
+  div.innerHTML = `
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div class="fw-bold service-name">${service.name}</div>
+
+      <div class="service-status d-flex align-items-center gap-2">
+
+        <span class="service-status-icon">
           ${getStatusIcon(service.status)}
-        </div>
-        <div class="small text-secondary mb-3">Último deploy: ${formatDate(service.createdAt)}</div>
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="d-flex gap-2">
-            <button class="btn btn-outline-info btn-sm" data-bs-toggle="tooltip" title="Logs" ${!service.deploymentId ? "disabled" : ""} onclick="renderLogsView('${service.deploymentId}', '${service.name}')">
-              <i class="bi bi-terminal"></i>
-            </button>
-            <button class="btn btn-outline-warning btn-sm" data-bs-toggle="tooltip" title="Variables" onclick="renderVariablesView('${service.projectId}','${service.environmentId}','${service.id}', '${service.name}')">
-              <i class="bi bi-sliders"></i>
-            </button>
-          </div>
-          <div class="d-flex gap-2 align-items-center">
-            <button class="btn btn-success btn-sm" data-bs-toggle="tooltip" title="Dashboard" onclick="openDashboard('${service.projectId}','${service.environmentId}','${service.id}')">
-              <i class="bi bi-speedometer2"></i>
-            </button>
-            <button class="btn btn-primary btn-sm" data-bs-toggle="tooltip" title="Webchat" onclick="openWebchat('${service.projectId}','${service.environmentId}','${service.id}', '${service.name}')">
-              <i class="bi bi-chat-dots"></i>
-            </button>
-            ${service.isUpdatable ? `
-            <button class="btn btn-warning btn-sm" data-bs-toggle="tooltip" title="Deploy Update" onclick="handleDeployUpdate('${service.id}', '${service.environmentId}')">
-              <i class="bi bi-cloud-arrow-up"></i>
-            </button>
-            ` : ""}
-            <div class="dropdown">
-              <button class="btn btn-sm btn-outline-light dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-              <ul class="dropdown-menu dropdown-menu-dark">
-                ${service.isUpdatable ? `<li><button class="dropdown-item text-warning" onclick="handleDeployUpdate('${service.id}', '${service.environmentId}')"><i class="bi bi-cloud-arrow-up me-2"></i>Deploy Update</button></li>` : ""}
-                <li><button class="dropdown-item" onclick="handleRedeploy('${service.id}', '${service.environmentId}')"><i class="bi bi-arrow-clockwise me-2"></i>Redeploy</button></li>
-                <li><button class="dropdown-item" ${!service.deploymentId ? "disabled" : ""} onclick="handleDownloadLogs('${service.deploymentId}', \`${a.name}\`)"><i class="bi bi-download me-2"></i>Descargar Logs</button></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><button class="dropdown-item text-danger" onclick="handleDelete('${service.id}')"><i class="bi bi-trash me-2"></i>Remove</button></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    `).join("");
-  }
+        </span>
 
-  const baseContent = document.getElementById("detail-base-content");
-  const target = baseContent || document.getElementById("assistant-detail");
-
-  target.innerHTML = `
-    <div class="animate-fade">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <div class="d-flex align-items-center gap-3">
-          <div class="d-flex align-items-center gap-2">
-            <h2 class="mb-0 fw-bold">${a.name}</h2>
-            <button class="btn btn-sm btn-outline-light" onclick="openRenameProject('${a.id}', \`${a.name}\`)" title="Renombrar">
-              <i class="bi bi-pencil"></i>
+        <span class="service-update-container">
+          ${service.isUpdatable ? `
+            <button 
+              class="btn btn-warning btn-sm btn-update-mini"
+              title="Actualizar servicio">
+              <i class="bi bi-arrow-repeat"></i>
             </button>
-          </div>
-          <button class="btn btn-sm btn-outline-light" title="Railway" onclick="window.api.openExternal('${a.railwayUrl}')">
-            <i class="bi bi-folder2-open"></i>
-          </button>
-          <button class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="handleDeleteProject('${a.id}')">
-            <i class="bi bi-trash"></i>
-          </button>
-          ${a.isUpdatable ? `
-          <div class="ms-3 d-flex align-items-center gap-2 text-warning fw-bold small animate-fade">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-            <span>Update Available</span>
-          </div>
           ` : ""}
-        </div>
-        <div id="client-badge-container" class="d-flex gap-2">
-          ${linkedClient ? `
-            <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 p-2 d-flex align-items-center gap-2" 
-                 style="cursor:pointer" onclick="openLinkClient('${a.id}')">
-              <i class="bi bi-person-fill"></i>
-              <span>${linkedClient.clientes.nombre}</span>
-            </div>
-          ` : `
-            <button class="btn btn-outline-secondary btn-sm" onclick="openLinkClient('${a.id}')">
-              <i class="bi bi-link-45deg"></i> Vincular Cliente
-            </button>
-          `}
-          ${ticketsBadge}
-          ${whatsappBadge}
-        </div>
+        </span>
+
+      </div>
+    </div>
+
+    <div class="small text-secondary mb-3 service-date">
+      Último deploy: ${formatDate(service.createdAt)}
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center">
+
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-info btn-sm btn-logs" 
+          ${!service.deploymentId ? "disabled" : ""}>
+          <i class="bi bi-terminal"></i> Logs
+        </button>
+
+        <button class="btn btn-outline-warning btn-sm btn-vars">
+          <i class="bi bi-sliders"></i> Variables
+        </button>
       </div>
 
-      <div class="d-flex gap-4 mb-4 small">
-        <div><i class="bi bi-check-circle-fill text-success"></i> ${online} Online</div>
-        <div><i class="bi bi-x-circle-fill text-danger"></i> ${error} Error</div>
-        <div><i class="bi bi-arrow-repeat text-warning"></i> ${building} Building</div>
-      </div>
+      <div class="d-flex gap-2 align-items-center">
 
-      <div class="d-grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));">
-        ${servicesHtml}
+        <button class="btn btn-outline-success btn-sm btn-dashboard">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </button>
+
+        <button class="btn btn-outline-primary btn-sm btn-webchat">
+          <i class="bi bi-chat-dots"></i> Webchat
+        </button>
+
       </div>
     </div>
   `;
 
-  // Scroll to active item in sidebar
-  const activeItem = document.querySelector(`.assistant-item[data-id="${a.id}"]`);
-  if (activeItem) {
-    activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
+  // Eventos (IMPORTANTE: ahora no usamos onclick inline)
 
-  // Tooltips
-  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el, { trigger: 'hover' }));
+  div.querySelector(".btn-logs")?.addEventListener("click", () => {
+    renderLogsView(service.deploymentId, service.name);
+  });
+
+  div.querySelector(".btn-vars")?.addEventListener("click", () => {
+    renderVariablesView(
+      service.projectId,
+      service.environmentId,
+      service.id,
+      service.name
+    );
+  });
+
+  div.querySelector(".btn-dashboard")?.addEventListener("click", () => {
+    openDashboard(
+      service.projectId,
+      service.environmentId,
+      service.id
+    );
+  });
+
+  div.querySelector(".btn-webchat")?.addEventListener("click", () => {
+    openWebchat(
+      service.projectId,
+      service.environmentId,
+      service.id,
+      service.name
+    );
+  });
+
+  div.querySelector(".btn-delete")?.addEventListener("click", () => {
+    handleDelete(service.id);
+  });
+
+  div.querySelector(".btn-update-mini")?.addEventListener("click", () => {
+    handleDeployUpdate(service.id, service.environmentId);
+  });
+
+  return div;
+}
+
+function patchServices(project) {
+
+  const container = document.getElementById("services-container");
+  if (!container) return;
+
+  project.services.forEach(service => {
+
+    const existing = container.querySelector(
+      `[data-service-id="${service.id}"]`
+    );
+
+    if (!existing) {
+      container.appendChild(createServiceCard(service, project));
+      return;
+    }
+
+    // Actualizar icono
+    const statusIcon = existing.querySelector(".service-status-icon");
+    if (statusIcon) {
+      statusIcon.innerHTML = getStatusIcon(service.status);
+    }
+
+    // Actualizar fecha
+    const dateEl = existing.querySelector(".service-date");
+    if (dateEl) {
+      dateEl.textContent =
+        "Último deploy: " + formatDate(service.createdAt);
+    }
+
+  });
 }
 
 
@@ -689,12 +960,14 @@ let refreshRate = 30000; // 30s default
 
 async function smartRefresh() {
 
+  const previous = JSON.stringify(assistants);
+
   await loadAssistants(true);
 
+  const current = JSON.stringify(assistants);
+
   const hasBuilding = assistants.some(project =>
-    project.services.some(service =>
-      service.status === "checking"
-    )
+    project.services.some(service => service.status === "checking")
   );
 
   refreshRate = hasBuilding ? 5000 : 30000;
@@ -717,49 +990,36 @@ startAutoRefresh();
 
 document.addEventListener("DOMContentLoaded", async () => {
 
-  const btnReload = document.getElementById("btn-reload");
-  if (btnReload) {
-    btnReload.addEventListener("click", () => {
-      renderMainDashboard();
-    });
-  }
+  const version = await window.api.getAppVersion();
+  const el = document.getElementById("app-version");
+  if (el) el.textContent = "v" + version;
 
-  const btnOpenClients = document.getElementById("btn-open-clients");
-  if (btnOpenClients) {
-    btnOpenClients.addEventListener("click", () => {
-      renderClientsView();
-      renderSidebar();
-    });
-  }
+  document.querySelectorAll(".nav-top").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const view = btn.dataset.view;
 
-  const btnOpenTickets = document.getElementById("btn-open-tickets");
-  if (btnOpenTickets) {
-    btnOpenTickets.addEventListener("click", () => {
-      renderTicketsView();
-      renderSidebar();
-    });
-  }
+      if (view === "assistants" && assistants.length === 0) {
+        await loadAssistants(false);
+      }
 
-  const btnOpenBilling = document.getElementById("btn-open-billing");
-  if (btnOpenBilling) {
-    btnOpenBilling.addEventListener("click", () => {
-      renderBillingView();
-      renderSidebar();
+      navigate(view);
     });
-  }
-  const btnOpenAudit = document.getElementById("btn-open-audit");
-  if (btnOpenAudit) {
-    btnOpenAudit.addEventListener("click", () => {
-      renderAuditView();
-      renderSidebar();
-    });
-  }
+  });
+
+  // Cargar datos iniciales
+  await loadAssistants(false);
+
+  const savedView = localStorage.getItem("activeView") || "dashboard";
+  navigate(savedView);
+
+  document.body.classList.remove("app-preload");
+
 });
 
-/**
- * DASHBOARD MAESTRO (GLOBAL)
- */
-async function renderMainDashboard() {
+// =========================
+// DASHBOARD MAESTRO GLOBAL
+// =========================
+async function renderDashboard() {
   selectedProjectId = null;
   document.querySelectorAll(".assistant-item").forEach(el => el.classList.remove("active-assistant"));
 
@@ -802,15 +1062,15 @@ async function renderMainDashboard() {
     });
 
     dash.innerHTML = `
-      <div class="animate-fade">
-        <h2 class="mb-4 fw-bold">DASHBOARD MAESTRO</h2>
+      <div class="animate-fade mt-4">
+        <h2 class="mb-4 fw-bold">DASHBOARD</h2>
         
         <div class="row g-4 mb-5">
           <!-- CARD BOTS -->
           <div class="col-md-3">
             <div class="glass-card p-4 text-center h-100">
               <div class="display-5 fw-bold text-success">${assistants.length}</div>
-              <div class="text-secondary text-uppercase small ls-1">Proyectos Totales</div>
+              <div class="text-uppercase small ls-1">Proyectos Totales</div>
               <div class="mt-3 small text-secondary">
                 <span class="text-success">${onlineServices} Online</span> / 
                 <span class="text-danger">${errorServices} Error</span>
@@ -821,10 +1081,10 @@ async function renderMainDashboard() {
           <!-- CARD CLIENTES -->
           <div class="col-md-3">
             <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="renderClientsView()">
-              <div class="display-5 fw-bold text-danger">${activeClients.length}</div>
-              <div class="text-secondary text-uppercase small ls-1">Clientes Activos</div>
+              <div class="display-5 fw-bold text-info">${activeClients.length}</div>
+              <div class="text-uppercase small ls-1">Clientes Activos</div>
               <div class="mt-3">
-                 <button class="btn btn-sm btn-outline-danger">Gestionar Clientes</button>
+                 <button class="btn btn-sm btn-outline-info">Gestionar Clientes</button>
               </div>
             </div>
           </div>
@@ -833,7 +1093,7 @@ async function renderMainDashboard() {
           <div class="col-md-3">
             <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="renderTicketsView()">
               <div class="display-5 fw-bold text-warning">${pendingTickets.length}</div>
-              <div class="text-secondary text-uppercase small ls-1">Tickets Pendientes</div>
+              <div class="text-uppercase small ls-1">Tickets Pendientes</div>
               <div class="mt-3">
                  <button class="btn btn-sm btn-outline-warning">Ver Tickets</button>
               </div>
@@ -846,7 +1106,7 @@ async function renderMainDashboard() {
               <div class="display-5 fw-bold ${errorServices > 0 ? 'text-danger' : 'text-success'}">
                  ${errorServices > 0 ? 'ALERTA' : 'OK'}
               </div>
-              <div class="text-secondary text-uppercase small ls-1">Estado de Salud</div>
+              <div class="text-uppercase small ls-1">Estado de Salud</div>
               <div class="mt-3 small text-secondary">
                 ${errorServices > 0 ? 'Se detectaron fallos técnicos' : 'Todos los sistemas operativos'}
               </div>
@@ -871,7 +1131,7 @@ async function renderMainDashboard() {
           </div>
           <div class="col-md-6">
              <div class="glass-card p-4">
-               <h5 class="mb-3">Quick Actions</h5>
+               <h5 class="mb-3">Acciones Rápidas</h5>
                <div class="d-grid gap-2">
                   <button class="btn btn-outline-light text-start btn-sm" onclick="renderClientsView()">
                     <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
@@ -879,7 +1139,7 @@ async function renderMainDashboard() {
                   <button class="btn btn-outline-light text-start btn-sm" onclick="renderTicketsView()">
                     <i class="bi bi-plus-circle me-2"></i> Crear Ticket
                   </button>
-                  <button class="btn btn-outline-success text-start btn-sm" id="dashboard-refresh">
+                  <button class="btn btn-outline-light text-start btn-sm" id="dashboard-refresh">
                     <i class="bi bi-arrow-clockwise me-2"></i> Actualizar Infraestructura
                   </button>
                </div>
@@ -891,7 +1151,7 @@ async function renderMainDashboard() {
 
     document.getElementById('dashboard-refresh').onclick = () => {
       loadAssistants(false);
-      renderMainDashboard();
+      renderDashboard();
     };
 
   } catch (err) {
@@ -900,19 +1160,19 @@ async function renderMainDashboard() {
   }
 }
 
-async function init() {
-  const version = await window.api.getAppVersion();
-  const el = document.getElementById("app-version");
-  if (el) el.textContent = "v" + version;
+// async function init() {
 
-  // 1. Mostrar dashboard inmediatamente (con spinner interno)
-  renderMainDashboard();
+//   const version = await window.api.getAppVersion();
+//   const el = document.getElementById("app-version");
+//   if (el) el.textContent = "v" + version;
 
-  // 2. Cargar datos en segundo plano
-  await loadAssistants(false);
-}
+//   await loadAssistants(false);
 
-init();
+//   navigate("dashboard");
+// }
+
+// init();
+
 
 // --------------------------------------------------
 // EXTERNAL SELECTION (MESSAGING FROM OTHER WINDOWS)

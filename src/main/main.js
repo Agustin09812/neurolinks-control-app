@@ -1,8 +1,17 @@
-require('dotenv').config();
+// require('dotenv').config(); -> No usar dotenv directamente acá para evitar problemas de path en producción. Se carga dinámicamente más abajo según el entorno.
 const { app, BrowserWindow, shell, ipcMain, Menu, Notification, dialog } = require('electron');
 const path = require('path');
 const https = require("https");
 const fs = require('fs');
+
+// HOT FIX PARA COMPILAR 
+const isDev = !app.isPackaged;
+
+require('dotenv').config({
+  path: isDev
+    ? path.join(__dirname, '../../.env')
+    : path.join(process.resourcesPath, '.env')
+});
 
 const railwayService = require('../services/railwayService');
 const supabaseService = require('../services/supabaseService');

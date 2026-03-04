@@ -6,117 +6,7 @@
     <title>Gestión de Tickets - Neurolinks</title>
     <link rel="stylesheet" href="../../node_modules/bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="../../node_modules/bootstrap-icons/font/bootstrap-icons.css">
-    <style>
-        :root {
-            --bg-deep: #0a0c14;
-            --bg-card: rgba(26, 29, 43, 0.7);
-            --accent: #f093fb;
-            --accent-glass: rgba(240, 147, 251, 0.1);
-            --text-main: #e6e6e6;
-            --text-dim: #888;
-            --status-open: #ffc107;
-            --status-progress: #00d2ff;
-            --status-closed: #28a745;
-        }
-
-        body {
-            background-color: var(--bg-deep);
-            color: var(--text-main);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            overflow-x: hidden;
-            background-image: 
-                radial-gradient(circle at 5% 5%, rgba(240, 147, 251, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 95% 95%, rgba(0, 210, 255, 0.05) 0%, transparent 40%);
-            min-height: 100vh;
-        }
-
-        .glass-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        }
-
-        .navbar {
-            background: rgba(15, 17, 26, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 1rem 2rem;
-        }
-
-        .table {
-            color: #ffffff !important;
-            vertical-align: middle;
-        }
-
-        .table thead th {
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 1px;
-            color: var(--text-dim);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 1.25rem 1rem;
-        }
-
-        .table tbody td {
-            color: #ffffff !important;
-            padding: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            background: transparent;
-        }
-
-        .btn-ticket {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-weight: 600;
-            padding: 0.6rem 1.2rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.2);
-        }
-
-        .btn-ticket:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
-            color: white;
-        }
-
-        .status-badge {
-            padding: 0.35rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .status-abierto { background: rgba(255, 193, 7, 0.1); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.2); }
-        .status-enprogreso { background: rgba(0, 210, 255, 0.1); color: #00d2ff; border: 1px solid rgba(0, 210, 255, 0.2); }
-        .status-cerrado { background: rgba(40, 167, 69, 0.1); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.2); }
-
-        .priority-alta { color: #ff4757; }
-        .priority-media { color: #ffa502; }
-        .priority-baja { color: #2ed573; }
-
-        .form-control, .form-select, .modal-content {
-            background-color: #161925;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .form-select option {
-            background: #161925;
-            color: white;
-        }
-
-        .ticket-row:hover {
-            background: rgba(255, 255, 255, 0.02);
-            cursor: pointer;
-        }
-
-    </style>
+    <link rel="stylesheet" href="../../assets/css/styles.css">
 </head>
 
 <body>
@@ -124,7 +14,8 @@
     <nav class="navbar navbar-expand-lg sticky-top">
         <div class="container-fluid">
             <span class="navbar-brand d-flex align-items-center fw-bold">
-                <i class="bi bi-ticket-perforated text-danger me-2 fs-4"></i> NEUROLINKS <span class="text-danger ms-1">TICKETS</span>
+                <i class="bi bi-ticket-perforated text-danger me-2 fs-4"></i> NEUROLINKS <span
+                    class="text-danger ms-1">TICKETS</span>
             </span>
             <button class="btn btn-ticket" onclick="openNewTicketModal()">
                 <i class="bi bi-plus-lg me-2"></i> Abrir Nuevo Ticket
@@ -206,7 +97,8 @@
                     <div class="row g-3">
                         <div class="col-md-12">
                             <label class="form-label text-dim small fw-bold">TÍTULO DEL PROBLEMA</label>
-                            <input type="text" class="form-control" id="ticketTitle" placeholder="Ej: Error en despliegue de base de datos" required>
+                            <input type="text" class="form-control" id="ticketTitle"
+                                placeholder="Ej: Error en despliegue de base de datos" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label text-dim small fw-bold">CLIENTE ASOCIADO</label>
@@ -242,7 +134,7 @@
                         </div>
                         <div class="col-md-12">
                             <label class="form-label text-dim small fw-bold">DESCRIPCIÓN DETALLADA</label>
-                            <textarea class="form-control" id="ticketDescription" rows="5" placeholder="Explique el problema aquí..."></textarea>
+                            <textarea class="form-control" id="ticketDescription" rows="5"></textarea>
                         </div>
                     </div>
                 </div>
@@ -268,9 +160,9 @@
         function populateClientDropdowns() {
             const filters = document.getElementById("filterClient");
             const modal = document.getElementById("ticketClient");
-            
+
             const options = clientsList.map(c => `<option value="${c.id}">${c.nombre}</option>`).join("");
-            
+
             filters.innerHTML = '<option value="">Todos los clientes</option>' + options;
             modal.innerHTML = '<option value="">Seleccionar cliente...</option>' + options;
         }

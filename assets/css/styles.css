@@ -1,125 +1,127 @@
+/* =========================================================
+GLOBAL STYLESHEET
+========================================================= */
+
+/* Forzar color en tablas dentro de glass-card */
+.glass-card .table,
+.glass-card .table tbody td,
+.glass-card .table tbody tr,
+.glass-card .table thead th {
+  color: var(--text-main) !important;
+}
+
+/* Forzar icono calendario blanco */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.8;
+}
+
+/* =========================================================
+   1. DESIGN SYSTEM (TOKENS)
+========================================================= */
+
 :root {
   --bg-deep: #0a0c14;
   --bg-sidebar: rgba(15, 17, 26, 0.95);
   --bg-card: rgba(26, 29, 43, 0.7);
-  --accent: #00d2ff;
-  --accent-glass: rgba(0, 210, 255, 0.1);
+  --bg-glass: rgba(20, 23, 35, 0.85);
+
+  --accent-primary: #00d2ff;
+  --accent-secondary: #f093fb;
+
+  --success: #2ed573;
+  --error: #ff4757;
+  --warning: #ffa502;
+  --info: #00d2ff;
+
   --text-main: #e6e6e6;
   --text-dim: #888;
-  --border: rgba(255, 255, 255, 0.05);
-  --error: #ff4757;
-  --success: #2ed573;
-  --warning: #ffa502;
+
+  --border-soft: rgba(255, 255, 255, 0.05);
+  --border-light: rgba(255, 255, 255, 0.1);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --transition-fast: 0.2s ease;
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+
+/* =========================================================
+   2. BASE LAYOUT
+========================================================= */
 
 body {
   background-color: var(--bg-deep);
   color: var(--text-main);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  overflow: hidden;
+  overflow-x: hidden;
   background-image:
     radial-gradient(circle at 0% 0%, rgba(0, 210, 255, 0.03) 0%, transparent 50%),
     radial-gradient(circle at 100% 100%, rgba(121, 40, 202, 0.03) 0%, transparent 50%);
 }
 
-/* Sidebar Styles */
-.nav-link {
-  border-radius: 8px;
-  margin-bottom: 4px;
-  padding: 10px 15px;
-  transition: all 0.2s ease;
+
+/* =========================================================
+   3. NAVBAR
+========================================================= */
+
+.nav-top {
+  position: relative;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  transition: all 0.25s ease;
+  color: var(--text-dim) !important;
 }
 
-.nav-link:hover {
-  background: rgba(255, 255, 255, 0.03);
+/* Hover */
+.nav-top:hover {
+  color: var(--text-main) !important;
+  transform: translateY(-1px);
 }
 
-.nav-link.active {
-  background: var(--accent-glass) !important;
-  color: var(--accent) !important;
+/* Línea animada */
+.nav-top::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 0%;
+  height: 2px;
+  background: var(--accent-primary);
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
+
+/* Hover underline */
+.nav-top:hover::after {
+  width: 60%;
+}
+
+/* Active */
+.nav-top.active {
+  color: var(--text-main) !important;
   font-weight: 600;
 }
 
-.assistant-item {
-  position: relative;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
-  margin-bottom: 4px;
-  font-size: 0.9rem;
+.nav-top.active::after {
+  width: 80%;
+  background: linear-gradient(90deg,
+      var(--accent-primary),
+      var(--accent-secondary));
 }
 
-.assistant-item:hover {
-  background-color: rgba(255, 255, 255, 0.02);
-  border-color: var(--border);
+.view-transition {
+  animation: fadeInView 0.3s ease;
 }
 
-.active-assistant {
-  background: linear-gradient(90deg, rgba(0, 210, 255, 0.1) 0%, transparent 100%);
-  border-left: 3px solid var(--accent);
-  color: white !important;
-}
-
-.sidebar-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Detail Panel & Cards */
-.service-card {
-  background: var(--bg-card);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-.service-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
-
-.glass-header {
-  background: rgba(15, 17, 26, 0.5);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--border);
-}
-
-/* Badges */
-.badge-ticket {
-  background: var(--error);
-  color: white;
-  font-size: 0.65rem;
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-weight: 800;
-}
-
-/* Animations */
-@keyframes fadeIn {
+@keyframes fadeInView {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(6px);
   }
 
   to {
@@ -128,21 +130,15 @@ body {
   }
 }
 
-.animate-fade {
-  animation: fadeIn 0.4s ease forwards;
-}
-
-/* Dashboard Specific Styles */
-.ls-1 {
-  letter-spacing: 1px;
-}
+/* =========================================================
+   4. GLASS COMPONENT SYSTEM
+========================================================= */
 
 .glass-card {
   background: var(--bg-card);
   backdrop-filter: blur(15px);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-smooth);
 }
 
 .glass-card:hover {
@@ -151,166 +147,37 @@ body {
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
 }
 
-.bg-dark-hover {
-  transition: background 0.2s;
+.glass-header {
+  background: rgba(15, 17, 26, 0.5);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-soft);
 }
 
-.bg-dark-hover:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
-}
 
+/* =========================================================
+   5. SERVICE CARDS
+========================================================= */
 
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.4;
-  }
-
-  100% {
-    opacity: 1;
-  }
-}
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.animate-fade {
-  animation: fadeIn 0.4s ease-out forwards;
-}
-
-.animate-fade-up {
-  animation: fadeUp 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-}
-
-/* Toast styles */
-.toast {
-  background: rgba(20, 20, 30, 0.95) !important;
+.service-card {
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  transition: var(--transition-smooth);
 }
 
-.bg-success {
-  background-color: #2ed573 !important;
-}
-
-.bg-danger {
-  background-color: #ff4757 !important;
-}
-
-.bg-warning {
-  background-color: #ffa502 !important;
-}
-
-.bg-info {
-  background-color: #00d2ff !important;
-}
-
-/* Scrollbar styling for logs */
-#log-terminal::-webkit-scrollbar {
-  width: 8px;
-}
-
-#log-terminal::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-#log-terminal::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-#log-terminal::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+.service-card:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 
-/* Global Components Styles */
-.text-accent-clients {
-  color: #f093fb;
-}
+/* =========================================================
+   6. TABLE SYSTEM (GLOBAL)
+========================================================= */
 
-.text-accent-tickets {
-  color: #f093fb;
-}
-
-.bg-accent-glass {
-  background: rgba(240, 147, 251, 0.05) !important;
-}
-
-.btn-premium,
-.btn-ticket {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-weight: 600;
-  padding: 0.6rem 1.2rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(240, 147, 251, 0.2);
-}
-
-.btn-premium:hover,
-.btn-ticket:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
-  color: white;
-}
-
-.btn-outline-custom {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-main);
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
-}
-
-.btn-outline-custom:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.btn-danger-soft {
-  background: rgba(220, 53, 69, 0.1);
-  color: #ff6b6b;
-  border: 1px solid rgba(220, 53, 69, 0.2);
-  transition: all 0.3s;
-}
-
-.btn-danger-soft:hover {
-  background: #dc3545;
-  color: white;
-  transform: translateY(-2px);
-}
-
-/* Tables in views */
 .table {
-  color: #ffffff !important;
+  color: var(--text-main);
   vertical-align: middle;
 }
 
@@ -319,51 +186,21 @@ body {
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 1px;
-  color: var(--text-dim);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-soft);
   padding: 1.25rem 1rem;
 }
 
 .table tbody td {
-  color: #ffffff !important;
   padding: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   background: transparent;
 }
 
-/* Clients View Specific */
-.client-avatar {
-  width: 35px;
-  height: 35px;
-  background: rgba(240, 147, 251, 0.1);
-  color: #f093fb;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-}
 
-.details-row {
-  display: none;
-  background: rgba(0, 0, 0, 0.2);
-}
+/* =========================================================
+   7. STATUS BADGES (GLOBAL SYSTEM)
+========================================================= */
 
-.details-row.active {
-  display: table-row;
-  animation: fadeIn 0.3s ease-out;
-}
-
-.details-container {
-  padding: 1.5rem;
-  border-left: 4px solid #f093fb;
-  display: grid;
-  grid-template-columns: 1fr 250px;
-  gap: 2rem;
-  background: rgba(255, 255, 255, 0.01);
-}
-
-/* Tickets View Specific */
 .status-badge {
   padding: 0.35rem 0.75rem;
   border-radius: 20px;
@@ -390,37 +227,312 @@ body {
   border: 1px solid rgba(40, 167, 69, 0.2);
 }
 
-.priority-alta {
-  color: #ff4757;
+
+/* =========================================================
+   8. DETAIL SPLIT LAYOUT
+========================================================= */
+
+.detail-layout {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 2rem;
+  align-items: start;
 }
 
-.priority-media {
-  color: #ffa502;
+.services-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.priority-baja {
-  color: #2ed573;
+.side-panel-column {
+  position: sticky;
+  top: 20px;
+  min-width: 0;
 }
 
-.ticket-row:hover {
-  background: rgba(255, 255, 255, 0.02);
-  cursor: pointer;
+.side-panel-placeholder {
+  background: rgba(20, 23, 35, 0.6);
+  border: 1px dashed var(--border-light);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
 }
 
-.modal-content {
-  background-color: #161925;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+#detail-side-panel {
+  min-height: 500px;
+  border-radius: var(--radius-lg);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
+
+/* =========================================================
+   9. FORM & MODALS
+========================================================= */
 
 .form-control,
-.form-select {
-  background-color: #1a1d2e !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
+.form-select,
+.modal-content {
+  background-color: #161925 !important;
+  border: 1px solid var(--border-light) !important;
+  color: var(--text-main);
 }
 
 .form-control:focus,
 .form-select:focus {
-  border-color: #f093fb !important;
+  border-color: var(--accent-secondary) !important;
   box-shadow: 0 0 0 0.25rem rgba(240, 147, 251, 0.1) !important;
+}
+
+
+/* =========================================================
+   10. BUTTON SYSTEM
+========================================================= */
+
+.badge-client-btn {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.badge-client-btn:active {
+  transform: scale(0.98);
+}
+
+.btn-update-mini {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  box-shadow: 0 0 6px rgba(255, 193, 7, 0.4);
+  transition: all 0.2s ease;
+}
+
+.btn-update-mini:hover {
+  transform: rotate(90deg);
+  box-shadow: 0 0 10px rgba(255, 193, 7, 0.8);
+}
+
+.btn-update-mini {
+  animation: pulseUpdate 1.5s infinite;
+}
+
+@keyframes pulseUpdate {
+  0% {
+    box-shadow: 0 0 0 rgba(255, 193, 7, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 12px rgba(255, 193, 7, 0.9);
+  }
+
+  100% {
+    box-shadow: 0 0 0 rgba(255, 193, 7, 0.4);
+  }
+}
+
+
+/* =========================================================
+   11. TOAST SYSTEM
+========================================================= */
+
+.toast {
+  background: rgba(20, 20, 30, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-light) !important;
+}
+
+
+/* =========================================================
+  12. SCROLLBARS
+========================================================= */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+
+/* =========================================================
+  13. ANIMATIONS
+========================================================= */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.5s ease-out forwards;
+}
+
+
+/* =========================================================
+   14. SPLASH SCREEN
+========================================================= */
+
+.splash-container {
+  animation: fadeIn 0.8s ease forwards;
+}
+
+.splash-title {
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.splash-version {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* =========================================================
+   15. CLIENTS VIEW
+========================================================= */
+
+/* Tabla comportamiento */
+
+.table-hover tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+  transition: var(--transition-fast);
+}
+
+/* Tamaños utilitarios */
+
+.x-small {
+  font-size: 0.7rem;
+}
+
+.ls-1 {
+  letter-spacing: 1px;
+}
+
+/* Avatar cliente */
+
+.client-avatar {
+  width: 40px;
+  height: 40px;
+  background: rgba(240, 147, 251, 0.1);
+  color: var(--accent-secondary);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+/* Badge pendiente */
+
+.badge-pending {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+/* Badge ticket (clients view) */
+
+.badge-ticket {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+  padding: 0.3rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+/* Details expandibles */
+
+.details-row {
+  display: none;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.details-row.active {
+  display: table-row;
+  animation: slideDown 0.3s ease-out;
+}
+
+.details-container {
+  padding: 1.5rem;
+  border-left: 4px solid var(--accent-secondary);
+  display: grid;
+  grid-template-columns: 1fr 250px;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Panel acciones lateral */
+
+.action-section {
+  border-left: 1px solid var(--border-light);
+  padding-left: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+/* Estados visuales fila */
+
+.row-active {
+  box-shadow: inset 4px 0 0 var(--accent-secondary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.clickable-row:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.clickable-row:active {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Animación específica clients */
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

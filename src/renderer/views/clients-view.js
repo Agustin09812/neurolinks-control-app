@@ -23,188 +23,187 @@ async function renderClientsView() {
     const view = document.getElementById("clients-view");
     view.style.display = "block";
     view.innerHTML = `
-        <div class="d-flex justify-content-center align-items-center h-100" id="clients-loading">
-            <div class="spinner-border text-accent-clients" role="status"></div>
-        </div>
-        <div id="clients-content" style="display:none;" class="animate-fade">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="fw-bold mb-0">GESTIÓN DE <span class="text-accent-clients">CLIENTES</span></h2>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-success" onclick="exportClientsToCSV()">
-                        <i class="bi bi-file-earmark-excel me-2"></i> Exportar
-                    </button>
-                    <button class="btn btn-premium" onclick="openNewClientModal()">
-                        <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
-                    </button>
-                </div>
+        <div class="animate-fade mt-4">
+            <div class="d-flex justify-content-center align-items-center h-100" id="clients-loading">
+                <div class="spinner-border text-accent-clients" role="status"></div>
             </div>
-
-            <!-- Filtros -->
-            <div class="glass-card p-4 mb-4">
-                <div class="row g-3">
-                    <div class="col-md-5">
-                        <label class="small text-dim fw-bold mb-2">BUSCAR CLIENTE</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-dark border-secondary text-dim">
-                                <i class="bi bi-search"></i>
-                            </span>
-                            <input type="text" class="form-control" id="clientsSearch" placeholder="Nombre, empresa o contacto..." onkeyup="handleClientsSearch(this.value)">
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="small text-dim fw-bold mb-2">FILTRAR POR PLAN</label>
-                        <select class="form-select" id="clientsFilterPlan" onchange="handleClientsFilterPlan(this.value)">
-                            <option value="">Todos los planes</option>
-                            <option value="Standard">Standard</option>
-                            <option value="Premium">Premium</option>
-                            <option value="Enterprise">Enterprise</option>
-                            <option value="Baja">Baja</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 d-flex align-items-end">
-                        <button class="btn btn-outline-custom w-100" onclick="resetClientsFilters()">
-                            <i class="bi bi-arrow-counterclockwise me-2"></i> Reset
+            <div id="clients-content" style="display:none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="fw-bold mb-0">GESTIÓN DE <span class="text-accent-clients">CLIENTES</span></h2>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-light btn-sm" onclick="openNewClientModal()">
+                            <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
+                        </button>
+                        <button class="btn btn-outline-light btn-sm" onclick="exportClientsToCSV()">
+                            <i class="bi bi-file-earmark-excel me-2"></i> Exportar
+                        </button>
+                        <button class="btn btn-outline-light btn-sm" onclick="resetClientsFilters()">
+                            <i class="bi bi-person-plus me-2"></i> Actualizar
                         </button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Tabla -->
-            <div class="glass-card overflow-hidden">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Cliente</th>
-                                <th>Empresa / Contacto</th>
-                                <th>Plan</th>
-                                <th>Tickets</th>
-                            </tr>
-                        </thead>
-                        <tbody id="clients-table-body">
-                            <!-- Clientes dinámicos -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- MODAL CLIENTE -->
-        <div class="modal fade" id="clientModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content glass-card shadow-lg">
-                    <div class="modal-header">
-                        <h5 class="modal-title fw-bold" id="clientModalTitle">Nuevo Cliente</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form id="clientForm">
-                        <div class="modal-body p-4">
-                            <input type="hidden" id="clientId">
-                            <div class="row g-3">
-                                <div class="col-md-12">
-                                    <label class="form-label text-dim small fw-bold">NOMBRE COMPLETO *</label>
-                                    <input type="text" class="form-control" id="clientName" required>
-                                </div>
-                                <div class="col-md-12">
-                                    <label class="form-label text-dim small fw-bold">EMPRESA</label>
-                                    <input type="text" class="form-control" id="clientCompany">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-dim small fw-bold">EMAIL</label>
-                                    <input type="email" class="form-control" id="clientEmail">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-dim small fw-bold">TELÉFONO</label>
-                                    <input type="text" class="form-control" id="clientPhone">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-dim small fw-bold">PLAN CONTRATADO</label>
-                                    <select class="form-select" id="clientPlan">
-                                        <option value="Standard">Standard</option>
-                                        <option value="Premium">Premium</option>
-                                        <option value="Enterprise">Enterprise</option>
-                                        <option value="Baja">Baja</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-dim small fw-bold">PRÓX. VENCIMIENTO</label>
-                                    <input type="date" class="form-control" id="clientVencimiento">
-                                </div>
+    
+                <!-- Filtros -->
+                <div class="glass-card p-4 mb-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="small text-dim fw-bold mb-2">BUSCAR CLIENTE</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-dim">
+                                    <i class="bi bi-search text-secondary"></i>
+                                </span>
+                                <input type="text" class="form-control text-light" id="clientsSearch" onkeyup="handleClientsSearch(this.value)">
                             </div>
                         </div>
-                        <div class="modal-footer p-3">
-                            <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-premium px-4">Guardar Cliente</button>
+                        <div class="col-md-6">
+                            <label class="small text-dim fw-bold mb-2">FILTRAR POR PLAN</label>
+                            <select class="form-select" id="clientsFilterPlan" onchange="handleClientsFilterPlan(this.value)">
+                                <option value="">Todos los planes</option>
+                                <option value="Standard">Standard</option>
+                                <option value="Premium">Premium</option>
+                                <option value="Enterprise">Enterprise</option>
+                                <option value="Baja">Baja</option>
+                            </select>
                         </div>
-                    </form>
+                    </div>
+                </div>
+    
+                <!-- Tabla -->
+                <div class="glass-card overflow-hidden">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="color: var(--bg-deep) !important">Cliente</th>
+                                    <th style="color: var(--bg-deep) !important">Empresa / Contacto</th>
+                                    <th style="color: var(--bg-deep) !important">Plan</th>
+                                    <th style="color: var(--bg-deep) !important">Tickets</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clients-table-body">
+                                <!-- Clientes dinámicos -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- MODAL PAGOS -->
-        <div class="modal fade" id="paymentsModal" tabindex="-1">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content glass-card shadow-lg">
-                    <div class="modal-header">
-                        <h5 class="modal-title fw-bold">Historial de Pagos: <span id="paymentClientName" class="text-accent-clients"></span></h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body p-4">
-                        <div class="row g-4">
-                            <!-- Formulario Nuevo Pago -->
-                            <div class="col-md-4">
-                                <h6 class="text-dim small fw-bold mb-3">REGISTRAR PAGO</h6>
-                                <form id="paymentForm">
-                                    <input type="hidden" id="paymentClientId">
-                                    <div class="mb-3">
-                                        <label class="form-label small text-dim">CONCEPTO</label>
-                                        <input type="text" class="form-control form-control-sm" id="payConcept" required placeholder="Ej: Abono Marzo">
+        <!-- MODAL CLIENTE -->
+            <div class="modal fade" id="clientModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content glass-card shadow-lg">
+                        <div class="modal-header">
+                            <h5 class="modal-title fw-bold" id="clientModalTitle">Nuevo Cliente</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form id="clientForm">
+                            <div class="modal-body p-4">
+                                <input type="hidden" id="clientId">
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label class="form-label text-dim small fw-bold required">NOMBRE COMPLETO</label>
+                                        <input type="text" class="form-control text-light" id="clientName" required>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small text-dim">MONTO ($)</label>
-                                        <input type="number" step="0.01" class="form-control form-control-sm" id="payAmount" required placeholder="0.00">
+                                    <div class="col-md-12">
+                                        <label class="form-label text-dim small fw-bold">EMPRESA</label>
+                                        <input type="text" class="form-control text-light" id="clientCompany">
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small text-dim">MÉTODO</label>
-                                        <select class="form-select form-select-sm" id="payMethod">
-                                            <option value="Transferencia">Transferencia</option>
-                                            <option value="Efectivo">Efectivo</option>
-                                            <option value="Mercado Pago">Mercado Pago</option>
-                                            <option value="Cripto">Cripto</option>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-dim small fw-bold">EMAIL</label>
+                                        <input type="email" class="form-control text-light" id="clientEmail">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-dim small fw-bold">TELÉFONO</label>
+                                        <input type="text" class="form-control text-light" id="clientPhone">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-dim small fw-bold">PLAN CONTRATADO</label>
+                                        <select class="form-select" id="clientPlan">
+                                            <option value="Standard">Standard</option>
+                                            <option value="Premium">Premium</option>
+                                            <option value="Enterprise">Enterprise</option>
+                                            <option value="Baja">Baja</option>
                                         </select>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small text-dim">FECHA</label>
-                                        <input type="date" class="form-control form-control-sm" id="payDate" required>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-dim small fw-bold">PRÓX. VENCIMIENTO</label>
+                                        <input type="date" class="form-control text-light" id="clientVencimiento">
                                     </div>
-                                    <button type="submit" class="btn btn-premium btn-sm w-100">
-                                        <i class="bi bi-plus-circle me-2"></i>Agregar Pago
-                                    </button>
-                                </form>
+                                </div>
                             </div>
-                            <!-- Tabla de Historial -->
-                            <div class="col-md-8 border-start border-secondary ps-4">
-                                <h6 class="text-dim small fw-bold mb-3">HISTORIAL RECIENTE</h6>
-                                <div class="table-responsive" style="max-height: 300px;">
-                                    <table class="table table-hover table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>Fecha</th>
-                                                <th>Concepto</th>
-                                                <th>Monto</th>
-                                                <th class="text-end"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="payments-table-body">
-                                            <!-- Pagos dinámicos -->
-                                        </tbody>
-                                    </table>
+                            <div class="modal-footer p-3">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-success">Guardar Cliente</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- MODAL PAGOS -->
+            <div class="modal fade" id="paymentsModal" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content glass-card shadow-lg">
+                        <div class="modal-header">
+                            <h5 class="modal-title fw-bold">Historial de Pagos: <span id="paymentClientName" class="text-accent-clients"></span></h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="row g-4">
+                                <!-- Formulario Nuevo Pago -->
+                                <div class="col-md-4">
+                                    <h6 class="text-dim small fw-bold mb-3">REGISTRAR PAGO</h6>
+                                    <form id="paymentForm">
+                                        <input type="hidden" id="paymentClientId">
+                                        <div class="mb-3">
+                                            <label class="form-label small text-dim">CONCEPTO</label>
+                                            <input type="text" class="form-control form-control-sm" id="payConcept" required placeholder="Ej: Abono Marzo">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small text-dim">MONTO ($)</label>
+                                            <input type="number" step="0.01" class="form-control form-control-sm" id="payAmount" required placeholder="0.00">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small text-dim">MÉTODO</label>
+                                            <select class="form-select form-select-sm" id="payMethod">
+                                                <option value="Transferencia">Transferencia</option>
+                                                <option value="Efectivo">Efectivo</option>
+                                                <option value="Mercado Pago">Mercado Pago</option>
+                                                <option value="Cripto">Cripto</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small text-dim">FECHA</label>
+                                            <input type="date" class="form-control form-control-sm text-light" id="payDate" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-premium btn-sm w-100">
+                                            <i class="bi bi-plus-circle me-2"></i>Agregar Pago
+                                        </button>
+                                    </form>
+                                </div>
+                                <!-- Tabla de Historial -->
+                                <div class="col-md-8 border-start border-secondary ps-4">
+                                    <h6 class="text-dim small fw-bold mb-3">HISTORIAL RECIENTE</h6>
+                                    <div class="table-responsive" style="max-height: 300px;">
+                                        <table class="table table-hover table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Fecha</th>
+                                                    <th>Concepto</th>
+                                                    <th>Monto</th>
+                                                    <th class="text-end"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="payments-table-body">
+                                                <!-- Pagos dinámicos -->
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                </div>
             </div>
-        </div>
     `;
 
     document.getElementById("clientForm").onsubmit = handleClientSubmit;

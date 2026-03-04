@@ -15,74 +15,82 @@
   <!-- HEADER -->
   <div class="border-bottom border-secondary py-3 px-4">
     <h1 class="mb-0 fw-bold text-center">NEUROLINKS CONTROL</h1>
-    <div class="text-center"><small id="app-version" class="text-secondary"></small></div>
+    <div class="text-center">
+      <small id="app-version" class="text-secondary"></small>
+    </div>
   </div>
 
-  <!-- WRAPPER PRINCIPAL -->
-  <div class="flex-grow-1 d-flex overflow-hidden">
+  <!-- NAVBAR SUPERIOR -->
+  <div class="border-bottom border-secondary bg-black bg-opacity-50">
+    <div class="container-fluid px-4">
+      <div class="d-flex align-items-center gap-3 py-2">
 
-    <!-- SIDEBAR -->
-    <div style="width: 260px;" class="border-end border-secondary d-flex flex-column overflow-hidden">
-
-      <div class="p-3 border-bottom border-secondary">
-        <button class="btn btn-outline-success w-100 btn-sm" id="btnDeployAssistant">
-          <i class="bi bi-plus-lg"></i> Nuevo Asistente
+        <button class="btn btn-success btn-sm" id="btnDeployAssistant">
+          <i class="bi bi-plus-lg"></i> NUEVO
         </button>
+
+        <div class="vr text-secondary"></div>
+
+        <button class="btn btn-link text-light nav-top active" style="text-decoration: none;" data-view="dashboard">
+          DASHBOARD
+        </button>
+
+        <button class="btn btn-link text-light nav-top" style="text-decoration: none;" data-view="clients">
+          CLIENTES
+        </button>
+
+        <button class="btn btn-link text-light nav-top" style="text-decoration: none;" data-view="tickets">
+          TICKETS
+        </button>
+
+        <button class="btn btn-link text-light nav-top" style="text-decoration: none;" data-view="billing">
+          FACTURACIÓN
+        </button>
+
+        <button class="btn btn-link text-light nav-top" style="text-decoration: none;" data-view="audit">
+          AUDITORÍA
+        </button>
+
+        <button class="btn btn-link text-light nav-top" style="text-decoration: none;" data-view="assistants">
+          ASISTENTES
+        </button>
+
       </div>
+    </div>
+  </div>
 
-      <nav class="nav flex-column p-3">
-        <a href="#" class="nav-link active" id="btn-reload">
-          <i class="bi bi-speedometer2 me-2"></i> Dashboard
-        </a>
-        <a href="#" class="nav-link text-white" id="btn-open-clients">
-          <i class="bi bi-people me-2"></i> Clientes
-        </a>
-        <a href="#" class="nav-link text-white" id="btn-open-tickets">
-          <i class="bi bi-ticket-perforated me-2"></i> Tickets
-        </a>
-        <a href="#" class="nav-link text-white" id="btn-open-billing">
-          <i class="bi bi-credit-card me-2"></i> Facturación
-        </a>
-        <a href="#" class="nav-link text-white" id="btn-open-audit">
-          <i class="bi bi-shield-check me-2"></i> Auditoría
-        </a>
-      </nav>
+  <!-- CONTENT WRAPPER -->
+  <div class="flex-grow-1 overflow-hidden d-flex flex-column">
 
-      <div id="assistant-list" class="flex-grow-1 overflow-auto p-3">
-      </div>
-
+    <!-- DASHBOARD -->
+    <div id="dashboard-global" class="flex-grow-1 overflow-auto p-4">
     </div>
 
-    <!-- PANEL DERECHO -->
-    <div class="flex-grow-1 overflow-hidden d-flex flex-column">
-      <!-- DASHBOARD GLOBAL (NUEVO) -->
-      <div id="dashboard-global" class="flex-grow-1 overflow-auto p-4">
-      </div>
+    <!-- ASISTANTS GRID (NUEVO) -->
+    <div id="assistants-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+    </div>
 
-      <!-- DETALLE DEL ASISTENTE (EXISTENTE) -->
-      <div id="assistant-detail" class="flex-grow-1 overflow-auto p-4" style="display:none;">
-        <div id="detail-base-content">
-          <h5 class="text-secondary">Seleccioná un asistente</h5>
-        </div>
+    <!-- DETALLE DEL ASISTENTE -->
+    <div id="assistant-detail" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+      <div id="detail-base-content">
+        <h5 class="text-secondary">Seleccioná un asistente</h5>
       </div>
+    </div>
 
-      <!-- VISTA CLIENTES (NUEVA) -->
-      <div id="clients-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
-      </div>
+    <!-- CLIENTES -->
+    <div id="clients-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+    </div>
 
-      <!-- VISTA TICKETS (NUEVA) -->
-      <div id="tickets-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
-      </div>
-      <!-- VISTA FACTURACIÓN -->
-      <div id="billing-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
-      </div>
-      <!-- VISTA AUDITORÍA -->
-      <div id="audit-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
-      </div>
+    <!-- TICKETS -->
+    <div id="tickets-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+    </div>
 
-      <!-- VISTA LOGS / VARIABLES (NUEVA INTEGRADA) -->
-      <div id="secondary-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
-      </div>
+    <!-- FACTURACIÓN -->
+    <div id="billing-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+    </div>
+
+    <!-- AUDITORÍA -->
+    <div id="audit-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
     </div>
 
   </div>
@@ -103,10 +111,10 @@
         </div>
 
         <div class="modal-footer border-secondary">
-          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+          <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
             Cancelar
           </button>
-          <button class="btn btn-success btn-sm" id="btnSaveRename">
+          <button class="btn btn-outline-success btn-sm" id="btnSaveRename">
             Guardar
           </button>
         </div>
@@ -135,7 +143,8 @@
           <div id="deploy-step-1">
             <div class="row mb-3 px-3">
               <div class="input-group">
-                <input type="text" id="template-search-input" class="form-control bg-dark text-light border-secondary" placeholder="Buscar entre mis templates..." value="">
+                <input type="text" id="template-search-input" class="form-control bg-dark text-light border-secondary"
+                  placeholder="Buscar entre mis templates..." value="">
                 <button class="btn btn-primary" id="btn-search-templates">
                   <i class="bi bi-search"></i> Buscar
                 </button>
@@ -197,14 +206,26 @@
         </div>
 
         <div class="modal-footer border-secondary">
-          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+          <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
             Cancelar
           </button>
-          <button class="btn btn-primary btn-sm" id="btnConfirmLinkClient">
+          <button class="btn btn-outline-success btn-sm" id="btnConfirmLinkClient">
             Vincular
           </button>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+    <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive"
+      aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="toastMessage"></div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+          aria-label="Close"></button>
       </div>
     </div>
   </div>
@@ -222,16 +243,6 @@
   <script src="core/render.js" defer></script>
   <!-- Templates de despliegue -->
   <script src="core/deploy-template.js" defer></script>
-
-  <!-- Toast Container -->
-  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
-    <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="d-flex">
-        <div class="toast-body" id="toastMessage"></div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-      </div>
-    </div>
-  </div>
 </body>
 
 </html>

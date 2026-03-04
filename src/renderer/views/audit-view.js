@@ -25,18 +25,18 @@ async function renderAuditView() {
     view.style.display = "block";
 
     view.innerHTML = `
-        <div class="animate-fade">
+        <div class="animate-fade mt-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h2 class="fw-bold mb-0 text-info">LOGS DE ACTIVIDAD</h2>
+                    <h2 class="fw-bold mb-0">LOGS DE ACTIVIDAD</h2>
                     <p class="text-secondary small mb-0">Auditoría en tiempo real de acciones del sistema</p>
                 </div>
                 <div class="d-flex gap-2">
                     <div class="input-group input-group-sm" style="width: 250px;">
                         <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" id="auditSearch" placeholder="Buscar acción..." onkeyup="filterAuditLogs()">
+                        <input type="text" class="form-control text-light" id="auditSearch" onkeyup="filterAuditLogs()">
                     </div>
-                    <button class="btn btn-outline-info btn-sm" onclick="loadAuditLogs()">
+                    <button class="btn btn-outline-light btn-sm" onclick="loadAuditLogs()">
                         <i class="bi bi-arrow-clockwise me-2"></i>Actualizar
                     </button>
                 </div>
@@ -71,13 +71,57 @@ async function renderAuditView() {
 }
 
 async function loadAuditLogs() {
+
     const tbody = document.getElementById("audit-table-body");
+    const refreshBtn = document.querySelector("#audit-view button.btn-outline-info");
+
+    if (!tbody) return;
+
     try {
+
+        // Deshabilitar botón
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Actualizando...
+            `;
+        }
+
+        // Mostrar spinner en tabla
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-5">
+                    <div class="spinner-border text-info" role="status"></div>
+                </td>
+            </tr>
+        `;
+
         auditLogs = await window.api.getAuditLogs() || [];
+
         displayAuditLogs(auditLogs);
+
     } catch (err) {
+
         console.error("Error loading audit logs:", err);
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-danger">Error al cargar registros de auditoría</td></tr>';
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-5 text-danger">
+                    Error al cargar registros de auditoría
+                </td>
+            </tr>
+        `;
+
+    } finally {
+
+        // Restaurar botón
+        if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = `
+                <i class="bi bi-arrow-clockwise me-2"></i>Actualizar
+            `;
+        }
     }
 }
 

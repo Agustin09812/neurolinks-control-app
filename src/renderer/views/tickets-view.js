@@ -31,143 +31,144 @@ async function renderTicketsView(filterClientId = "") {
     const view = document.getElementById("tickets-view");
     view.style.display = "block";
     view.innerHTML = `
-        <div class="d-flex justify-content-center align-items-center h-100" id="tickets-loading">
-            <div class="spinner-border text-warning" role="status"></div>
-        </div>
-        <div id="tickets-content" style="display:none;" class="animate-fade">
-             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="fw-bold mb-0">SISTEMA DE <span class="text-warning">TICKETS</span></h2>
-                <button class="btn btn-ticket" onclick="openNewTicketModal()">
-                    <i class="bi bi-plus-circle me-2"></i> Nuevo Ticket
-                </button>
+        <div class="animate-fade mt-4">
+            <div class="d-flex justify-content-center align-items-center h-100" id="tickets-loading">
+                <div class="spinner-border text-warning" role="status"></div>
             </div>
-
-            <div class="glass-card p-4 mb-4">
-                <div class="row g-3">
-                    <div class="col-md-2">
-                        <label class="small text-dim fw-bold mb-2">ESTADO</label>
-                        <select class="form-select select-sm" id="view-filter-status" onchange="handleTicketFilter('status', this.value)">
-                            <option value="">Todos</option>
-                            <option value="Abierto">Abierto</option>
-                            <option value="En Progreso">En Progreso</option>
-                            <option value="Cerrado">Cerrado</option>
-                        </select>
+            <div id="tickets-content" style="display:none;">
+                 <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="fw-bold mb-0" style="color: var(--text-main)">SISTEMA DE TICKETS</h2>
+                    <button class="btn btn-outline-light btn-sm" onclick="openNewTicketModal()">
+                        <i class="bi bi-plus-circle me-2"></i> Nuevo Ticket
+                    </button>
+                </div>
+    
+                <div class="glass-card p-4 mb-4">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label class="small text-dim fw-bold mb-2">ESTADO</label>
+                            <select class="form-select select-sm" id="view-filter-status" onchange="handleTicketFilter('status', this.value)">
+                                <option value="">Todos</option>
+                                <option value="Abierto">Abierto</option>
+                                <option value="En Progreso">En Progreso</option>
+                                <option value="Cerrado">Cerrado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small text-dim fw-bold mb-2">PRIORIDAD</label>
+                            <select class="form-select select-sm" id="view-filter-priority" onchange="handleTicketFilter('priority', this.value)">
+                                <option value="">Todas</option>
+                                <option value="Baja">Baja</option>
+                                <option value="Media">Media</option>
+                                <option value="Alta">Alta</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small text-dim fw-bold mb-2">CLIENTE</label>
+                            <select class="form-select select-sm" id="view-filter-client" onchange="handleTicketFilter('client', this.value)">
+                                <option value="">Todos los clientes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small text-dim fw-bold mb-2">DESDE</label>
+                            <input type="date" class="form-control form-control-sm text-light" id="view-filter-date-start" onchange="handleTicketFilter('dateStart', this.value)">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small text-dim fw-bold mb-2">HASTA</label>
+                            <input type="date" class="form-control form-control-sm text-light" id="view-filter-date-end" onchange="handleTicketFilter('dateEnd', this.value)">
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button class="btn btn-outline-custom w-100 btn-sm" onclick="resetTicketFilters()" title="Limpiar Filtros">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="col-md-2">
-                        <label class="small text-dim fw-bold mb-2">PRIORIDAD</label>
-                        <select class="form-select select-sm" id="view-filter-priority" onchange="handleTicketFilter('priority', this.value)">
-                            <option value="">Todas</option>
-                            <option value="Baja">Baja</option>
-                            <option value="Media">Media</option>
-                            <option value="Alta">Alta</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="small text-dim fw-bold mb-2">CLIENTE</label>
-                        <select class="form-select select-sm" id="view-filter-client" onchange="handleTicketFilter('client', this.value)">
-                            <option value="">Todos los clientes</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="small text-dim fw-bold mb-2">DESDE</label>
-                        <input type="date" class="form-control form-control-sm" id="view-filter-date-start" onchange="handleTicketFilter('dateStart', this.value)">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="small text-dim fw-bold mb-2">HASTA</label>
-                        <input type="date" class="form-control form-control-sm" id="view-filter-date-end" onchange="handleTicketFilter('dateEnd', this.value)">
-                    </div>
-                    <div class="col-md-1 d-flex align-items-end">
-                        <button class="btn btn-outline-custom w-100 btn-sm" onclick="resetTicketFilters()" title="Limpiar Filtros">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                        </button>
+                </div>
+    
+                <div class="d-flex justify-content-end mb-3">
+                    <button class="btn btn-outline-light btn-sm" onclick="exportTicketsToCSV()">
+                        <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel (CSV)
+                    </button>
+                </div>
+    
+                <div class="glass-card overflow-hidden">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="color: var(--bg-deep) !important">ID / Título</th>
+                                    <th style="color: var(--bg-deep) !important">Cliente</th>
+                                    <th style="color: var(--bg-deep) !important">Tipo</th>
+                                    <th style="color: var(--bg-deep) !important">Estado</th>
+                                    <th style="color: var(--bg-deep) !important">Prioridad</th>
+                                    <th style="color: var(--bg-deep) !important">Creado</th>
+                                    <th class="text-end" style="color: var(--bg-deep) !important">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tickets-table-body-view"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-
-            <div class="d-flex justify-content-end mb-3">
-                <button class="btn btn-sm btn-outline-success" onclick="exportTicketsToCSV()">
-                    <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel (CSV)
-                </button>
-            </div>
-
-            <div class="glass-card overflow-hidden">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>ID / Título</th>
-                                <th>Cliente</th>
-                                <th>Tipo</th>
-                                <th>Estado</th>
-                                <th>Prioridad</th>
-                                <th>Creado</th>
-                                <th class="text-end">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tickets-table-body-view"></tbody>
-                    </table>
-                </div>
-            </div>
         </div>
-
         <!-- MODAL TICKET -->
-        <div class="modal fade" id="ticketModalView" tabindex="-1">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content glass-card shadow-lg">
-                    <div class="modal-header">
-                        <h5 class="modal-title fw-bold" id="ticketModalTitleView">Nuevo Ticket</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form id="ticketFormView">
-                        <div class="modal-body p-4">
-                            <input type="hidden" id="ticketIdView">
-                            <div class="row g-3">
-                                <div class="col-md-8">
-                                    <label class="form-label text-dim small fw-bold">TÍTULO DEL PROBLEMA *</label>
-                                    <input type="text" class="form-control" id="ticketTitleView" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label text-dim small fw-bold">CLIENTE *</label>
-                                    <select class="form-select" id="ticketClientView" required></select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label text-dim small fw-bold">TIPO</label>
-                                    <select class="form-select" id="ticketTypeView">
-                                        <option value="Soporte">Soporte</option>
-                                        <option value="Mejora">Mejora</option>
-                                        <option value="Bugs">Bugs</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label text-dim small fw-bold">ESTADO</label>
-                                    <select class="form-select" id="ticketStatusView">
-                                        <option value="Abierto">Abierto</option>
-                                        <option value="En Progreso">En Progreso</option>
-                                        <option value="Cerrado">Cerrado</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label text-dim small fw-bold">PRIORIDAD</label>
-                                    <select class="form-select" id="ticketPriorityView">
-                                        <option value="Baja">Baja</option>
-                                        <option value="Media">Media</option>
-                                        <option value="Alta">Alta</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-12">
-                                    <label class="form-label text-dim small fw-bold">DESCRIPCIÓN</label>
-                                    <textarea class="form-control" id="ticketDescView" rows="4"></textarea>
+            <div class="modal fade" id="ticketModalView" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content glass-card shadow-lg">
+                        <div class="modal-header">
+                            <h5 class="modal-title fw-bold" id="ticketModalTitleView">Nuevo Ticket</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form id="ticketFormView">
+                            <div class="modal-body p-4">
+                                <input type="hidden" id="ticketIdView">
+                                <div class="row g-3">
+                                    <div class="col-md-8">
+                                        <label class="form-label text-dim small fw-bold required">TÍTULO DEL PROBLEMA</label>
+                                        <input type="text" class="form-control text-light" id="ticketTitleView" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label text-dim small fw-bold required">CLIENTE</label>
+                                        <select class="form-select" id="ticketClientView" required></select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label text-dim small fw-bold">TIPO</label>
+                                        <select class="form-select" id="ticketTypeView">
+                                            <option value="Soporte">Soporte</option>
+                                            <option value="Mejora">Mejora</option>
+                                            <option value="Bugs">Bugs</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label text-dim small fw-bold">ESTADO</label>
+                                        <select class="form-select" id="ticketStatusView">
+                                            <option value="Abierto">Abierto</option>
+                                            <option value="En Progreso">En Progreso</option>
+                                            <option value="Cerrado">Cerrado</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label text-dim small fw-bold">PRIORIDAD</label>
+                                        <select class="form-select" id="ticketPriorityView">
+                                            <option value="Baja">Baja</option>
+                                            <option value="Media">Media</option>
+                                            <option value="Alta">Alta</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label text-dim small fw-bold">DESCRIPCIÓN</label>
+                                        <textarea class="form-control text-light" id="ticketDescView" rows="4"></textarea>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="modal-footer p-3">
-                            <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-warning px-4 text-dark fw-bold">Guardar Ticket</button>
-                        </div>
-                    </form>
+                            <div class="modal-footer p-3">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-success">Guardar Ticket</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
     `;
 
     document.getElementById("ticketFormView").onsubmit = handleTicketSubmit;

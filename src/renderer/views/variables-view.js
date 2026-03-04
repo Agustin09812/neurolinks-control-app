@@ -1,87 +1,96 @@
 
 async function renderVariablesView(projectId, environmentId, serviceId, serviceName) {
-    let varContainer = document.getElementById("integrated-var-container");
 
-    if (!varContainer) {
-        const detailMain = document.getElementById("assistant-detail");
-        varContainer = document.createElement("div");
-        varContainer.id = "integrated-var-container";
-        varContainer.className = "mt-4 animate-fade-up";
-        detailMain.appendChild(varContainer);
-    }
+    const panel = document.getElementById("detail-side-panel");
+    if (!panel) return;
 
-    varContainer.innerHTML = `
-        <div class="glass-card p-4 border-top border-warning border-3">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0 text-warning"><i class="bi bi-sliders me-2"></i> Variables: ${serviceName}</h5>
-                <button class="btn btn-sm btn-outline-light" onclick="this.parentElement.parentElement.parentElement.remove()">
-                    <i class="bi bi-x-lg"></i> Cerrar
+    panel.innerHTML = `
+        <div class="glass-card p-4 border-top border-warning border-3 animate-fade-up">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 text-warning">
+                    <i class="bi bi-sliders me-2"></i> Variables: ${serviceName}
+                </h5>
+                <button class="btn btn-sm btn-outline-light"
+                    onclick="document.getElementById('detail-side-panel').innerHTML = ''">
+                    <i class="bi bi-x-lg"></i>
                 </button>
             </div>
-            
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Valor</th>
-                            <th class="text-end">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="vars-table-body">
-                        <tr><td colspan="3" class="text-center">Cargando variables...</td></tr>
-                    </tbody>
-                </table>
-            </div>
 
-            <div class="mt-4 p-3 rounded bg-dark border border-secondary border-opacity-20">
+            <div class="p-3 rounded bg-dark border border-secondary border-opacity-20 mb-4">
                 <h6 class="text-secondary small text-uppercase mb-3">Nueva Variable</h6>
                 <div class="row g-2">
                     <div class="col-md-5">
-                        <input type="text" id="new-var-name" class="form-control form-control-sm" placeholder="NOMBRE_VARIABLE">
+                        <input type="text" id="new-var-name"
+                            class="form-control form-control-sm text-light">
                     </div>
                     <div class="col-md-5">
-                        <input type="text" id="new-var-value" class="form-control form-control-sm" placeholder="valor">
+                        <input type="text" id="new-var-value"
+                            class="form-control form-control-sm text-light">
                     </div>
                     <div class="col-md-2 d-grid">
-                        <button class="btn btn-warning btn-sm" onclick="handleAddVariable('${projectId}', '${environmentId}', '${serviceId}', '${serviceName}')">
+                        <button class="btn btn-warning btn-sm"
+                            onclick="handleAddVariable('${projectId}', '${environmentId}', '${serviceId}', '${serviceName}')">
                             <i class="bi bi-plus-lg"></i>
                         </button>
                     </div>
                 </div>
             </div>
+
+            <div id="vars-grid" class="d-grid gap-3">
+                <div class="text-center text-secondary py-4">
+                    Cargando variables...
+                </div>
+            </div>
+
         </div>
     `;
 
-    varContainer.scrollIntoView({ behavior: 'smooth' });
     loadVariables(projectId, environmentId, serviceId);
 }
 
 async function loadVariables(projectId, environmentId, serviceId) {
-    const tbody = document.getElementById("vars-table-body");
-    if (!tbody) return;
+    const grid = document.getElementById("vars-grid");
+    if (!grid) return;
 
     try {
         const variables = await window.api.getServiceVariables(projectId, environmentId, serviceId);
-        if (Object.keys(variables).length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-secondary">No hay variables definidas.</td></tr>';
+
+        const entries = Object.entries(variables);
+
+        if (entries.length === 0) {
+            grid.innerHTML = `
+                <div class="text-center text-secondary py-4">
+                    No hay variables definidas.
+                </div>
+            `;
             return;
         }
 
-        tbody.innerHTML = Object.entries(variables).map(([key, value]) => `
-            <tr>
-                <td class="fw-bold text-info">${key}</td>
-                <td class="text-truncate" style="max-width: 200px;">${value}</td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-link text-danger" onclick="handleDeleteVariable('${projectId}', '${environmentId}', '${serviceId}', '${key}')">
+        grid.innerHTML = entries.map(([key, value]) => `
+            <div class="variable-card p-4 d-flex justify-content-between align-items-start">
+
+                <div>
+                    <div class="variable-name">${key}</div>
+                    <div class="variable-value mt-2">${value}</div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-danger"
+                        onclick="handleDeleteVariable('${projectId}', '${environmentId}', '${serviceId}', '${key}')">
                         <i class="bi bi-trash"></i>
                     </button>
-                </td>
-            </tr>
+                </div>
+
+            </div>
         `).join("");
 
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">Error: ${err.message}</td></tr>`;
+        grid.innerHTML = `
+            <div class="text-center text-danger py-4">
+                Error: ${err.message}
+            </div>
+        `;
     }
 }
 

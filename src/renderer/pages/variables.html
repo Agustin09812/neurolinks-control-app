@@ -4,7 +4,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>Variables - Neurolinks Control</title>
-
   <link rel="stylesheet" href="../../node_modules/bootstrap/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="../../node_modules/bootstrap-icons/font/bootstrap-icons.css">
   <link rel="stylesheet" href="../../assets/css/styles.css">
@@ -36,8 +35,8 @@
 
   <!-- CONTENT -->
   <div class="flex-grow-1 d-flex p-3">
-    <div class="table-responsive w-100">
-      <table class="table table-dark table-hover align-middle">
+    <div class="flex-grow-1 p-4 overflow-auto">
+      <div id="variables-grid" class="d-grid gap-3">
         <thead>
           <tr>
             <th style="width: 30%">Name</th>
@@ -52,7 +51,7 @@
             </td>
           </tr>
         </tbody>
-      </table>
+      </div>
     </div>
   </div>
 
@@ -81,10 +80,10 @@
         </div>
 
         <div class="modal-footer border-secondary">
-          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+          <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
             Cancel
           </button>
-          <button class="btn btn-success btn-sm" id="btn-save-variable">
+          <button class="btn btn-outline-success btn-sm" id="btn-save-variable">
             Save
           </button>
         </div>
