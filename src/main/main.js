@@ -1,8 +1,8 @@
-// require('dotenv').config(); -> No usar dotenv directamente acá para evitar problemas de path en producción. Se carga dinámicamente más abajo según el entorno.
 const { app, BrowserWindow, shell, ipcMain, Menu, Notification, dialog } = require('electron');
 const path = require('path');
 const https = require("https");
 const fs = require('fs');
+const extract = require('extract-zip');
 
 // HOT FIX PARA COMPILAR 
 const isDev = !app.isPackaged;
@@ -28,7 +28,7 @@ function createSplash() {
     height: 300,
     frame: false,
     icon: path.join(__dirname, "../../assets/icons/icon.ico"),
-    alwaysOnTop: true,
+    alwaysOnTop: false,
     resizable: false,
     center: true,
     webPreferences: {
@@ -127,11 +127,13 @@ async function checkForUpdates() {
 
           if (isNewerVersion(remoteVersion, localVersion)) {
 
-            const asset = json.assets?.[0];
+            const asset = json.assets?.find(a => a.name.endsWith(".zip"));
+
+            if (!asset) return resolve(null);
 
             return resolve({
               version: remoteVersion,
-              url: asset?.browser_download_url
+              url: asset.browser_download_url
             });
 
           }
@@ -165,42 +167,6 @@ function isNewerVersion(remote, local) {
 
   return false;
 }
-
-// Handler para descarga automática de actualizaciones
-ipcMain.on('start-download-update', async (event, downloadUrl) => {
-  const tempPath = path.join(app.getPath('temp'), 'update-neurolinks.exe');
-  const file = fs.createWriteStream(tempPath);
-
-  https.get(downloadUrl, (response) => {
-    // Manejar redirecciones de GitHub
-    if (response.statusCode === 302 || response.statusCode === 301) {
-      return ipcMain.emit('start-download-update', event, response.headers.location);
-    }
-
-    const totalSize = parseInt(response.headers['content-length'], 10);
-    let downloadedSize = 0;
-
-    response.on('data', (chunk) => {
-      downloadedSize += chunk.length;
-      if (totalSize) {
-        const progress = Math.round((downloadedSize / totalSize) * 100);
-        event.reply('download-progress', progress);
-      }
-    });
-
-    response.pipe(file);
-
-    file.on('finish', () => {
-      file.close();
-      shell.openPath(tempPath).then(() => {
-        app.quit();
-      });
-    });
-  }).on('error', (err) => {
-    fs.unlink(tempPath, () => { });
-    console.error("Error en descarga:", err.message);
-  });
-});
 
 // =======================================================
 

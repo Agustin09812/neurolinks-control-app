@@ -23,7 +23,7 @@
 
       <div id="download-actions">
         <button id="btnConfirmDownload" class="btn btn-success btn-sm w-100">
-          Confirmar e Instalar Ahora
+          Descargar actualización
         </button>
       </div>
 
@@ -52,15 +52,28 @@
 
     // Cuando hay update disponible
     window.api?.onUpdateAvailable?.((data) => {
-      updateData = data;
+
       const spinner = document.querySelector(".spinner-border");
       if (spinner) spinner.style.display = "none";
 
       const box = document.getElementById("update-box");
-      if (box) box.style.display = "block";
+      if (!box) return;
+
+      box.style.display = "block";
 
       const text = box.querySelector("p");
-      if (text) text.textContent = `Nueva versión disponible (v${data.version})`;
+      if (text) {
+        text.textContent = `Nueva versión disponible (v${data.version})`;
+      }
+
+      const btnConfirm = document.getElementById("btnConfirmDownload");
+
+      if (btnConfirm) {
+        btnConfirm.onclick = () => {
+          window.api.openExternal(data.url);
+        };
+      }
+
     });
 
     const btnConfirm = document.getElementById("btnConfirmDownload");
