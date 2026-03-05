@@ -260,7 +260,7 @@ body {
 
 .side-panel-column {
   position: sticky;
-  top: 20px;
+  top: 0;
   min-width: 0;
 }
 
@@ -312,10 +312,10 @@ body {
 }
 
 .btn-update-mini {
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 25px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -565,4 +565,62 @@ body {
   line-height: 1.35;
   white-space: pre-wrap;
   text-wrap: balance;
+}
+
+/* =========================================================
+   17. SERVICES BUTTONS MENU
+========================================================= */
+
+.service-menu-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.service-menu {
+  width: 100%;
+  max-width: 220px;
+  /* controla el ancho del menú */
+  margin-top: 12px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.service-menu hr {
+  width: 100%;
+  border-color: rgba(255, 255, 255, 0.08);
+  margin: 6px 0;
+}
+
+.service-menu-item {
+  width: 100%;
+
+  text-align: center;
+  font-size: 13px;
+  padding: 8px 12px;
+
+  color: #ddd;
+  cursor: pointer;
+
+  border-radius: 6px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+
+  transition: all .2s ease;
+}
+
+.service-menu-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.service-menu-item.active {
+  background: rgba(0, 210, 255, 0.15);
+  color: #00d2ff;
+  border: 1px solid rgba(0, 210, 255, 0.3);
 }

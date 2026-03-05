@@ -18,9 +18,8 @@ async function renderLogsView(deploymentId, serviceName) {
                     <button class="btn btn-sm btn-outline-info" id="btn-download-integrated-logs">
                         <i class="bi bi-download me-1"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-light"
-                        onclick="document.getElementById('detail-side-panel').innerHTML = ''">
-                        <i class="bi bi-x-lg"></i>
+                    <button class="btn btn-sm btn-outline-light btn-close-logs">
+                      <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
             </div>
@@ -32,6 +31,17 @@ async function renderLogsView(deploymentId, serviceName) {
             </div>
         </div>
     `;
+
+    document.querySelector(".btn-close-logs").onclick = () => {
+
+        if (logInterval) {
+            clearInterval(logInterval);
+            logInterval = null;
+        }
+
+        document.getElementById("detail-side-panel").innerHTML = "";
+
+    };
 
     document.getElementById("btn-download-integrated-logs").onclick = async () => {
         try {
@@ -80,32 +90,5 @@ async function fetchLogs(deploymentId) {
     } catch (err) {
         terminal.innerHTML =
             `<div class="text-danger">Error al cargar logs: ${err.message}</div>`;
-    }
-}
-
-async function fetchLogs(deploymentId) {
-    const terminal = document.getElementById("log-terminal");
-    if (!terminal) {
-        if (logInterval) clearInterval(logInterval);
-        return;
-    }
-
-    try {
-        const logs = await window.api.fetchDeploymentLogs(deploymentId);
-        if (logs && Array.isArray(logs) && logs.length > 0) {
-            // Formatear logs (Railway devuelve objetos)
-            const displayLogs = logs.slice(-1000).map(l => {
-                const time = l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : '';
-                const severity = l.severity ? `[${l.severity}]` : '';
-                return `[${time}] ${severity} ${l.message}`;
-            }).join('\n');
-
-            terminal.innerHTML = `<pre class="mb-0" style="white-space: pre-wrap; word-break: break-all;">${displayLogs}</pre>`;
-            terminal.scrollTop = terminal.scrollHeight;
-        } else if (!logs || logs.length === 0) {
-            terminal.innerHTML = '<div class="text-secondary italic">No hay logs disponibles para este despliegue.</div>';
-        }
-    } catch (err) {
-        terminal.innerHTML = `<div class="text-danger">Error al cargar logs: ${err.message}</div>`;
     }
 }

@@ -479,73 +479,96 @@ function renderDetailStructure(project) {
   detail.style.display = "block";
 
   detail.innerHTML = `
-  <div class="animate-fade">
+<div class="animate-fade mt-4">
 
-    <!-- BOTÓN VOLVER -->
-    <div class="mb-4">
-      <button class="btn btn-outline-light btn-sm" id="btnBackToGrid">
-        <i class="bi bi-arrow-left me-2"></i> Volver a Asistentes
-      </button>
-    </div>
+  <!-- BOTÓN VOLVER -->
+  <div class="mb-4">
+    <button class="btn btn-outline-light btn-sm" id="btnBackToGrid">
+      <i class="bi bi-arrow-left me-2"></i> Volver a Asistentes
+    </button>
+  </div>
 
-    <!-- HEADER -->
-    <div class="mb-5">
+  <!-- GRID PRINCIPAL -->
+  <div class="detail-layout">
 
-      <!-- FILA 1: TITULO + BOTONES -->
-      <div class="d-flex justify-content-between align-items-center mb-3">
+    <!-- COLUMNA IZQUIERDA -->
+    <div class="services-column">
 
-        <!-- IZQUIERDA -->
-        <h2 class="fw-bold mb-0">${project.name}</h2>
+      <!-- HEADER -->
+      <div class="mb-4">
 
-        <!-- DERECHA -->
-        <div class="d-flex gap-2">
-          <button class="btn btn-sm btn-outline-light btn-rename">
-            <i class="bi bi-pencil"></i> Renombrar
-          </button>
+        <!-- TITULO + SETTINGS -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
 
-          <button class="btn btn-sm btn-outline-light btn-railway">
-            <i class="bi bi-folder2-open"></i> Abrir Railway
-          </button>
+          <p class="fw-bold mb-0">${project.name}</p>
 
-          <button class="btn btn-sm btn-outline-danger btn-delete-project">
-            <i class="bi bi-trash"></i> Eliminar
-          </button>
+          <div class="dropdown">
+            <button 
+              class="btn btn-outline-light btn-sm"
+              data-bs-toggle="dropdown">
+
+              <i class="bi bi-gear"></i>
+
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+
+              <li>
+                <button class="dropdown-item btn-rename">
+                  <i class="bi bi-pencil me-2"></i>
+                  Cambiar nombre
+                </button>
+              </li>
+
+              <li>
+                <button class="dropdown-item btn-railway">
+                  <i class="bi bi-box-arrow-up-right me-2"></i>
+                  Abrir Railway
+                </button>
+              </li>
+
+              <li>
+                <hr class="dropdown-divider">
+              </li>
+
+              <li>
+                <button class="dropdown-item text-danger btn-delete-project">
+                  <i class="bi bi-trash me-2"></i>
+                  Eliminar proyecto
+                </button>
+              </li>
+
+            </ul>
+
+          </div>
+
         </div>
 
-      </div>
-
-      <!-- FILA 2: ESTADOS + BADGES -->
-      <div class="d-flex justify-content-between align-items-center">
-
-        <!-- IZQUIERDA: CONTADORES -->
+        <!-- CONTADORES -->
         <div id="header-status-row"
-             class="d-flex gap-4 small align-items-center">
+             class="d-flex gap-4 small align-items-center mb-2">
         </div>
 
-        <!-- DERECHA: BADGES -->
+        <!-- BADGES -->
         <div id="header-badges"
              class="d-flex gap-2 flex-wrap">
         </div>
 
       </div>
 
+      <!-- SERVICIOS -->
+      <div id="services-container" class="d-grid gap-3"></div>
+
     </div>
 
-    <!-- LAYOUT PRINCIPAL -->
-    <div class="detail-layout">
-
-      <div class="services-column">
-        <div id="services-container" class="d-grid gap-3"></div>
-      </div>
-
-      <div class="side-panel-column">
-        <div id="detail-side-panel" class="side-panel-placeholder">
-        </div>
-      </div>
-
+    <!-- COLUMNA DERECHA -->
+    <div class="side-panel-column">
+      <div id="detail-side-panel" class="side-panel-placeholder"></div>
     </div>
 
   </div>
+
+</div>
 `;
 
   // Eventos header
@@ -623,20 +646,28 @@ async function updateDetailHeader(project) {
     if (!linkedClient || !linkedClient.clientes) {
 
       linkButton = `
-        <button class="btn btn-outline-info btn-sm btn-link-client">
-          <i class="bi bi-link-45deg"></i> Vincular Cliente
-        </button>
-      `;
+          <span 
+            class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn"
+            style="cursor:pointer;font-size:11px;padding:4px 8px;">
+
+            <i class="bi bi-link-45deg me-1"></i>
+            Vincular cliente
+
+          </span>
+        `;
 
     } else {
 
       clientBadge = `
-        <button 
-          class="badge badge-client-btn bg-info bg-opacity-10 text-info border border-info border-opacity-20 p-2 d-flex align-items-center gap-2">
-          <i class="bi bi-person-fill"></i>
-          <span>${linkedClient.clientes.nombre}</span>
-        </button>
-      `;
+          <span 
+            class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn"
+            style="cursor:pointer;font-size:11px;padding:4px 8px;">
+
+            <i class="bi bi-person-fill me-1"></i>
+            ${linkedClient.clientes.nombre}
+
+          </span>
+        `;
 
       const count = await window.api.getClientPendingTickets(linkedClient.clientes.id);
       if (selectedProjectId !== currentProjectId) return;
@@ -673,17 +704,25 @@ async function updateDetailHeader(project) {
 
     if (wsStatus?.connected) {
       whatsappBadge = `
-        <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 p-2 d-flex align-items-center gap-2">
-          <i class="bi bi-whatsapp"></i>
-          <span>Conectado</span>
-        </div>
+        <span 
+          class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"
+          style="font-size:11px;padding:4px 8px;">
+
+          <i class="bi bi-whatsapp me-1"></i>
+          Conectado
+
+        </span>
       `;
     } else {
       whatsappBadge = `
-        <div class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20 p-2 d-flex align-items-center gap-2">
-          <i class="bi bi-whatsapp"></i>
-          <span>Desconectado</span>
-        </div>
+        <span 
+          class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25"
+          style="font-size:11px;padding:4px 8px;">
+
+          <i class="bi bi-whatsapp me-1"></i>
+          Desconectado
+
+        </span>
       `;
     }
 
@@ -745,90 +784,175 @@ function createServiceCard(service, project) {
   div.dataset.serviceId = service.id;
 
   div.innerHTML = `
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <div class="fw-bold service-name">${service.name}</div>
+  <!-- HEADER -->
+  <div class="d-flex justify-content-between align-items-center mb-2">
 
-      <div class="service-status d-flex align-items-center gap-2">
-
-        <span class="service-status-icon">
-          ${getStatusIcon(service.status)}
-        </span>
-
-        <span class="service-update-container">
-          ${service.isUpdatable ? `
-            <button 
-              class="btn btn-warning btn-sm btn-update-mini"
-              title="Actualizar servicio">
-              <i class="bi bi-arrow-repeat"></i>
-            </button>
-          ` : ""}
-        </span>
-
-      </div>
+    <div class="fw-bold service-name">
+      ${service.name}
     </div>
 
-    <div class="small text-secondary mb-3 service-date">
-      Último deploy: ${formatDate(service.createdAt)}
+    <div class="d-flex align-items-center gap-2">
+
+      <span class="service-status-icon">
+        ${getStatusIcon(service.status)}
+      </span>
+
+      ${service.isUpdatable ? `
+        <button 
+          class="btn btn-warning btn-sm btn-update-mini"
+          title="Actualizar servicio">
+          <i class="bi bi-arrow-repeat"></i>
+        </button>
+      ` : ""}
+
     </div>
 
-    <div class="d-flex justify-content-between align-items-center">
+  </div>
 
-      <div class="d-flex gap-2">
-        <button class="btn btn-outline-info btn-sm btn-logs" 
-          ${!service.deploymentId ? "disabled" : ""}>
-          <i class="bi bi-terminal"></i> Logs
-        </button>
+  <!-- FECHA -->
+  <div class="small text-secondary mb-3 service-date text-center">
+    Último deploy: ${formatDate(service.createdAt)}
+  </div>
 
-        <button class="btn btn-outline-warning btn-sm btn-vars">
-          <i class="bi bi-sliders"></i> Variables
-        </button>
+  <!-- MENU -->
+  <div class="service-menu-wrapper">
+
+    <div class="service-menu">
+
+      <div class="service-menu-item btn-logs">
+        <i class="bi bi-terminal me-2"></i> Logs
       </div>
 
-      <div class="d-flex gap-2 align-items-center">
+      <hr>
 
-        <button class="btn btn-outline-success btn-sm btn-dashboard">
-          <i class="bi bi-speedometer2"></i> Dashboard
-        </button>
-
-        <button class="btn btn-outline-primary btn-sm btn-webchat">
-          <i class="bi bi-chat-dots"></i> Webchat
-        </button>
-
+      <div class="service-menu-item btn-vars">
+        <i class="bi bi-sliders me-2"></i> Variables
       </div>
+
+      <hr>
+
+      <div class="service-menu-item btn-dashboard">
+        <i class="bi bi-speedometer2 me-2"></i> Dashboard
+      </div>
+
+      <hr>
+
+      <div class="service-menu-item btn-webchat">
+        <i class="bi bi-chat-dots me-2"></i> Webchat
+      </div>
+
+      <hr>
+
+      <div class="service-menu-item btn-redeploy">
+        <i class="bi bi-arrow-repeat me-2"></i> Redeploy
+      </div>
+
     </div>
-  `;
 
-  // Eventos (IMPORTANTE: ahora no usamos onclick inline)
+  </div>
+`;
 
-  div.querySelector(".btn-logs")?.addEventListener("click", () => {
+  function setActiveServiceMenu(el) {
+
+    const container = el.closest(".service-menu");
+
+    if (!container) return;
+
+    container.querySelectorAll(".service-menu-item")
+      .forEach(i => i.classList.remove("active"));
+
+    el.classList.add("active");
+
+  }
+
+  function clearActiveServiceMenu() {
+
+    document
+      .querySelectorAll(".service-menu-item.active")
+      .forEach(el => el.classList.remove("active"));
+
+  }
+
+  // --------------------------------------------------
+  // BOTONES DE SERVICIO
+  // --------------------------------------------------
+
+  div.querySelector(".btn-logs")?.addEventListener("click", (e) => {
+
+    setActiveServiceMenu(e.currentTarget);
+
     renderLogsView(service.deploymentId, service.name);
+
   });
 
-  div.querySelector(".btn-vars")?.addEventListener("click", () => {
+  div.querySelector(".btn-vars")?.addEventListener("click", (e) => {
+
+    setActiveServiceMenu(e.currentTarget);
+
     renderVariablesView(
       service.projectId,
       service.environmentId,
       service.id,
       service.name
     );
+
   });
 
-  div.querySelector(".btn-dashboard")?.addEventListener("click", () => {
+  div.querySelector(".btn-dashboard")?.addEventListener("click", (e) => {
+
+    setActiveServiceMenu(e.currentTarget);
+
     openDashboard(
       service.projectId,
       service.environmentId,
       service.id
     );
+
   });
 
-  div.querySelector(".btn-webchat")?.addEventListener("click", () => {
+  div.querySelector(".btn-webchat")?.addEventListener("click", (e) => {
+
+    setActiveServiceMenu(e.currentTarget);
+
     openWebchat(
       service.projectId,
       service.environmentId,
       service.id,
       service.name
     );
+
   });
+
+  div.querySelector(".btn-redeploy")?.addEventListener("click", (e) => {
+
+    setActiveServiceMenu(e.currentTarget);
+
+    handleRedeploy(service.id, service.environmentId);
+
+  });
+
+  // --------------------------------------------------
+  // OBSERVAR CUANDO SE CIERRA EL SIDE PANEL
+  // --------------------------------------------------
+
+  const sidePanel = document.getElementById("detail-side-panel");
+
+  if (sidePanel) {
+
+    const observer = new MutationObserver(() => {
+
+      if (sidePanel.innerHTML.trim() === "") {
+        clearActiveServiceMenu();
+      }
+
+    });
+
+    observer.observe(sidePanel, {
+      childList: true,
+      subtree: false
+    });
+
+  }
 
   div.querySelector(".btn-delete")?.addEventListener("click", () => {
     handleDelete(service.id);
