@@ -33,7 +33,7 @@ async function renderBillingView() {
                     <p class="text-secondary small mb-0">Gestión financiera y facturación histórica</p>
                 </div>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-light btn-sm" onclick="openNewPaymentModal()">
+                    <button class="btn btn-outline-light btn-sm" id="btnNuevaFactura" onclick="openNewPaymentModal()">
                         <i class="bi bi-plus-lg me-2"></i>Nueva Factura
                     </button>
                     <button class="btn btn-outline-light btn-sm" onclick="refreshBilling()">
@@ -156,7 +156,32 @@ async function renderBillingView() {
 async function loadBillingData() {
     const tbody = document.getElementById("billing-table-body");
     try {
-        allPayments = await window.api.getAllPayments() || [];
+        const isAdmin = window.currentUser && window.currentUser.rol === 'admin';
+        const funcs = (window.currentUser && window.currentUser.funciones_habilitadas) || {};
+        let permLvl = isAdmin ? 'editar_crear' : (funcs.facturas || 'none');
+        if (permLvl === true) permLvl = 'editar_crear';
+
+        const btnNueva = document.getElementById("btnNuevaFactura");
+        if (btnNueva) btnNueva.style.display = (permLvl === 'editar_crear') ? 'inline-block' : 'none';
+
+        if (permLvl === 'none' || permLvl === false) {
+            allPayments = [];
+        } else {
+            const payments = await window.api.getAllPayments() || [];
+            if (permLvl === 'ver_propio') {
+                allPayments = payments.filter(p => String(p.cliente_id) === String(window.currentUser.cliente_id));
+
+                const filterSelect = document.getElementById("bill-filter-client");
+                if (filterSelect && window.currentUser.cliente) {
+                    filterSelect.value = window.currentUser.cliente.nombre;
+                    filterSelect.disabled = true;
+                    billingFilters.client = window.currentUser.cliente.nombre;
+                }
+            } else {
+                allPayments = payments;
+            }
+        }
+
         applyBillingFilters();
     } catch (err) {
         console.error("Error loading billing data:", err);
@@ -214,23 +239,38 @@ function applyBillingFilters() {
         return;
     }
 
+    const isAdmin = window.currentUser && window.currentUser.rol === 'admin';
+    const funcs = (window.currentUser && window.currentUser.funciones_habilitadas) || {};
+    let permLvl = isAdmin ? 'editar_crear' : (funcs.facturas || 'none');
+    if (permLvl === true) permLvl = 'editar_crear';
+
     filtered.forEach(p => {
         const tr = document.createElement("tr");
         tr.className = "border-secondary";
+
+        let actionsHtml = '';
+        if (permLvl === 'editar_crear') {
+            actionsHtml = `
+                <button class="btn btn-link text-danger p-0" onclick="deleteGlobalPayment('\${p.id}')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+        } else {
+            actionsHtml = `<span class="small text-dim">-</span>`;
+        }
+
         tr.innerHTML = `
-            <td class="ps-4 text-secondary">${new Date(p.fecha).toLocaleDateString()}</td>
-            <td><span class="fw-bold text-accent-clients">${p.clientes ? p.clientes.nombre : 'Sin Cliente'}</span></td>
-            <td class="small opacity-75">${p.concepto}</td>
-            <td><span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 font-monospace">$${p.monto}</span></td>
+            <td class="ps-4 text-secondary">\${new Date(p.fecha).toLocaleDateString()}</td>
+            <td><span class="fw-bold text-accent-clients">\${p.clientes ? p.clientes.nombre : 'Sin Cliente'}</span></td>
+            <td class="small opacity-75">\${p.concepto}</td>
+            <td><span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 font-monospace">$\${p.monto}</span></td>
             <td class="text-center">
                 <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2 py-1 rounded-pill x-small">
-                    ${p.metodo}
+                    \${p.metodo}
                 </span>
             </td>
             <td class="text-center">
-                <button class="btn btn-link text-danger p-0" onclick="deleteGlobalPayment('${p.id}')">
-                    <i class="bi bi-trash"></i>
-                </button>
+                \${actionsHtml}
             </td>
         `;
         tbody.appendChild(tr);

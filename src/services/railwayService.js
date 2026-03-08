@@ -25,7 +25,7 @@ async function railwayQuery(query, variables = {}, customToken = null) {
 }
 
 const railwayService = {
-  async getAssistants() {
+  async getAssistants(filterProjectIds = null) {
     const query = `
       query {
         projects {
@@ -80,7 +80,11 @@ const railwayService = {
       return [];
     }
 
-    const projects = result.data.projects.edges.map(edge => edge.node);
+    let projects = result.data.projects.edges.map(edge => edge.node);
+
+    if (filterProjectIds && Array.isArray(filterProjectIds)) {
+      projects = projects.filter(p => filterProjectIds.includes(p.id));
+    }
 
     return projects.map(project => {
       const services = (project.services?.edges || []).map(serviceEdge => {
@@ -334,7 +338,7 @@ const railwayService = {
     return result.data?.templates?.edges.map(e => e.node) || [];
   },
 
-  async deployTemplate(templateId) {
+  async deployTemplate(templateId, variables = {}) {
     try {
       // 1. Primero obtenemos la configuración serializada del template
       const getConfigQuery = `
@@ -363,15 +367,36 @@ const railwayService = {
         }
       `;
 
-      const variables = {
+      const deployVariables = {
         input: {
           templateId: template.id,
           serializedConfig: template.serializedConfig
         }
       };
 
+      // Si el usuario pasó variables personalizadas, las mergeamos en el serializedConfig
+      if (Object.keys(variables).length > 0) {
+        try {
+          const configObj = JSON.parse(template.serializedConfig);
+          if (configObj.services && Array.isArray(configObj.services)) {
+            configObj.services.forEach(service => {
+              const serviceVars = variables[service.name];
+              if (serviceVars) {
+                if (!service.variables) service.variables = {};
+                Object.entries(serviceVars).forEach(([key, value]) => {
+                  service.variables[key] = value;
+                });
+              }
+            });
+          }
+          deployVariables.input.serializedConfig = JSON.stringify(configObj);
+        } catch (err) {
+          console.error("Error al mergear variables en serializedConfig:", err);
+        }
+      }
+
       // Se usa el token principal (RAILWAY_TOKEN) para que el despliegue se realice en la cuenta/workspace original
-      const result = await railwayQuery(deployMutation, variables);
+      const result = await railwayQuery(deployMutation, deployVariables);
 
       if (result.errors) {
         throw new Error(result.errors[0].message);
@@ -388,6 +413,77 @@ const railwayService = {
         success: false,
         error: error.message
       };
+    }
+  },
+
+  async getTemplateVariables(templateId) {
+    try {
+      const query = `
+        query template($id: String!) {
+          template(id: $id) {
+            id
+            name
+            serializedConfig
+            config {
+              services {
+                name
+                variables {
+                  name
+                  defaultValue
+                  description
+                }
+              }
+            }
+          }
+        }
+      `;
+      const result = await railwayQuery(query, { id: templateId }, RAILWAY_TOKEN_TEMPLATE);
+      const template = result.data?.template;
+      if (!template) return [];
+
+      const configServices = template.config?.services || [];
+      const allVariables = [];
+
+      // 1. Añadir variables declaradas en el config (las "oficiales" del template)
+      configServices.forEach(s => {
+        (s.variables || []).forEach(v => {
+          allVariables.push({
+            serviceName: s.name,
+            ...v
+          });
+        });
+      });
+
+      // 2. Extraer variables del serializedConfig (las que existen pero no están expuestas)
+      if (template.serializedConfig) {
+        try {
+          const configObj = JSON.parse(template.serializedConfig);
+          if (configObj.services && Array.isArray(configObj.services)) {
+            configObj.services.forEach(s => {
+              if (s.variables) {
+                Object.entries(s.variables).forEach(([name, value]) => {
+                  const exists = allVariables.find(v => v.serviceName === s.name && v.name === name);
+                  if (!exists) {
+                    allVariables.push({
+                      serviceName: s.name,
+                      name,
+                      defaultValue: value,
+                      description: 'Variable detectada en la configuración base'
+                    });
+                  }
+                });
+              }
+            });
+          }
+        } catch (e) {
+          console.error("Error parsing serializedConfig in getTemplateVariables:", e);
+        }
+      }
+
+      return allVariables;
+    } catch (error) {
+      console.error("Error en getTemplateVariables:", error);
+      return [];
     }
   }
 };

@@ -39,7 +39,7 @@ async function renderTicketsView(filterClientId = "") {
             <div id="tickets-content" style="display:none;">
                  <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="fw-bold mb-0" style="color: var(--text-main)">SISTEMA DE TICKETS</h2>
-                    <button class="btn btn-outline-light btn-sm" onclick="openNewTicketModal()">
+                    <button class="btn btn-outline-light btn-sm" id="btnNuevoTicket" onclick="openNewTicketModal()">
                         <i class="bi bi-plus-circle me-2"></i> Nuevo Ticket
                     </button>
                 </div>
@@ -202,14 +202,42 @@ async function loadTicketsData() {
     const loadingDiv = document.getElementById("tickets-loading");
     const contentDiv = document.getElementById("tickets-content");
 
-    // Si no existen los divs, abortamos
     if (!loadingDiv || !contentDiv) return;
 
     try {
-
         const previousCount = lastTicketsCount;
 
-        allTicketsView = await window.api.getTickets() || [];
+        const isAdmin = window.currentUser && window.currentUser.rol === 'admin';
+        const funcs = (window.currentUser && window.currentUser.funciones_habilitadas) || {};
+        let permLvl = isAdmin ? 'editar_crear' : (funcs.tickets || 'none');
+        if (permLvl === true) permLvl = 'editar_crear';
+
+        // Aplicar filtro de cliente si el usuario tiene permiso 'ver_propio'
+        const filters = {};
+        if (permLvl === 'ver_propio') {
+            filters.cliente_id = window.currentUser.cliente_id;
+
+            // Bloquear selectors de cliente en la UI
+            const filterSelect = document.getElementById("view-filter-client");
+            if (filterSelect) {
+                filterSelect.value = window.currentUser.cliente_id;
+                filterSelect.disabled = true;
+            }
+            const modalSelect = document.getElementById("ticketClientView");
+            if (modalSelect) {
+                modalSelect.value = window.currentUser.cliente_id;
+                modalSelect.disabled = true;
+            }
+        }
+
+        const btnNuevo = document.getElementById("btnNuevoTicket");
+        if (btnNuevo) btnNuevo.style.display = (permLvl === 'editar_crear') ? 'inline-block' : 'none';
+
+        if (permLvl === 'none' || permLvl === false) {
+            allTicketsView = [];
+        } else {
+            allTicketsView = await window.api.getTickets(filters) || [];
+        }
 
         // Detectar nuevos tickets
         if (previousCount !== 0 && allTicketsView.length > previousCount) {
@@ -282,9 +310,25 @@ function renderTicketsList() {
         return;
     }
 
+    const isAdmin = window.currentUser && window.currentUser.rol === 'admin';
+    const funcs = (window.currentUser && window.currentUser.funciones_habilitadas) || {};
+    let permLvl = isAdmin ? 'editar_crear' : (funcs.tickets || 'none');
+    if (permLvl === true) permLvl = 'editar_crear';
+
     filtered.forEach(t => {
         const tr = document.createElement("tr");
         tr.className = "ticket-row";
+
+        let actionButtonsHtml = '';
+        if (permLvl === 'editar_crear') {
+            actionButtonsHtml = `
+                    <button class="btn btn-sm btn-outline-light" onclick="openEditTicket('\${t.id}')"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="handleDeleteTicket('\${t.id}')"><i class="bi bi-trash"></i></button>
+            `;
+        } else {
+            actionButtonsHtml = `<span class="small text-dim">Solo lectura</span>`;
+        }
+
         tr.innerHTML = `
             <td>
                 <div class="fw-bold">#${t.id.substring(0, 8)}</div>
@@ -297,8 +341,7 @@ function renderTicketsList() {
             <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
             <td class="text-end">
                 <div class="d-flex gap-2 justify-content-end">
-                    <button class="btn btn-sm btn-outline-light" onclick="openEditTicket('${t.id}')"><i class="bi bi-pencil"></i></button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="handleDeleteTicket('${t.id}')"><i class="bi bi-trash"></i></button>
+                    ${actionButtonsHtml}
                 </div>
             </td>
         `;

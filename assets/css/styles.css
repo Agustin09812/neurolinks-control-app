@@ -234,6 +234,10 @@ body {
   border: 1px solid rgba(0, 210, 255, 0.2);
 }
 
+.text-accent-clients {
+  color: var(--accent-secondary);
+}
+
 .status-cerrado {
   background: rgba(40, 167, 69, 0.1);
   color: #28a745;
@@ -347,6 +351,26 @@ body {
   }
 }
 
+
+
+/* Custom Outline Button for Dark Theme */
+.btn-outline-custom {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-main);
+  transition: all 0.2s ease;
+}
+
+.btn-outline-custom:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--accent-primary);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btn-outline-custom:active {
+  transform: translateY(0);
+}
 
 /* =========================================================
    11. TOAST SYSTEM

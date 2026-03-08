@@ -4,6 +4,8 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
     const panel = document.getElementById("detail-side-panel");
     if (!panel) return;
 
+    panel.dataset.view = "variables";
+
     panel.innerHTML = `
         <div class="glass-card p-4 border-top border-warning border-3 animate-fade-up" style="height: calc(100% - 30px);">
 
@@ -12,7 +14,7 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
                     <i class="bi bi-sliders me-2"></i> Variables: ${serviceName}
                 </h5>
                 <button class="btn btn-sm btn-outline-light"
-                    onclick="document.getElementById('detail-side-panel').innerHTML = ''">
+                    onclick="closeSidePanel()">
                     <i class="bi bi-x-lg"></i>
                 </button>
             </div>

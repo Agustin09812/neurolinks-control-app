@@ -8,6 +8,8 @@ async function renderWebchatView(serviceDomain, serviceName) {
     if (!url.endsWith('/')) url += '/';
     url += 'webchat';
 
+    panel.dataset.view = "webchat";
+
     panel.innerHTML = `
         <div class="glass-card p-0 border-top border-primary border-3 overflow-hidden shadow-lg animate-fade-up"
             style="height: 100%; border-radius: 15px;">
@@ -24,7 +26,7 @@ async function renderWebchatView(serviceDomain, serviceName) {
                         <i class="bi bi-box-arrow-up-right"></i>
                     </button>
                     <button class="btn btn-sm btn-outline-light"
-                        onclick="document.getElementById('detail-side-panel').innerHTML = ''">
+                        onclick="closeSidePanel()">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>

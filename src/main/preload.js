@@ -16,8 +16,8 @@ contextBridge.exposeInMainWorld('api', {
   // PROJECTS
   // --------------------------------------------------
 
-  getAssistants: () =>
-    ipcRenderer.invoke('get-assistants'),
+  getAssistants: (clientId) =>
+    ipcRenderer.invoke('get-assistants', clientId),
 
   updateProjectName: (projectId, newName) =>
     ipcRenderer.invoke('update-project-name', projectId, newName),
@@ -35,8 +35,11 @@ contextBridge.exposeInMainWorld('api', {
   searchTemplates: (query) =>
     ipcRenderer.invoke('search-templates', query),
 
-  deployTemplate: (templateId) =>
-    ipcRenderer.invoke('deploy-template', templateId),
+  getTemplateVariables: (templateId) =>
+    ipcRenderer.invoke('get-template-variables', templateId),
+
+  deployTemplate: (templateId, variables) =>
+    ipcRenderer.invoke('deploy-template', templateId, variables),
 
   // --------------------------------------------------
   // SERVICES
@@ -177,6 +180,19 @@ contextBridge.exposeInMainWorld('api', {
 
   getAuditLogs: () =>
     ipcRenderer.invoke('get-audit-logs'),
+
+  // login
+  loginWithToken: (token) => ipcRenderer.invoke('login-with-token', token),
+  loginWithCredentials: (usuario, contrasena) => ipcRenderer.invoke('login-with-credentials', { usuario, contrasena }),
+  verifyAdmin: (password) => ipcRenderer.invoke('verify-admin', password),
+  setActiveUser: (userData) => ipcRenderer.send('set-active-user', userData),
+
+  // usuarios
+  getUsuarios: () => ipcRenderer.invoke('get-usuarios'),
+  getUsuariosByCliente: (clienteId) => ipcRenderer.invoke('get-usuarios-by-cliente', clienteId),
+  createUsuario: (userData) => ipcRenderer.invoke('create-usuario', userData),
+  updateUsuario: (id, userData) => ipcRenderer.invoke('update-usuario', id, userData),
+  deleteUsuario: (id) => ipcRenderer.invoke('delete-usuario', id),
 
   // --------------------------------------------------
   // NAVIGATION

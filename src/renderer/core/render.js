@@ -1,17 +1,19 @@
 let assistants = [];
 let selectedProjectId = null;
+let selectedProjectClient = null;
 let lastAssistantsHash = "" // Hash system for optimized refreshing
 let isRefreshing = false; // Avoid glitch while refreshing
 let notifications = []; // Notifications system in app
 const notificationMemory = new Map(); // Notifications memory
 let renderToken = 0;
+window.currentUser = null;
 
 // ========================================
 // ROUTER CENTRAL DE NAVEGACIÓN
 // ========================================
 
 async function navigate(view) {
-
+  console.log("Navigating to:", view);
   localStorage.setItem("activeView", view);
 
   const views = [
@@ -22,18 +24,24 @@ async function navigate(view) {
     "tickets-view",
     "billing-view",
     "audit-view",
-    "notifications-view"
+    "notifications-view",
+    "config-view"
   ];
+
+  // Reglas de Acceso por Rol
+  if (window.currentUser?.rol === 'client') {
+    const forbiddenForClients = ['clients', 'audit', 'billing'];
+    if (forbiddenForClients.includes(view)) {
+      console.warn("Access denied for view:", view);
+      showToast("No tienes permiso para acceder a esta sección", "danger");
+      return;
+    }
+  }
 
   const activeViewEl = document.getElementById(`${view}-view`)
     || document.getElementById("dashboard-global");
 
-  if (activeViewEl) {
-    activeViewEl.classList.add("view-transition");
-    setTimeout(() => {
-      activeViewEl.classList.remove("view-transition");
-    }, 300);
-  }
+  console.log("Active view element:", activeViewEl?.id);
 
   views.forEach(id => {
     const el = document.getElementById(id);
@@ -51,55 +59,73 @@ async function navigate(view) {
 
   // Mostrar vista correcta
   switch (view) {
-
     case "dashboard":
-      document.getElementById("dashboard-global").style.display = "block";
-      renderDashboard?.();
+      console.log("Showing dashboard-global");
+      const d = document.getElementById("dashboard-global");
+      if (d) d.style.display = "block";
+      renderDashboard().catch(e => console.error("Error in renderDashboard:", e));
       break;
 
     case "assistants":
-
-      // reset detail panel si estaba abierto
+      console.log("Showing assistants-view");
       const detail = document.getElementById("assistant-detail");
       if (detail) {
         detail.dataset.initialized = "";
         detail.dataset.projectId = "";
         detail.style.display = "none";
       }
-
       await loadAssistants(false);
-
-      document.getElementById("assistants-view").style.display = "block";
-
+      const av = document.getElementById("assistants-view");
+      if (av) av.style.display = "block";
       renderAssistantsGrid?.();
-
       break;
 
     case "clients":
-      document.getElementById("clients-view").style.display = "block";
+      const cv = document.getElementById("clients-view");
+      if (cv) cv.style.display = "block";
       renderClientsView?.();
       break;
 
     case "tickets":
-      document.getElementById("tickets-view").style.display = "block";
+      const tv = document.getElementById("tickets-view");
+      if (tv) tv.style.display = "block";
       renderTicketsView?.();
       break;
 
     case "billing":
-      document.getElementById("billing-view").style.display = "block";
+      const bv = document.getElementById("billing-view");
+      if (bv) bv.style.display = "block";
       renderBillingView?.();
       break;
 
     case "audit":
-      document.getElementById("audit-view").style.display = "block";
+      const adv = document.getElementById("audit-view");
+      if (adv) adv.style.display = "block";
       renderAuditView?.();
       break;
 
+    case "admins":
+      const usrv = document.getElementById("usuarios-view");
+      if (usrv) usrv.style.display = "block";
+      renderUsuariosView?.();
+      break;
+
     case "notifications":
-      document.getElementById("notifications-view").style.display = "block";
+      const nv = document.getElementById("notifications-view");
+      if (nv) nv.style.display = "block";
       renderNotificationsView?.();
       break;
 
+    case "config":
+      const cfgv = document.getElementById("config-view");
+      if (cfgv) cfgv.style.display = "block";
+      renderConfigView?.();
+      break;
+
+    case "assistant-detail":
+      const ad = document.getElementById("assistant-detail");
+      if (ad) ad.style.display = "block";
+      break;
   }
 
 }
@@ -236,7 +262,22 @@ async function loadAssistants(preserveSelection = true) {
 
   const currentSelected = selectedProjectId;
 
-  const data = await window.api.getAssistants();
+  const isAdmin = window.currentUser && window.currentUser.rol === 'admin';
+  const funcs = (window.currentUser && window.currentUser.funciones_habilitadas) || {};
+  let permLvl = isAdmin ? 'editar_crear' : (funcs.agentes || 'none');
+  if (permLvl === true) permLvl = 'editar_crear';
+
+  if (permLvl === 'none' || permLvl === false) {
+    assistants = [];
+    if (document.getElementById("assistants-view")?.style.display === "block") {
+      renderAssistantsGrid();
+    }
+    return;
+  }
+
+  const clientIdFilter = (permLvl === 'ver_propio') ? window.currentUser?.cliente_id : null;
+  const data = await window.api.getAssistants(clientIdFilter);
+
   if (!Array.isArray(data)) return;
 
   data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -332,6 +373,13 @@ function renderAssistantsGrid() {
 
   const grid = document.getElementById("assistants-grid");
 
+  let filteredAssistants = assistants;
+  if (currentUser?.rol === 'client' && currentUser.cliente_id) {
+    // Filtrar asistentes vinculados a este cliente
+    // Necesitaremos que el backend nos de esa información o filtrarla aquí si la tenemos
+    // Por ahora asumimos que assistants ya vienen filtrados o usaremos window.api.getClientProjects
+  }
+
   if (!assistants.length) {
     grid.innerHTML = `
       <div class="col-12 text-center text-secondary py-5">
@@ -418,12 +466,29 @@ async function renderDetail(project, isRefresh = false) {
     detailPanel.dataset.projectId !== project.id;
 
   selectedProjectId = project.id;
+  if (!isRefresh) {
+    navigate('assistant-detail');
+  }
+
+  const sidePanel = document.getElementById("detail-side-panel");
 
   // RESET SI CAMBIA PROYECTO
   if (isDifferentProject) {
     detailPanel.dataset.initialized = "";
     detailPanel.dataset.projectId = "";
     detailPanel.innerHTML = "";
+    selectedProjectClient = null; // Clear client info
+    if (sidePanel) sidePanel.dataset.view = "default";
+  }
+
+  // Fetch client info once for the project
+  if (!selectedProjectClient || isDifferentProject || isRefresh) {
+    try {
+      selectedProjectClient = await window.api.getProjectClient(project.id);
+    } catch (err) {
+      console.error("Error fetching project client:", err);
+      selectedProjectClient = null;
+    }
   }
 
   // ===== RENDER INICIAL (NUNCA ABORTAR)
@@ -439,7 +504,8 @@ async function renderDetail(project, isRefresh = false) {
 
     if (token !== renderToken) return;
 
-    renderServices(project);
+    await renderServices(project);
+    updateSidePanel(project); // <-- Nueva función
 
     return;
   }
@@ -452,11 +518,19 @@ async function renderDetail(project, isRefresh = false) {
     if (token !== renderToken) return;
 
     patchServices(project);
-
+    updateSidePanel(project); // <-- Actualizar también en refresh
   }
 }
 
 function renderDetailStructure(project) {
+  const isAdmin = window.currentUser && window.currentUser.rol === 'admin';
+  const funcs = (window.currentUser && window.currentUser.funciones_habilitadas) || {};
+  let permLvl = isAdmin ? 'editar_crear' : (funcs.agentes || 'none');
+  if (permLvl === true) permLvl = 'editar_crear';
+  const canEdit = permLvl === 'editar_crear';
+
+  const detail = document.getElementById("assistant-detail");
+  if (!detail) return;
 
   const servicesContainer = document.getElementById("services-container");
 
@@ -469,14 +543,36 @@ function renderDetailStructure(project) {
   `;
   }
 
-  document.getElementById("dashboard-global").style.display = "none";
-  document.getElementById("clients-view").style.display = "none";
-  document.getElementById("tickets-view").style.display = "none";
-  document.getElementById("billing-view").style.display = "none";
-  document.getElementById("audit-view").style.display = "none";
+  // Construir opciones aseguradas...
+  let dropdownItems = `
+      <li>
+        <button class="dropdown-item btn-railway">
+          <i class="bi bi-box-arrow-up-right me-2"></i>
+          Abrir Railway
+        </button>
+      </li>
+  `;
 
-  const detail = document.getElementById("assistant-detail");
-  detail.style.display = "block";
+  if (canEdit) {
+    dropdownItems = `
+      <li>
+        <button class="dropdown-item btn-rename">
+          <i class="bi bi-pencil me-2"></i>
+          Cambiar nombre
+        </button>
+      </li>
+      ${dropdownItems}
+      <li>
+        <hr class="dropdown-divider">
+      </li>
+      <li>
+        <button class="dropdown-item text-danger btn-delete-project">
+          <i class="bi bi-trash me-2"></i>
+          Eliminar proyecto
+        </button>
+      </li>
+    `;
+  }
 
   detail.innerHTML = `
 <div class="animate-fade mt-4">
@@ -512,32 +608,7 @@ function renderDetailStructure(project) {
             </button>
 
             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
-
-              <li>
-                <button class="dropdown-item btn-rename">
-                  <i class="bi bi-pencil me-2"></i>
-                  Cambiar nombre
-                </button>
-              </li>
-
-              <li>
-                <button class="dropdown-item btn-railway">
-                  <i class="bi bi-box-arrow-up-right me-2"></i>
-                  Abrir Railway
-                </button>
-              </li>
-
-              <li>
-                <hr class="dropdown-divider">
-              </li>
-
-              <li>
-                <button class="dropdown-item text-danger btn-delete-project">
-                  <i class="bi bi-trash me-2"></i>
-                  Eliminar proyecto
-                </button>
-              </li>
-
+              ${dropdownItems}
             </ul>
 
           </div>
@@ -548,6 +619,7 @@ function renderDetailStructure(project) {
         <div id="header-status-row"
              class="d-flex gap-4 small align-items-center mb-2">
         </div>
+
 
         <!-- BADGES -->
         <div id="header-badges"
@@ -575,13 +647,9 @@ function renderDetailStructure(project) {
 
   document.getElementById("btnBackToGrid").addEventListener("click", async () => {
     selectedProjectId = null;
+    selectedProjectClient = null; // Clear client info
 
-    detail.dataset.initialized = "";
-    detail.dataset.projectId = "";
-
-    detail.style.display = "none";
-
-    document.getElementById("assistants-view").style.display = "block";
+    navigate('assistants');
 
     // refresh assistants
     await loadAssistants(false);
@@ -589,17 +657,24 @@ function renderDetailStructure(project) {
     renderAssistantsGrid();
   });
 
-  detail.querySelector(".btn-rename").addEventListener("click", () => {
-    openRenameProject(project.id, project.name);
-  });
+  const btnRename = detail.querySelector(".btn-rename");
+  if (btnRename) {
+    btnRename.addEventListener("click", () => {
+      openRenameProject(project.id, project.name);
+    });
+  }
 
   detail.querySelector(".btn-railway").addEventListener("click", () => {
     window.api.openExternal(project.railwayUrl);
   });
 
-  detail.querySelector(".btn-delete-project").addEventListener("click", () => {
-    handleDeleteProject(project.id);
-  });
+  const btnDelete = detail.querySelector(".btn-delete-project");
+  if (btnDelete) {
+    btnDelete.addEventListener("click", () => {
+      handleDeleteProject(project.id);
+    });
+  }
+
 }
 
 async function updateDetailHeader(project) {
@@ -632,6 +707,12 @@ async function updateDetailHeader(project) {
     <span><i class="bi bi-arrow-repeat text-warning"></i> ${building}</span>
   `;
 
+  const isAdmin = window.currentUser && window.currentUser.rol === 'admin';
+  const funcs = (window.currentUser && window.currentUser.funciones_habilitadas) || {};
+  let permLvl = isAdmin ? 'editar_crear' : (funcs.agentes || 'none');
+  if (permLvl === true) permLvl = 'editar_crear';
+  const canEdit = permLvl === 'editar_crear';
+
   // =========================
   // CLIENTE
   // =========================
@@ -639,58 +720,79 @@ async function updateDetailHeader(project) {
   let ticketsBadge = "";
   let linkButton = "";
 
-  try {
-    const linkedClient = await window.api.getProjectClient(project.id);
+  // Use the globally fetched selectedProjectClient
+  const linkedClient = selectedProjectClient;
+
+  if (!linkedClient || !linkedClient.clientes) {
+
+    if (canEdit) {
+      linkButton = `
+            <span 
+              class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn"
+              style="cursor:pointer;font-size:11px;padding:4px 8px;">
+  
+              <i class="bi bi-link-45deg me-1"></i>
+              Vincular cliente
+  
+            </span>
+          `;
+    } else {
+      linkButton = `
+            <span 
+              class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25"
+              style="font-size:11px;padding:4px 8px;">
+
+              <i class="bi bi-person-x me-1"></i>
+              Sin vincular
+
+            </span>
+          `;
+    }
+
+  } else {
+
+    if (canEdit) {
+      clientBadge = `
+            <span 
+              class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn"
+              style="cursor:pointer;font-size:11px;padding:4px 8px;">
+
+              <i class="bi bi-person-fill me-1"></i>
+              ${linkedClient.clientes.nombre}
+
+            </span>
+          `;
+    } else {
+      clientBadge = `
+            <span 
+              class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25"
+              style="font-size:11px;padding:4px 8px;">
+
+              <i class="bi bi-person-fill me-1"></i>
+              ${linkedClient.clientes.nombre}
+
+            </span>
+          `;
+    }
+
+    const count = await window.api.getClientPendingTickets(linkedClient.clientes.id);
     if (selectedProjectId !== currentProjectId) return;
 
-    if (!linkedClient || !linkedClient.clientes) {
-
-      linkButton = `
-          <span 
-            class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn"
-            style="cursor:pointer;font-size:11px;padding:4px 8px;">
-
-            <i class="bi bi-link-45deg me-1"></i>
-            Vincular cliente
-
-          </span>
-        `;
-
-    } else {
-
-      clientBadge = `
-          <span 
-            class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn"
-            style="cursor:pointer;font-size:11px;padding:4px 8px;">
-
-            <i class="bi bi-person-fill me-1"></i>
-            ${linkedClient.clientes.nombre}
-
-          </span>
-        `;
-
-      const count = await window.api.getClientPendingTickets(linkedClient.clientes.id);
-      if (selectedProjectId !== currentProjectId) return;
-
-      if (count > 0) {
-        ticketsBadge = `
+    if (count > 0) {
+      ticketsBadge = `
           <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 p-2 d-flex align-items-center gap-2">
             <i class="bi bi-ticket-perforated-fill"></i>
             <span>${count} Tickets</span>
           </div>
         `;
-      } else {
-        ticketsBadge = `
+    } else {
+      ticketsBadge = `
           <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 p-2 d-flex align-items-center gap-2">
             <i class="bi bi-check-circle-fill"></i>
             <span>Sin pendientes</span>
           </div>
         `;
-      }
     }
-
-  } catch (err) {
-    console.error("Client header error:", err);
   }
 
   // =========================
@@ -749,10 +851,112 @@ async function updateDetailHeader(project) {
   if (clientEl) clientEl.onclick = () => openLinkClient(project.id);
 }
 
-function renderServices(project) {
+// --------------------------------------------------
+// SIDE PANEL UPDATES (QUICK ACTIONS & ACCESS)
+// --------------------------------------------------
+async function updateSidePanel(project) {
+  const panel = document.getElementById("detail-side-panel");
+  if (!panel) return;
 
-  if (isRefreshing) return;
+  const currentProjectId = project.id;
 
+  try {
+    // Use the globally fetched selectedProjectClient
+    const linked = selectedProjectClient;
+
+    // Si el panel está mostrando Logs, Variables, etc, no sobreescribir con Información del Proyecto
+    if (panel.dataset.view && panel.dataset.view !== "default") return;
+    if (selectedProjectId !== currentProjectId) return;
+
+    let backofficeCard = '';
+    if (linked && linked.clientes) {
+      const client = linked.clientes;
+      backofficeCard = `
+        <div class="glass-card p-3 mb-3 border-info border-opacity-10">
+          <div class="d-flex align-items-center mb-2">
+            <div class="bg-info bg-opacity-10 p-2 rounded me-2">
+              <i class="bi bi-key-fill text-info"></i>
+            </div>
+            <h6 class="mb-0 small fw-bold text-uppercase">Acceso Backoffice</h6>
+          </div>
+          <p class="text-secondary" style="font-size: 0.75rem;">
+            El cliente puede gestionar su asistente usando el siguiente token:
+          </p>
+          <div class="bg-black bg-opacity-50 p-2 rounded border border-secondary border-opacity-25 d-flex justify-content-between align-items-center mb-2">
+            <code class="text-info small">${client.token_backoffice || 'No generado'}</code>
+            <button class="btn btn-link btn-sm p-0 text-secondary" onclick="navigator.clipboard.writeText('${client.token_backoffice}')">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="small text-secondary">Estado:</span>
+            <span class="badge ${client.backoffice_activado ? 'bg-success' : 'bg-danger'} bg-opacity-10 ${client.backoffice_activado ? 'text-success' : 'text-danger'}">
+              ${client.backoffice_activado ? 'Activo' : 'Desactivo'}
+            </span>
+          </div>
+        </div>
+      `;
+    } else {
+      backofficeCard = `
+        <div class="glass-card p-3 mb-3 border-secondary border-opacity-10 opacity-50">
+          <div class="d-flex align-items-center mb-2">
+            <div class="bg-secondary bg-opacity-10 p-2 rounded me-2">
+              <i class="bi bi-key-fill text-secondary"></i>
+            </div>
+            <h6 class="mb-0 small fw-bold text-uppercase">Acceso Backoffice</h6>
+          </div>
+          <p class="text-secondary mb-0" style="font-size: 0.75rem;">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Vinculá un cliente para habilitar el acceso.
+          </p>
+        </div>
+      `;
+    }
+
+    panel.innerHTML = `
+      <div class="animate-fade">
+        ${backofficeCard}
+        
+        <div class="glass-card p-3 mb-3">
+          <h6 class="mb-3 small fw-bold text-uppercase">Información del Proyecto</h6>
+          <ul class="list-unstyled mb-0" style="font-size: 0.75rem;">
+            <li class="mb-2 d-flex justify-content-between">
+              <span class="text-secondary">ID Railway:</span>
+              <span class="text-light">${project.id.substring(0, 8)}...</span>
+            </li>
+            <li class="mb-2 d-flex justify-content-between">
+              <span class="text-secondary">Creado:</span>
+              <span class="text-light">${new Date(project.createdAt).toLocaleDateString()}</span>
+            </li>
+            <li class="d-flex justify-content-between">
+              <span class="text-secondary">Servicios:</span>
+              <span class="text-light">${project.services.length}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    `;
+
+  } catch (err) {
+    console.error("Error updating side panel:", err);
+  }
+}
+
+function closeSidePanel() {
+  const panel = document.getElementById("detail-side-panel");
+  if (!panel) return;
+
+  panel.innerHTML = "";
+  panel.dataset.view = "default";
+
+  // Intentar restaurar la info del proyecto
+  if (selectedProjectId) {
+    const project = assistants.find(p => p.id === selectedProjectId);
+    if (project) updateSidePanel(project);
+  }
+}
+
+async function renderServices(project) {
   if (project.id !== selectedProjectId) return;
 
   const container = document.getElementById("services-container");
@@ -771,13 +975,72 @@ function renderServices(project) {
     return;
   }
 
+  // Obtener cliente una sola vez para pasárselo a las tarjetas
+  // This is now handled globally in renderDetail
+  // selectedProjectClient = null;
+  // try {
+  //   selectedProjectClient = await window.api.getProjectClient(project.id);
+  // } catch (err) {}
+
   freshProject.services.forEach(service => {
-    const card = createServiceCard(service, freshProject);
+    const card = createServiceCard(service, freshProject, selectedProjectClient);
     container.appendChild(card);
   });
 }
 
-function createServiceCard(service, project) {
+function patchServices(project) {
+  if (project.id !== selectedProjectId) return;
+
+  const container = document.getElementById("services-container");
+  if (!container) return;
+
+  const freshProject = assistants.find(a => a.id === project.id);
+  if (!freshProject || !freshProject.services) return;
+
+  freshProject.services.forEach(service => {
+    const existingCard = container.querySelector(`[data-service-id="${service.id}"]`);
+    if (existingCard) {
+      // Update status dot
+      const statusDot = existingCard.querySelector(".status-dot");
+      if (statusDot) {
+        statusDot.classList.remove("status-online", "status-offline");
+        statusDot.classList.add(service.status === 'SUCCESS' ? 'status-online' : 'status-offline');
+      }
+      // Update status text
+      const statusText = existingCard.querySelector(".small.text-secondary");
+      if (statusText) {
+        statusText.textContent = service.status || 'UNKNOWN';
+      }
+      // Update last deploy date
+      const serviceDate = existingCard.querySelector(".service-date");
+      if (serviceDate) {
+        serviceDate.textContent = `Último deploy: ${formatDate(service.createdAt)}`;
+      }
+    } else {
+      // If a service is new, create and append it
+      const card = createServiceCard(service, freshProject, selectedProjectClient);
+      container.appendChild(card);
+    }
+  });
+
+  // Remove services that no longer exist
+  const currentServiceIds = new Set(freshProject.services.map(s => s.id));
+  container.querySelectorAll(".service-card").forEach(card => {
+    if (!currentServiceIds.has(card.dataset.serviceId)) {
+      card.remove();
+    }
+  });
+}
+
+function createServiceCard(service, project, client = null) {
+  const isAdmin = window.currentUser && window.currentUser.rol === 'admin';
+  const funcs = (window.currentUser && window.currentUser.funciones_habilitadas) || {};
+  let permLvl = isAdmin ? 'editar_crear' : (funcs.agentes || 'none');
+  if (permLvl === true) permLvl = 'editar_crear';
+  const canEdit = permLvl === 'editar_crear';
+
+  const backofficeActivado = client && client.clientes && client.clientes.backoffice_activado;
+  const showBackoffice = isAdmin || backofficeActivado;
 
   const div = document.createElement("div");
   div.className = "service-card p-4 rounded";
@@ -791,20 +1054,10 @@ function createServiceCard(service, project) {
       ${service.name}
     </div>
 
-    <div class="d-flex align-items-center gap-2">
-
-      <span class="service-status-icon">
-        ${getStatusIcon(service.status)}
-      </span>
-
-      ${service.isUpdatable ? `
-        <button 
-          class="btn btn-warning btn-sm btn-update-mini"
-          title="Actualizar servicio">
-          <i class="bi bi-arrow-repeat"></i>
-        </button>
-      ` : ""}
-
+    <!-- STATUS DOT -->
+    <div class="d-flex align-items-center">
+       <span class="status-dot ${service.status === 'SUCCESS' ? 'status-online' : 'status-offline'} me-2"></span>
+       <span class="small text-secondary">${service.status || 'UNKNOWN'}</span>
     </div>
 
   </div>
@@ -822,12 +1075,13 @@ function createServiceCard(service, project) {
       <div class="service-menu-item btn-logs">
         <i class="bi bi-terminal me-2"></i> Logs
       </div>
-
-      <hr>
-
-      <div class="service-menu-item btn-vars">
-        <i class="bi bi-sliders me-2"></i> Variables
-      </div>
+      
+      ${canEdit ? `
+        <hr>
+        <div class="service-menu-item btn-vars">
+          <i class="bi bi-sliders me-2"></i> Variables
+        </div>
+      ` : ''}
 
       <hr>
 
@@ -841,11 +1095,19 @@ function createServiceCard(service, project) {
         <i class="bi bi-chat-dots me-2"></i> Webchat
       </div>
 
-      <hr>
+      ${showBackoffice ? `
+        <hr>
+        <div class="service-menu-item btn-backoffice">
+          <i class="bi bi-key-fill me-2"></i> Backoffice
+        </div>
+      ` : ''}
 
-      <div class="service-menu-item btn-redeploy">
-        <i class="bi bi-arrow-repeat me-2"></i> Redeploy
-      </div>
+      ${canEdit ? `
+        <hr>
+        <div class="service-menu-item btn-redeploy">
+          <i class="bi bi-arrow-repeat me-2"></i> Redeploy
+        </div>
+      ` : ''}
 
     </div>
 
@@ -931,6 +1193,14 @@ function createServiceCard(service, project) {
 
   });
 
+  div.querySelector(".btn-backoffice")?.addEventListener("click", (e) => {
+
+    setActiveServiceMenu(e.currentTarget);
+
+    openBackoffice(service.projectId);
+
+  });
+
   // --------------------------------------------------
   // OBSERVAR CUANDO SE CIERRA EL SIDE PANEL
   // --------------------------------------------------
@@ -965,41 +1235,6 @@ function createServiceCard(service, project) {
   return div;
 }
 
-function patchServices(project) {
-
-  if (isRefreshing) return;
-
-  if (project.id !== selectedProjectId) return;
-
-  const container = document.getElementById("services-container");
-  if (!container) return;
-
-  project.services.forEach(service => {
-
-    const existing = container.querySelector(
-      `[data-service-id="${service.id}"]`
-    );
-
-    if (!existing) {
-      container.appendChild(createServiceCard(service, project));
-      return;
-    }
-
-    // Actualizar icono
-    const statusIcon = existing.querySelector(".service-status-icon");
-    if (statusIcon) {
-      statusIcon.innerHTML = getStatusIcon(service.status);
-    }
-
-    // Actualizar fecha
-    const dateEl = existing.querySelector(".service-date");
-    if (dateEl) {
-      dateEl.textContent =
-        "Último deploy: " + formatDate(service.createdAt);
-    }
-
-  });
-}
 
 
 // --------------------------------------------------
@@ -1313,6 +1548,59 @@ async function openWebchat(projectId, environmentId, serviceId, serviceName) {
   }
 }
 
+// --------------------------------------------------
+// BACKOFFICE
+// --------------------------------------------------
+
+async function openBackoffice(projectId) {
+  try {
+    const linked = await window.api.getProjectClient(projectId);
+    if (!linked || !linked.clientes) {
+      showToast("Este proyecto no está vinculado a un cliente.", "warning");
+      return;
+    }
+
+    const client = linked.clientes;
+    const project = assistants.find(a => a.id === projectId);
+
+    // Buscar el servicio principal para el dominio (normalmente el de webchat/dashboard)
+    const service = project.services.find(s => s.name.toLowerCase().includes('bot') || s.name.toLowerCase().includes('main')) || project.services[0];
+
+    if (!service) {
+      showToast("No se encontró un servicio para este proyecto.", "warning");
+      return;
+    }
+
+    const domains = await window.api.getServiceDomains(
+      projectId,
+      service.environmentId,
+      service.id
+    );
+
+    let domain = null;
+    if (domains?.customDomains?.length > 0) {
+      domain = domains.customDomains[0].domain;
+    } else if (domains?.serviceDomains?.length > 0) {
+      domain = domains.serviceDomains[0].domain;
+    }
+
+    if (!domain) {
+      showToast("Este servicio no tiene dominio público.", "warning");
+      return;
+    }
+
+    if (!domain.startsWith("http")) {
+      domain = "https://" + domain;
+    }
+
+    renderBackofficeView(domain, client.token_backoffice);
+
+  } catch (err) {
+    console.error("Error abriendo backoffice:", err);
+    showToast("Error al acceder al backoffice", "danger");
+  }
+}
+
 
 // --------------------------------------------------
 // SMART REFRESH AND HASH SYSTEM
@@ -1496,6 +1784,103 @@ document.addEventListener("DOMContentLoaded", async () => {
 // =========================
 // DASHBOARD MAESTRO GLOBAL
 // =========================
+async function renderConfigView() {
+  const container = document.getElementById("config-view");
+  container.innerHTML = `
+    <div class="row">
+      <div class="col-12 mb-4">
+        <h2 class="fw-bold"><i class="bi bi-gear-fill me-2"></i>Configuración de Usuario</h2>
+        <p class="text-secondary">Gestiona tu perfil y permisos de acceso.</p>
+      </div>
+
+      <div class="col-md-5">
+        <div class="glass-card p-4 h-100">
+          <h5 class="mb-4">Información del Perfil</h5>
+          <div class="text-center mb-4">
+            <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+              <i class="bi bi-person-fill text-white fs-1"></i>
+            </div>
+            <h4>${currentUser.nombre}</h4>
+            <span class="badge bg-info text-dark">${currentUser.rol.toUpperCase()}</span>
+          </div>
+          
+          <ul class="list-group list-group-flush bg-transparent">
+            <li class="list-group-item bg-transparent text-white border-secondary px-0">
+              <div class="small text-secondary">ID de Cliente</div>
+              <div>${currentUser.cliente_id || 'N/A'}</div>
+            </li>
+            <li class="list-group-item bg-transparent text-white border-secondary px-0">
+              <div class="small text-secondary">Correo Electrónico</div>
+              <div>${currentUser.email || 'No especificado'}</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-md-7">
+        <div class="glass-card p-4 h-100">
+          <h5 class="mb-4">Permisos y Funciones</h5>
+          <div class="alert alert-info py-2 small">
+            <i class="bi bi-info-circle me-2"></i>
+            Las funciones habilitadas dependen de tu contrato activo y rol asignado.
+          </div>
+
+          <div class="mt-4">
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">Visualización de Asistentes</div>
+                <div class="small text-secondary">${currentUser.rol === 'admin' ? 'Ver todos los proyectos del equipo' : 'Ver proyectos vinculados a mi cuenta'}</div>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" checked disabled>
+              </div>
+            </div>
+
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">Gestión de Tickets</div>
+                <div class="small text-secondary">Crear y responder tickets de soporte</div>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" ${currentUser.rol === 'admin' ? 'checked' : 'checked'} disabled>
+              </div>
+            </div>
+
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">Acceso a Facturación</div>
+                <div class="small text-secondary">Ver y descargar comprobantes de pago</div>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" ${currentUser.rol === 'admin' ? 'checked' : 'checked'} disabled>
+              </div>
+            </div>
+
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">Operaciones Críticas (Despliegue)</div>
+                <div class="small text-secondary">Reiniciar servicios y desplegar actualizaciones</div>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" ${currentUser.rol === 'admin' ? 'checked' : 'checked'} disabled>
+              </div>
+            </div>
+            
+            ${currentUser.rol === 'admin' ? `
+             <div class="mt-4 pt-3 border-top border-secondary">
+                <h6>Opciones de Administrador</h6>
+                <button class="btn btn-sm btn-outline-warning mt-2 w-100" onclick="navigate('admins')">
+                  <i class="bi bi-shield-lock me-2"></i> Administrar Usuarios Admin
+                </button>
+             </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 async function renderDashboard() {
   selectedProjectId = null;
   document.querySelectorAll(".assistant-item").forEach(el => el.classList.remove("active-assistant"));
@@ -1505,6 +1890,7 @@ async function renderDashboard() {
   document.getElementById("tickets-view").style.display = "none";
   document.getElementById("billing-view").style.display = "none";
   document.getElementById("audit-view").style.display = "none";
+  document.getElementById("config-view").style.display = "none";
 
   // Limpiar contenedores secundarios
   ["integrated-log-container", "integrated-var-container", "integrated-chat-container"].forEach(id => {
@@ -1521,18 +1907,25 @@ async function renderDashboard() {
   `;
 
   try {
-    const clients = await window.api.getClients();
-    const activeClients = clients.filter(c => c.plan !== 'Baja');
-    const tickets = await window.api.getTickets();
+    const isAdmin = window.currentUser?.rol === 'admin';
+    const cliId = isAdmin ? null : window.currentUser?.cliente_id;
+
+    // Fetch relevant data
+    const tickets = await window.api.getTickets(cliId ? { cliente_id: cliId } : {});
     const pendingTickets = tickets.filter(t => t.estado !== 'Cerrado');
 
-    let totalServices = 0;
+    let clientsCount = 0;
+    if (isAdmin) {
+      try {
+        const clients = await window.api.getClients();
+        clientsCount = clients.filter(c => c.plan !== 'Baja').length;
+      } catch (e) { console.warn("Admin could not fetch clients:", e); }
+    }
+
     let onlineServices = 0;
     let errorServices = 0;
-
     assistants.forEach(a => {
       a.services.forEach(s => {
-        totalServices++;
         if (s.status === 'online') onlineServices++;
         if (s.status === 'error') errorServices++;
       });
@@ -1540,14 +1933,14 @@ async function renderDashboard() {
 
     dash.innerHTML = `
       <div class="animate-fade mt-4">
-        <h2 class="mb-4 fw-bold">DASHBOARD</h2>
+        <h2 class="mb-4 fw-bold">DASHBOARD ${!isAdmin ? `- ${window.currentUser.nombre.toUpperCase()}` : ''}</h2>
         
         <div class="row g-4 mb-5">
           <!-- CARD BOTS -->
-          <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100">
+          <div class="col-md-${isAdmin ? '3' : '4'}">
+            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="navigate('assistants')">
               <div class="display-5 fw-bold text-success">${assistants.length}</div>
-              <div class="text-uppercase small ls-1">Proyectos Totales</div>
+              <div class="text-uppercase small ls-1">Proyectos</div>
               <div class="mt-3 small text-secondary">
                 <span class="text-success">${onlineServices} Online</span> / 
                 <span class="text-danger">${errorServices} Error</span>
@@ -1555,20 +1948,22 @@ async function renderDashboard() {
             </div>
           </div>
 
-          <!-- CARD CLIENTES -->
+          ${isAdmin ? `
+          <!-- CARD CLIENTES (Admin only) -->
           <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="renderClientsView()">
-              <div class="display-5 fw-bold text-info">${activeClients.length}</div>
+            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="navigate('clients')">
+              <div class="display-5 fw-bold text-info">${clientsCount}</div>
               <div class="text-uppercase small ls-1">Clientes Activos</div>
               <div class="mt-3">
-                 <button class="btn btn-sm btn-outline-info">Gestionar Clientes</button>
+                 <button class="btn btn-sm btn-outline-info">Gestionar</button>
               </div>
             </div>
           </div>
+          ` : ''}
 
           <!-- CARD TICKETS -->
-          <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="renderTicketsView()">
+          <div class="col-md-${isAdmin ? '3' : '4'}">
+            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="navigate('tickets')">
               <div class="display-5 fw-bold text-warning">${pendingTickets.length}</div>
               <div class="text-uppercase small ls-1">Tickets Pendientes</div>
               <div class="mt-3">
@@ -1578,14 +1973,14 @@ async function renderDashboard() {
           </div>
 
           <!-- CARD SALUD -->
-          <div class="col-md-3">
+          <div class="col-md-${isAdmin ? '3' : '4'}">
             <div class="glass-card p-4 text-center h-100">
               <div class="display-5 fw-bold ${errorServices > 0 ? 'text-danger' : 'text-success'}">
                  ${errorServices > 0 ? 'ALERTA' : 'OK'}
               </div>
-              <div class="text-uppercase small ls-1">Estado de Salud</div>
+              <div class="text-uppercase small ls-1">Estado General</div>
               <div class="mt-3 small text-secondary">
-                ${errorServices > 0 ? 'Se detectaron fallos técnicos' : 'Todos los sistemas operativos'}
+                ${errorServices > 0 ? 'Se detectaron fallos' : 'Sistemas estables'}
               </div>
             </div>
           </div>
@@ -1596,28 +1991,33 @@ async function renderDashboard() {
             <div class="glass-card p-4">
                <h5 class="mb-3">Último Ticket</h5>
                ${pendingTickets.length > 0 ? `
-                  <div class="p-3 border border-secondary rounded bg-dark-hover">
+                  <div class="p-3 border border-secondary rounded bg-dark-hover" style="cursor:pointer" onclick="navigate('packets')">
                      <div class="d-flex justify-content-between">
                         <span class="fw-bold">${pendingTickets[0].titulo}</span>
                         <span class="badge bg-warning text-dark">${pendingTickets[0].prioridad}</span>
                      </div>
                      <div class="small text-secondary mt-1">${pendingTickets[0].clientes ? pendingTickets[0].clientes.nombre : 'Sin Cliente'}</div>
                   </div>
-               ` : '<div class="text-secondary">No hay tickets pendientes</div>'}
+               ` : '<div class="text-secondary small">No hay tickets pendientes</div>'}
             </div>
           </div>
           <div class="col-md-6">
              <div class="glass-card p-4">
                <h5 class="mb-3">Acciones Rápidas</h5>
                <div class="d-grid gap-2">
-                  <button class="btn btn-outline-light text-start btn-sm" onclick="renderClientsView()">
-                    <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
-                  </button>
-                  <button class="btn btn-outline-light text-start btn-sm" onclick="renderTicketsView()">
-                    <i class="bi bi-plus-circle me-2"></i> Crear Ticket
+                  ${isAdmin ? `
+                    <button class="btn btn-outline-light text-start btn-sm" onclick="navigate('clients')">
+                      <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
+                    </button>
+                    <button class="btn btn-outline-light text-start btn-sm" onclick="navigate('billing')">
+                      <i class="bi bi-receipt me-2"></i> Revisar Facturación
+                    </button>
+                  ` : ''}
+                  <button class="btn btn-outline-light text-start btn-sm" onclick="navigate('tickets')">
+                    <i class="bi bi-chat-dots me-2"></i> Crear Nuevo Ticket
                   </button>
                   <button class="btn btn-outline-light text-start btn-sm" id="dashboard-refresh">
-                    <i class="bi bi-arrow-clockwise me-2"></i> Actualizar Infraestructura
+                    <i class="bi bi-arrow-repeat me-2"></i> Actualizar Tablero
                   </button>
                </div>
              </div>
@@ -1626,29 +2026,262 @@ async function renderDashboard() {
       </div>
     `;
 
-    document.getElementById('dashboard-refresh').onclick = () => {
-      loadAssistants(false);
+    document.getElementById("dashboard-refresh").onclick = () => {
+      loadAssistants();
       renderDashboard();
     };
 
-  } catch (err) {
-    console.error("Error cargando dashboard:", err);
-    dash.innerHTML = `<div class="alert alert-danger">Error al cargar datos del dashboard</div>`;
+  } catch (error) {
+    console.error("Error al renderizar Dashboard:", error);
+    dash.innerHTML = `<div class="alert alert-danger m-4">Error al cargar datos del tablero.</div>`;
   }
 }
 
-// async function init() {
+// --------------------------------------------------
+// INIT APP & AUTH LOGIC
+// --------------------------------------------------
 
-//   const version = await window.api.getAppVersion();
-//   const el = document.getElementById("app-version");
-//   if (el) el.textContent = "v" + version;
+async function initApp() {
+  console.log("initApp started");
+  const version = await window.api.getAppVersion();
+  console.log("App version:", version);
+  const el = document.getElementById("app-version");
+  if (el) el.textContent = "v" + version;
 
-//   await loadAssistants(false);
+  const session = localStorage.getItem("session");
+  if (session) {
+    console.log("Session found");
+    try {
+      window.currentUser = JSON.parse(session);
+      showApp();
+    } catch (e) {
+      console.error("Error parsing session:", e);
+      showLogin();
+    }
+  } else {
+    console.log("No session, showing login");
+    showLogin();
+  }
 
-//   navigate("dashboard");
-// }
+  console.log("Setting up auth listeners...");
+  setupAuthListeners();
+  console.log("initApp finished");
+}
 
-// init();
+function showLogin() {
+  const loginView = document.getElementById("login-view");
+  const appWrapper = document.getElementById("app-wrapper");
+  if (loginView) {
+    loginView.classList.remove("d-none");
+    loginView.classList.add("d-flex");
+  }
+  if (appWrapper) {
+    appWrapper.classList.add("d-none");
+    appWrapper.classList.remove("d-flex");
+  }
+}
+
+function showApp() {
+  console.log("showApp called");
+  try {
+    const loginView = document.getElementById("login-view");
+    const appWrapper = document.getElementById("app-wrapper");
+
+    if (loginView) {
+      loginView.classList.add("d-none");
+      loginView.classList.remove("d-flex");
+    }
+    if (appWrapper) {
+      appWrapper.classList.remove("d-none");
+      appWrapper.classList.add("d-flex");
+      console.log("app-wrapper shown using d-flex");
+    }
+
+    if (window.currentUser) {
+      console.log("Current user:", window.currentUser);
+      const userDisplay = document.getElementById("user-display-name");
+      if (userDisplay) {
+        userDisplay.textContent = window.currentUser.nombre || window.currentUser.rol.toUpperCase();
+      }
+
+      console.log("Applying permissions...");
+      applyPermissions();
+
+      console.log("Loading assistants (background)...");
+      loadAssistants(false).catch(err => console.error("Error loading assistants:", err));
+
+      console.log("Navigating to dashboard...");
+      navigate("dashboard").catch(err => console.error("Error navigating to dashboard:", err));
+
+      // Notificar al proceso principal para auditoría
+      window.api.setActiveUser(window.currentUser);
+    } else {
+      console.warn("showApp called but no currentUser found");
+    }
+  } catch (err) {
+    console.error("Critical error in showApp:", err);
+  }
+}
+
+function applyPermissions() {
+  if (!window.currentUser) return;
+  const isAdmin = window.currentUser.rol === 'admin';
+  const funcs = window.currentUser.funciones_habilitadas || {};
+
+  const isVisible = (moduleName) => {
+    if (isAdmin) return true;
+    const perm = funcs[moduleName];
+    // Retrocompatibilidad con booleanos: true -> visible
+    // String: si es 'none' -> oculto, sino visible
+    if (typeof perm === 'boolean') return perm;
+    return perm && perm !== 'none';
+  };
+
+  // Mostrar/Ocultar vistas en la navegación
+  // Módulo -> data-view(s)
+  const navRules = [
+    { mod: 'clientes', views: ['clients'] },
+    { mod: 'tickets', views: ['tickets'] },
+    { mod: 'agentes', views: ['assistants'] }, // Mapeando asistentes a agentes
+    { mod: 'facturas', views: ['billing'] }
+  ];
+
+  navRules.forEach(rule => {
+    const visible = isVisible(rule.mod);
+    rule.views.forEach(view => {
+      const btn = document.querySelector(`.nav-top[data-view="${view}"]`);
+      if (btn) btn.style.display = visible ? 'inline-block' : 'none';
+    });
+  });
+
+  // Algunas secciones exclusivas de admin
+  const adminOnlyViews = ['audit', 'config', 'usuarios'];
+  adminOnlyViews.forEach(view => {
+    const btn = document.querySelector(`.nav-top[data-view="${view}"]`);
+    if (btn) btn.style.display = isAdmin ? 'inline-block' : 'none';
+  });
+
+  // Botón Nuevo Asistente
+  const btnDeploy = document.getElementById("btnDeployAssistant");
+  if (btnDeploy) {
+    let permLvl = isAdmin ? 'editar_crear' : (funcs.agentes || 'none');
+    if (permLvl === true) permLvl = 'editar_crear';
+    btnDeploy.style.display = (permLvl === 'editar_crear') ? 'inline-block' : 'none';
+  }
+
+  // Otros elementos genéricos
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = isAdmin ? 'block' : 'none';
+  });
+}
+
+function setupAuthListeners() {
+  // Toggle Admin Access
+  document.getElementById("btnAdminAccess").onclick = () => {
+    document.getElementById("login-form").style.display = "none";
+    document.getElementById("admin-login-form").style.display = "block";
+    document.getElementById("token-login-form").style.display = "none";
+  };
+
+  document.getElementById("btnTokenAccess").onclick = () => {
+    document.getElementById("login-form").style.display = "none";
+    document.getElementById("admin-login-form").style.display = "none";
+    document.getElementById("token-login-form").style.display = "block";
+  };
+
+  document.getElementById("btnBackToLogin").onclick = () => {
+    document.getElementById("login-form").style.display = "block";
+    document.getElementById("admin-login-form").style.display = "none";
+    document.getElementById("token-login-form").style.display = "none";
+  };
+
+  document.getElementById("btnBackToLoginFromToken").onclick = () => {
+    document.getElementById("login-form").style.display = "block";
+    document.getElementById("admin-login-form").style.display = "none";
+    document.getElementById("token-login-form").style.display = "none";
+  };
+
+  // Login con Usuario y Contraseña
+  document.getElementById("btnLogin").onclick = async () => {
+    console.log("btnLogin click");
+    const user = document.getElementById("login-user").value.trim();
+    const pass = document.getElementById("login-pass").value;
+
+    if (!user || !pass) {
+      console.warn("Faltan credenciales");
+      return showToast("Ingresá usuario y contraseña", "warning");
+    }
+
+    try {
+      console.log("Iniciando loginWithCredentials para:", user);
+      const result = await window.api.loginWithCredentials(user, pass);
+      console.log("Resultado login:", result);
+
+      if (result) {
+        window.currentUser = result.user;
+        localStorage.setItem("session", JSON.stringify(window.currentUser));
+        showToast(`Bienvenido, ${window.currentUser.nombre}`);
+        showApp();
+      } else {
+        showToast("Credenciales inválidas", "danger");
+      }
+    } catch (err) {
+      console.error("Error en click btnLogin:", err);
+      showToast("Error al validar credenciales", "danger");
+    }
+  };
+
+  // Login con Token
+  document.getElementById("btnLoginToken").onclick = async () => {
+    const token = document.getElementById("login-token").value.trim();
+    if (!token) return showToast("Ingresá un token", "warning");
+
+    try {
+      const result = await window.api.loginWithToken(token);
+      if (result) {
+        window.currentUser = result.user;
+        localStorage.setItem("session", JSON.stringify(window.currentUser));
+        showToast(`Bienvenido, ${window.currentUser.nombre}`);
+        showApp();
+      } else {
+        showToast("Token inválido o inactivo", "danger");
+      }
+    } catch (err) {
+      showToast("Error al validar token", "danger");
+    }
+  };
+
+  // Login Admin
+  document.getElementById("btnLoginAdmin").onclick = async () => {
+    const pass = document.getElementById("admin-pass").value;
+    if (!pass) return showToast("Ingresá la contraseña", "warning");
+
+    try {
+      const result = await window.api.verifyAdmin(pass);
+      if (result) {
+        window.currentUser = result.user;
+        localStorage.setItem("session", JSON.stringify(window.currentUser));
+        showToast("Acceso Administrador concedido");
+        showApp();
+      } else {
+        showToast("Contraseña incorrecta", "danger");
+      }
+    } catch (err) {
+      showToast("Error de autenticación", "danger");
+    }
+  };
+
+  // Logout
+  document.getElementById("btnLogout").onclick = () => {
+    window.currentUser = null;
+    localStorage.removeItem("session");
+    window.api.setActiveUser(null);
+    showLogin();
+  };
+}
+
+// Inicializar
+initApp();
 
 
 // --------------------------------------------------

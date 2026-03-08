@@ -42,6 +42,17 @@ const supabaseService = {
     },
 
     async createClient(clientData) {
+        // Generar token_backoffice automáticamente si no existe
+        if (!clientData.token_backoffice) {
+            const crypto = require('crypto');
+            clientData.token_backoffice = crypto.randomBytes(16).toString('hex');
+        }
+
+        // Establecer backoffice_activado por defecto a false si no se envia
+        if (clientData.backoffice_activado === undefined) {
+            clientData.backoffice_activado = false;
+        }
+
         const { data, error } = await supabase
             .from('clientes')
             .insert([clientData])
@@ -69,6 +80,17 @@ const supabaseService = {
             .eq('id', id);
         if (error) throw error;
         return true;
+    },
+
+    async getClientByToken(token) {
+        const { data, error } = await supabase
+            .from('clientes')
+            .select('*')
+            .eq('token_backoffice', token)
+            .eq('backoffice_activado', true)
+            .maybeSingle();
+        if (error) throw error;
+        return data;
     },
 
     /**
@@ -253,10 +275,11 @@ const supabaseService = {
     /**
      * Auditoría
      */
-    async logAction(action, details, entityType, entityId) {
+    async logAction(action, details, entityType, entityId, usuario = 'admin') {
         const { error } = await supabase
             .from('auditoria_acciones')
             .insert([{
+                usuario: usuario,
                 accion: action,
                 detalles: details,
                 entidad_tipo: entityType,
@@ -292,6 +315,129 @@ const supabaseService = {
             .limit(100);
         if (error) throw error;
         return data;
+    },
+
+    /**
+     * Gestión de Autenticación y Sesiones
+     */
+    async loginWithCredentials(usuario, contrasena) {
+        const { data: user, error } = await supabase
+            .from('usuarios')
+            .select('*, clientes(nombre, email, funciones_habilitadas)')
+            .eq('usuario', usuario)
+            .eq('contrasena', contrasena)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!user) return null;
+
+        // Si es un admin (sin cliente_id), tiene acceso total
+        const perms = user.rol === 'admin'
+            ? { clientes: "editar_crear", tickets: "editar_crear", agentes: "editar_crear", facturas: "editar_crear" }
+            : (user.clientes?.funciones_habilitadas || { clientes: "none", tickets: "none", agentes: "none", facturas: "none" });
+
+        // Formatear la respuesta para el front
+        return {
+            user: {
+                id: user.id,
+                nombre: user.nombre,
+                apellido: user.apellido,
+                usuario: user.usuario,
+                rol: user.rol,
+                cliente_id: user.cliente_id,
+                funciones_habilitadas: perms
+            },
+            cliente: user.clientes || null
+        };
+    },
+
+    async getUsuarios() {
+        const { data, error } = await supabase
+            .from('usuarios')
+            .select('*, clientes(nombre)');
+        if (error) throw error;
+        return data;
+    },
+
+    async createUsuario(userData) {
+        const { data, error } = await supabase
+            .from('usuarios')
+            .insert([userData])
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    },
+
+    async updateUsuario(id, userData) {
+        const { data, error } = await supabase
+            .from('usuarios')
+            .update(userData)
+            .eq('id', id)
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    },
+
+    async deleteUsuario(id) {
+        const { error } = await supabase
+            .from('usuarios')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        return true;
+    },
+
+    async getUsuariosByCliente(clienteId) {
+        const { data, error } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('cliente_id', clienteId);
+        if (error) throw error;
+        return data;
+    },
+
+    async loginWithToken(token) {
+        // Buscar cliente por token
+        const { data: cliente, error: cliError } = await supabase
+            .from('clientes')
+            .select('*')
+            .eq('token_backoffice', token)
+            .eq('backoffice_activado', true)
+            .maybeSingle();
+
+        if (cliError) throw cliError;
+        if (!cliente) return null;
+
+        return {
+            user: {
+                id: cliente.id,
+                nombre: cliente.nombre,
+                email: cliente.email,
+                rol: 'client', // Siempre rol cliente si entra por token
+                cliente_id: cliente.id,
+                funciones_habilitadas: cliente.funciones_habilitadas || { clientes: "none", tickets: "none", agentes: "none", facturas: "none" }
+            },
+            cliente: cliente
+        };
+    },
+
+    async verifyAdminShortcut(password) {
+        // En un entorno real, esto usaría Supabase Auth. 
+        // Para este requerimiento de "backoffice" con acceso rápido:
+        const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
+        if (password === adminPass) {
+            return {
+                user: {
+                    id: 'admin',
+                    nombre: 'Administrador',
+                    rol: 'admin',
+                    funciones_habilitadas: { clientes: "editar_crear", tickets: "editar_crear", agentes: "editar_crear", facturas: "editar_crear" }
+                }
+            };
+        }
+        return null;
     },
 
     /**

@@ -1,13 +1,15 @@
 async function renderDashboardView(serviceDomain) {
 
-  const panel = document.getElementById("detail-side-panel");
-  if (!panel) return;
+    const panel = document.getElementById("detail-side-panel");
+    if (!panel) return;
 
-  let url = serviceDomain;
-  if (!url.endsWith('/')) url += '/';
-  url += 'dashboard';
+    let url = serviceDomain;
+    if (!url.endsWith('/')) url += '/';
+    url += 'dashboard';
 
-  panel.innerHTML = `
+    panel.dataset.view = "dashboard";
+
+    panel.innerHTML = `
       <div class="glass-card p-0 border-top border-success border-3 overflow-hidden shadow-lg animate-fade-up"
           style="height: 100%; border-radius: 15px;">
 
@@ -27,7 +29,7 @@ async function renderDashboardView(serviceDomain) {
                   </button>
 
                   <button class="btn btn-sm btn-outline-light"
-                      onclick="document.getElementById('detail-side-panel').innerHTML = ''">
+                      onclick="closeSidePanel()">
                       <i class="bi bi-x-lg"></i>
                   </button>
 

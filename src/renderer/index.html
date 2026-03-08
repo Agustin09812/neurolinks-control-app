@@ -12,6 +12,55 @@
 
 <body class="bg-dark text-light vh-100 overflow-hidden d-flex flex-column">
 
+  <!-- LOGIN VIEW -->
+  <div id="login-view" class="position-fixed top-0 start-0 w-100 h-100 bg-dark d-flex align-items-center justify-content-center" style="z-index: 10000; display: none;">
+    <div class="glass-card p-5 text-center" style="max-width: 450px; width: 100%;">
+      <h3 class="fw-bold mb-4">NEUROLINKS CONTROL</h3>
+      <p class="text-secondary small mb-4">Ingresá tu token de acceso o credenciales de administrador</p>
+      
+      <div id="login-form" class="text-start">
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-secondary" for="login-user">USUARIO</label>
+          <input type="text" id="login-user" class="form-control bg-dark text-light border-secondary text-center" placeholder="Ingrese su usuario">
+        </div>
+        <div class="mb-4">
+          <label class="form-label small fw-bold text-secondary" for="login-pass">CONTRASEÑA</label>
+          <input type="password" id="login-pass" class="form-control bg-dark text-light border-secondary text-center" placeholder="••••••••">
+        </div>
+        <button class="btn btn-info w-100 fw-bold mb-3" id="btnLogin">INGRESAR</button>
+        <div class="text-center">
+          <button class="btn btn-link btn-sm text-secondary" id="btnAdminAccess" style="text-decoration:none;">Acceso Rápido Admin</button>
+          <button class="btn btn-link btn-sm text-secondary ms-2" id="btnTokenAccess" style="text-decoration:none;">Acceso con Token</button>
+        </div>
+      </div>
+
+      <div id="admin-login-form" style="display:none;" class="text-start">
+        <div class="mb-4">
+          <label class="form-label small fw-bold text-secondary" for="admin-pass">CONTRASEÑA ADMINISTRADOR</label>
+          <input type="password" id="admin-pass" class="form-control bg-dark text-light border-secondary text-center" placeholder="Ingrese clave maestra">
+        </div>
+        <button class="btn btn-primary w-100 fw-bold mb-3" id="btnLoginAdmin">INGRESAR (ADMIN)</button>
+        <div class="text-center">
+          <button class="btn btn-link btn-sm text-secondary" id="btnBackToLogin" style="text-decoration:none;">Volver</button>
+        </div>
+      </div>
+
+      <div id="token-login-form" style="display:none;" class="text-start">
+        <div class="mb-4">
+          <label class="form-label small fw-bold text-secondary" for="login-token">TOKEN DE ACCESO</label>
+          <input type="password" id="login-token" class="form-control bg-dark text-light border-secondary text-center" placeholder="Ej: NL-XXXX-XXXX">
+        </div>
+        <button class="btn btn-success w-100 fw-bold mb-3" id="btnLoginToken">INGRESAR CON TOKEN</button>
+        <div class="text-center">
+          <button class="btn btn-link btn-sm text-secondary" id="btnBackToLoginFromToken" style="text-decoration:none;">Volver</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP CONTENT (MAIN WRAPPER - Hidden when not logged) -->
+  <div id="app-wrapper" class="vh-100 d-flex flex-column" style="display:none;">
+
   <!-- HEADER -->
   <div class="border-bottom border-secondary py-3 px-4">
     <!-- <h3 class="mb-0 fw-bold text-center">NEUROLINKS CONTROL</h3> -->
@@ -66,7 +115,20 @@
             ASISTENTES
           </button>
 
-          <div class="ms-auto d-flex align-items-center">
+
+
+          <button class="btn btn-link text-light nav-top" data-view="config" style="text-decoration: none; display:none;">
+            CONFIG
+          </button>
+
+
+          <div class="ms-auto d-flex align-items-center gap-2">
+            
+            <span id="user-display-name" class="text-secondary small me-2"></span>
+
+            <button class="btn btn-outline-danger btn-sm" id="btnLogout" title="Salir">
+              <i class="bi bi-box-arrow-right"></i>
+            </button>
 
             <button class="btn btn-link text-light position-relative" id="btnNotifications"
               style="text-decoration:none; font-size:18px;" onclick="navigate('notifications')">
@@ -104,6 +166,8 @@
       </div>
     </div>
 
+
+
     <!-- CLIENTES -->
     <div id="clients-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
     </div>
@@ -122,6 +186,10 @@
 
     <!-- NOTIFICACIONES -->
     <div id="notifications-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+    </div>
+
+    <!-- CONFIGURACIÓN -->
+    <div id="config-view" class="flex-grow-1 overflow-auto p-4" style="display:none;">
     </div>
 
   </div>
@@ -249,8 +317,10 @@
     </div>
   </div>
 
+  </div> <!-- end of app-wrapper -->
+
   <!-- Toast Container -->
-  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 10001">
     <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive"
       aria-atomic="true">
       <div class="d-flex">
@@ -261,9 +331,9 @@
     </div>
   </div>
 
-
   <!-- JS -->
   <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
   <script src="views/clients-view.js" defer></script>
   <script src="views/tickets-view.js" defer></script>
   <script src="views/billing-view.js" defer></script>
@@ -271,11 +341,10 @@
   <script src="views/logs-view.js" defer></script>
   <script src="views/variables-view.js" defer></script>
   <script src="views/webchat-view.js" defer></script>
+  <script src="views/backoffice-view.js" defer></script>
   <script src="views/dashboard-view.js" defer></script>
   <script src="views/notifications-view.js" defer></script>
   <script src="core/render.js" defer></script>
-  <!-- Templates de despliegue -->
   <script src="core/deploy-template.js" defer></script>
 </body>
-
 </html>

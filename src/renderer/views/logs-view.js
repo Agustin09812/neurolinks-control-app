@@ -5,6 +5,7 @@ async function renderLogsView(deploymentId, serviceName) {
 
     const panel = document.getElementById("detail-side-panel");
     if (!panel) return;
+    panel.dataset.view = "logs";
 
     if (logInterval) clearInterval(logInterval);
 
@@ -38,9 +39,7 @@ async function renderLogsView(deploymentId, serviceName) {
             clearInterval(logInterval);
             logInterval = null;
         }
-
-        document.getElementById("detail-side-panel").innerHTML = "";
-
+        closeSidePanel();
     };
 
     document.getElementById("btn-download-integrated-logs").onclick = async () => {

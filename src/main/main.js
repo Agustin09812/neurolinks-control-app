@@ -19,6 +19,7 @@ const supabaseService = require('../services/supabaseService');
 let splash;
 let mainWindow;
 let splashStartTime;
+let currentAuditUser = 'admin';
 
 function createSplash() {
   splashStartTime = Date.now();
@@ -62,6 +63,10 @@ function createMainWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+
+  if (isDev) {
+    mainWindow.webContents.openDevTools();
+  }
 
   mainWindow.once("ready-to-show", () => {
 
@@ -171,7 +176,9 @@ function isNewerVersion(remote, local) {
 // =======================================================
 
 app.whenReady().then(() => {
-  Menu.setApplicationMenu(null);
+  if (!isDev) {
+    Menu.setApplicationMenu(null);
+  }
   createSplash();
 
   checkForUpdates().then(update => {
@@ -233,14 +240,19 @@ ipcMain.handle('open-tickets-window', async () => {
 // GET ASSISTANTS (Projects + Services + Latest Deployment)
 // --------------------------------------------------
 
-ipcMain.handle('get-assistants', async () => {
+ipcMain.handle('get-assistants', async (_, clientId) => {
   try {
-    return await railwayService.getAssistants();
+    let projectIds = null;
+    if (clientId) {
+      projectIds = await supabaseService.getClientProjects(clientId);
+    }
+    return await railwayService.getAssistants(projectIds);
   } catch (error) {
     console.error("Error en get-assistants:", error);
     throw error;
   }
 });
+
 
 // --------------------------------------------------
 // TEMPLATES (Search & Deploy)
@@ -255,13 +267,22 @@ ipcMain.handle('search-templates', async (_, query) => {
   }
 });
 
-ipcMain.handle('deploy-template', async (_, templateId) => {
+ipcMain.handle('get-template-variables', async (_, templateId) => {
   try {
-    const result = await railwayService.deployTemplate(templateId);
+    return await railwayService.getTemplateVariables(templateId);
+  } catch (error) {
+    console.error("Error en get-template-variables:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle('deploy-template', async (_, templateId, variables) => {
+  try {
+    const result = await railwayService.deployTemplate(templateId, variables);
 
     if (result.success) {
       const projectId = result.projectId;
-      await supabaseService.logAction('Deploy Template', `Nuevo proyecto creado vía template: ${result.templateName || templateId}`, 'proyectos', projectId);
+      await supabaseService.logAction('Deploy Template', `Nuevo proyecto creado vía template: ${result.templateName || templateId}`, 'proyectos', projectId, currentAuditUser);
       return { success: true, projectId };
     } else {
       return { success: false, error: result.error || "Error desconocido en el despliegue" };
@@ -280,7 +301,7 @@ ipcMain.handle('deploy-template', async (_, templateId) => {
 ipcMain.handle('redeploy-service', async (_, serviceId, environmentId) => {
   try {
     const result = await railwayService.redeployService(serviceId, environmentId);
-    await supabaseService.logAction('Reiniciar Servicio', `Reinicio de servicio ID: ${serviceId}`, 'servicios', serviceId);
+    await supabaseService.logAction('Reiniciar Servicio', `Reinicio de servicio ID: ${serviceId}`, 'servicios', serviceId, currentAuditUser);
     return result;
   } catch (error) {
     console.error("Error en redeploy-service:", error);
@@ -291,7 +312,7 @@ ipcMain.handle('redeploy-service', async (_, serviceId, environmentId) => {
 ipcMain.handle('deploy-service-update', async (_, serviceId, environmentId) => {
   try {
     const result = await railwayService.deployServiceUpdate(serviceId, environmentId);
-    await supabaseService.logAction('Deploy Update', `Deploy de actualización disponible para servicio ID: ${serviceId}`, 'servicios', serviceId);
+    await supabaseService.logAction('Deploy Update', `Deploy de actualización disponible para servicio ID: ${serviceId}`, 'servicios', serviceId, currentAuditUser);
     return result;
   } catch (error) {
     console.error("Error en deploy-service-update:", error);
@@ -307,7 +328,7 @@ ipcMain.handle('deploy-service-update', async (_, serviceId, environmentId) => {
 ipcMain.handle('delete-service', async (_, serviceId) => {
   try {
     const result = await railwayService.deleteService(serviceId);
-    await supabaseService.logAction('Eliminar Servicio', `Eliminación de servicio ID: ${serviceId}`, 'servicios', serviceId);
+    await supabaseService.logAction('Eliminar Servicio', `Eliminación de servicio ID: ${serviceId}`, 'servicios', serviceId, currentAuditUser);
     return result;
   } catch (error) {
     console.error("Error en delete-service:", error);
@@ -420,7 +441,7 @@ ipcMain.handle('get-service-variables', async (_, projectId, environmentId, serv
 ipcMain.handle('upsert-variable', async (_, projectId, environmentId, serviceId, name, value) => {
   try {
     const result = await railwayService.upsertVariable(projectId, environmentId, serviceId, name, value);
-    await supabaseService.logAction('Cambio Variable', `Se actualizó la variable ${name}`, 'variables', serviceId || projectId);
+    await supabaseService.logAction('Cambio Variable', `Se actualizó la variable ${name}`, 'variables', serviceId || projectId, currentAuditUser);
     return result;
   } catch (error) {
     console.error("Error en upsert-variable:", error);
@@ -496,26 +517,26 @@ ipcMain.handle('get-clients', async () => {
 
 ipcMain.handle('create-client', async (_, clientData) => {
   const result = await supabaseService.createClient(clientData);
-  await supabaseService.logAction('Crear Cliente', `Se creó el cliente ${clientData.nombre}`, 'clientes', result.id);
+  await supabaseService.logAction('Crear Cliente', `Se creó el cliente ${clientData.nombre}`, 'clientes', result.id, currentAuditUser);
   return result;
 });
 
 ipcMain.handle('update-client', async (_, id, clientData) => {
   const result = await supabaseService.updateClient(id, clientData);
-  await supabaseService.logAction('Actualizar Cliente', `Se actualizaron datos de ${clientData.nombre || 'cliente'}`, 'clientes', id);
+  await supabaseService.logAction('Actualizar Cliente', `Se actualizaron datos de ${clientData.nombre || 'cliente'}`, 'clientes', id, currentAuditUser);
   return result;
 });
 
 ipcMain.handle('delete-client', async (_, id) => {
   const result = await supabaseService.deleteClient(id);
-  await supabaseService.logAction('Eliminar Cliente', `Se eliminó el cliente ID: ${id}`, 'clientes', id);
+  await supabaseService.logAction('Eliminar Cliente', `Se eliminó el cliente ID: ${id}`, 'clientes', id, currentAuditUser);
   return result;
 });
 
 ipcMain.handle('link-project-client', async (_, railwayProjectId, clientId) => {
   try {
     const result = await supabaseService.linkProjectToClient(railwayProjectId, clientId);
-    await supabaseService.logAction('Vincular Proyecto', `Se vinculó el proyecto ${railwayProjectId} al cliente ID: ${clientId}`, 'clientes', clientId);
+    await supabaseService.logAction('Vincular Proyecto', `Se vinculó el proyecto ${railwayProjectId} al cliente ID: ${clientId}`, 'clientes', clientId, currentAuditUser);
     return result;
   } catch (error) {
     console.error("Error en link-project-client:", error);
@@ -541,14 +562,14 @@ ipcMain.handle('get-tickets', async (_, filters) => {
 
 ipcMain.handle('create-ticket', async (_, ticketData) => {
   const result = await supabaseService.createTicket(ticketData);
-  await supabaseService.logAction('Crear Ticket', `Nuevo ticket: ${ticketData.titulo}`, 'tickets', result.id);
+  await supabaseService.logAction('Crear Ticket', `Nuevo ticket: ${ticketData.titulo}`, 'tickets', result.id, currentAuditUser);
   return result;
 });
 
 ipcMain.handle('update-ticket', async (_, id, ticketData) => {
   const result = await supabaseService.updateTicket(id, ticketData);
   const statusMsg = ticketData.estado ? ` (Estado: ${ticketData.estado})` : "";
-  await supabaseService.logAction('Actualizar Ticket', `Ticket #${id} actualizado${statusMsg}`, 'tickets', id);
+  await supabaseService.logAction('Actualizar Ticket', `Ticket #${id} actualizado${statusMsg}`, 'tickets', id, currentAuditUser);
   return result;
 });
 
@@ -579,12 +600,66 @@ ipcMain.handle('get-all-payments', async () => {
 
 ipcMain.handle('create-payment', async (_, paymentData) => {
   const result = await supabaseService.createPayment(paymentData);
-  await supabaseService.logAction('Registrar Pago', `Pago de $${paymentData.monto} - ${paymentData.concepto}`, 'pagos', result.id);
+  await supabaseService.logAction('Registrar Pago', `Pago de $${paymentData.monto} - ${paymentData.concepto}`, 'pagos', result.id, currentAuditUser);
   return result;
 });
 
 ipcMain.handle('delete-payment', async (_, id) => {
   return await supabaseService.deletePayment(id);
+});
+
+// --------------------------------------------------
+// USUARIOS
+// --------------------------------------------------
+ipcMain.handle('get-usuarios', async () => {
+  return await supabaseService.getUsuarios();
+});
+
+ipcMain.handle('create-usuario', async (_, userData) => {
+  return await supabaseService.createUsuario(userData);
+});
+
+ipcMain.handle('update-usuario', async (_, id, userData) => {
+  return await supabaseService.updateUsuario(id, userData);
+});
+
+ipcMain.handle('delete-usuario', async (_, id) => {
+  return await supabaseService.deleteUsuario(id);
+});
+
+ipcMain.handle('get-usuarios-by-cliente', async (_, clienteId) => {
+  return await supabaseService.getUsuariosByCliente(clienteId);
+});
+
+// --------------------------------------------------
+// AUTH / SESSIONS
+// --------------------------------------------------
+
+ipcMain.handle('login-with-token', async (_, token) => {
+  try {
+    return await supabaseService.loginWithToken(token);
+  } catch (error) {
+    console.error("Error en login-with-token:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle('login-with-credentials', async (_, { usuario, contrasena }) => {
+  try {
+    return await supabaseService.loginWithCredentials(usuario, contrasena);
+  } catch (error) {
+    console.error("Error en login-with-credentials:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle('verify-admin', async (_, password) => {
+  try {
+    return await supabaseService.verifyAdminShortcut(password);
+  } catch (error) {
+    console.error("Error en verify-admin:", error);
+    throw error;
+  }
 });
 
 // --------------------------------------------------
@@ -596,6 +671,20 @@ ipcMain.on('request-select-project', (_, projectId) => {
     mainWindow.webContents.send('select-project', projectId);
     mainWindow.focus();
   }
+});
+
+ipcMain.on('set-active-user', (_, userData) => {
+  if (!userData) {
+    currentAuditUser = 'Sistema';
+    return;
+  }
+  // Formato: Rol / Nombre Apellido
+  const rol = (userData.rol || 'usuario').toUpperCase();
+  const nombreComp = `${userData.nombre || ''} ${userData.apellido || ''}`.trim();
+  const display = nombreComp || userData.usuario || 'Desconocido';
+
+  currentAuditUser = `${rol} / ${display}`;
+  console.log("Auditoría configurada para el usuario:", currentAuditUser);
 });
 
 /**
