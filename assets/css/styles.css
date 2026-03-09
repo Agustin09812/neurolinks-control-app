@@ -624,3 +624,85 @@ body {
   color: #00d2ff;
   border: 1px solid rgba(0, 210, 255, 0.3);
 }
+
+/* =========================================================
+   UPDATE BANNER
+========================================================= */
+
+.update-banner {
+  width: 100%;
+  background: linear-gradient(90deg, #ffb300, #ff9800);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+  display: flex;
+  justify-content: center;
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: all .35s ease;
+
+}
+
+.update-banner.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.update-banner-content {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 18px;
+}
+
+.update-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.update-icon {
+  font-size: 16px;
+  color: var(--bg-deep);
+  animation: pulseUpdate 2s infinite;
+}
+
+.update-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--bg-deep);
+}
+
+.update-btn {
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 5px;
+  cursor: pointer;
+  color: var(--bg-deep);
+  transition: all .2s ease;
+}
+
+.update-btn:hover {
+  background: var(--bg-deep);
+  border: 1px solid var(--bg-deep);
+  transform: translateY(-1px);
+  color: #ffb300;
+}
+
+/* animación icono */
+
+@keyframes pulseUpdate {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}

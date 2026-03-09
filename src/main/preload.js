@@ -114,7 +114,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // --------------------------------------------------
   // UPDATES
-  // -------------------------------------------------
+  // --------------------------------------------------
 
   onUpdateAvailable: (callback) => {
     ipcRenderer.on("update-available", (_, data) => {
@@ -122,14 +122,14 @@ contextBridge.exposeInMainWorld('api', {
     });
   },
 
-  startDownloadUpdate: (url) => {
-    ipcRenderer.send('start-download-update', url);
+  onUpdateProgress: (callback) => {
+    ipcRenderer.on("update-progress", (_, percent) => {
+      callback(percent);
+    });
   },
 
-  onDownloadProgress: (callback) => {
-    ipcRenderer.on('download-progress', (_, progress) => {
-      callback(progress);
-    });
+  startUpdate: () => {
+    ipcRenderer.invoke("start-update");
   },
 
   // --------------------------------------------------

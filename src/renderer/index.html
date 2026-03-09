@@ -86,6 +86,24 @@
     </div>
   </div>
 
+  <!-- UPDATE BANNER -->
+  <div id="update-banner" class="update-banner">
+    <div class="update-banner-content">
+      <div class="update-left">
+        <span class="update-icon">
+          <i class="bi bi-lightning-charge-fill"></i>
+        </span>
+        <span class="update-text">
+          Nueva actualización disponible
+          <strong id="update-version"></strong>
+        </span>
+      </div>
+      <button id="btnViewChanges" class="update-btn">
+        Ver cambios
+      </button>
+    </div>
+  </div>
+
   <!-- CONTENT WRAPPER -->
   <div class="flex-grow-1 overflow-hidden d-flex flex-column">
 
@@ -245,6 +263,34 @@
           </button>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- UPDATE MODAL -->
+  <div class="modal fade" id="updateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-light border-warning">
+        <div class="modal-header border-warning">
+          <h5 class="modal-title">
+            Nueva versión disponible
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <h6 id="update-modal-version" class="text-warning mb-3"></h6>
+          <div id="update-modal-notes" class="small text-secondary mb-3"></div>
+          <div id="update-progress" class="progress d-none">
+            <div id="update-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated"
+              style="width:0%">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-warning">
+          <button id="btnModalUpdate" class="btn btn-outline-warning btn-sm">
+            Actualizar ahora
+          </button>
+        </div>
       </div>
     </div>
   </div>

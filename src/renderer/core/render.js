@@ -324,13 +324,25 @@ function renderAssistantsGrid() {
             Gestión técnica de proyectos desplegados en Railway
           </p>
         </div>
+        <button class="btn btn-outline-light btn-sm" id="btnRefreshAssistants">
+             <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+           </button>
       </div>
-  
       <div id="assistants-grid" class="row g-4"></div>
     </div>
   `;
 
   const grid = document.getElementById("assistants-grid");
+
+  document.getElementById("btnRefreshAssistants")?.addEventListener("click", async () => {
+
+    showToast("Actualizando asistentes...", "info");
+
+    await loadAssistants(false);
+
+    renderAssistantsGrid();
+
+  });
 
   if (!assistants.length) {
     grid.innerHTML = `
@@ -482,9 +494,13 @@ function renderDetailStructure(project) {
 <div class="animate-fade mt-4">
 
   <!-- BOTÓN VOLVER -->
-  <div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
     <button class="btn btn-outline-light btn-sm" id="btnBackToGrid">
       <i class="bi bi-arrow-left me-2"></i> Volver a Asistentes
+    </button>
+
+    <button class="btn btn-outline-light btn-sm" id="btnRefreshProject">
+      <i class="bi bi-arrow-clockwise"></i> Actualizar
     </button>
   </div>
 
@@ -500,7 +516,7 @@ function renderDetailStructure(project) {
         <!-- TITULO + SETTINGS -->
         <div class="d-flex justify-content-between align-items-center mb-2">
 
-          <p class="fw-bold mb-0">${project.name}</p>
+          <p id="project-title" class="fw-bold mb-0">${project.name}</p>
 
           <div class="dropdown">
             <button 
@@ -573,6 +589,14 @@ function renderDetailStructure(project) {
 
   // Eventos header
 
+  document.getElementById("btnRefreshProject")?.addEventListener("click", async () => {
+
+    showToast("Actualizando proyecto...", "info");
+
+    await loadAssistants(true);
+
+  });
+
   document.getElementById("btnBackToGrid").addEventListener("click", async () => {
     selectedProjectId = null;
 
@@ -608,7 +632,7 @@ async function updateDetailHeader(project) {
 
   const badgesContainer = document.getElementById("header-badges");
   const statusContainer = document.getElementById("header-status-row");
-  const titleEl = document.querySelector("#assistant-detail h2");
+  const titleEl = document.getElementById("project-title");
 
   if (!badgesContainer || !statusContainer) return;
 
@@ -1637,20 +1661,6 @@ async function renderDashboard() {
   }
 }
 
-// async function init() {
-
-//   const version = await window.api.getAppVersion();
-//   const el = document.getElementById("app-version");
-//   if (el) el.textContent = "v" + version;
-
-//   await loadAssistants(false);
-
-//   navigate("dashboard");
-// }
-
-// init();
-
-
 // --------------------------------------------------
 // EXTERNAL SELECTION (MESSAGING FROM OTHER WINDOWS)
 // --------------------------------------------------
@@ -1669,4 +1679,71 @@ window.api.onSelectProject((projectId) => {
   } else {
     console.warn("Project not found in current list:", projectId);
   }
+});
+
+// --------------------------------------------------
+// AUTOUPDATE
+// --------------------------------------------------
+
+let updateData = null;
+
+window.api.onUpdateAvailable((data) => {
+
+  updateData = data;
+  const banner = document.getElementById("update-banner");
+  const version = document.getElementById("update-version");
+  if (!banner) return;
+  banner.classList.add("show");
+  version.textContent = `v${data.version}`;
+
+});
+
+
+// ABRIR MODAL CON CAMBIOS
+
+document.getElementById("btnViewChanges")?.addEventListener("click", () => {
+
+  if (!updateData) return;
+
+  const version = document.getElementById("update-modal-version");
+  const notes = document.getElementById("update-modal-notes");
+
+  version.textContent = "Versión " + updateData.version;
+
+  const releaseNotes = updateData.notes || [];
+
+  if (Array.isArray(releaseNotes)) {
+    notes.innerHTML = releaseNotes
+      .map(n => "• " + n)
+      .join("<br>");
+  } else {
+    notes.textContent = releaseNotes;
+  }
+
+  const modal = new bootstrap.Modal(document.getElementById("updateModal"));
+  modal.show();
+
+});
+
+
+// BOTON ACTUALIZAR
+
+document.getElementById("btnModalUpdate")?.addEventListener("click", () => {
+
+  if (!confirm("¿Descargar e instalar la nueva versión?")) return;
+  window.api.startUpdate();
+
+});
+
+
+// PROGRESO DE DESCARGA
+
+window.api.onUpdateProgress((percent) => {
+
+  const progress = document.getElementById("update-progress");
+  const bar = document.getElementById("update-progress-bar");
+  if (!progress) return;
+  progress.classList.remove("d-none");
+  bar.style.width = percent + "%";
+
 });
