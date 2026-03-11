@@ -1,17 +1,27 @@
 const { app, BrowserWindow, shell, ipcMain, Menu, Notification, dialog } = require('electron');
 const path = require('path');
-const https = require("https");
-const fs = require('fs');
-const extract = require('extract-zip');
+const fs = require("fs");
 
-// HOT FIX PARA COMPILAR 
+// HOT FIX PARA COMPILAR
 const isDev = !app.isPackaged;
 
+// .ENV
 require('dotenv').config({
   path: isDev
     ? path.join(__dirname, '../../.env')
     : path.join(process.resourcesPath, '.env')
 });
+
+const { autoUpdater } = require("electron-updater");
+
+// TOKEN GITHUB
+autoUpdater.requestHeaders = {
+  authorization: `token ${process.env.GITHUB_TOKEN}`
+};
+
+// AUTOUPDATER CONFIG
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
 
 const railwayService = require('../services/railwayService');
 const supabaseService = require('../services/supabaseService');
@@ -20,8 +30,28 @@ let splash;
 let mainWindow;
 let splashStartTime;
 let currentAuditUser = 'admin';
+let updateInfo = null;
+
+
+// ======================================================
+// SAFE WINDOW CREATION
+// ======================================================
+
+function safeCreateMainWindow() {
+
+  if (mainWindow && !mainWindow.isDestroyed()) return;
+  createMainWindow();
+
+}
+
+
+// ======================================================
+// SPLASH
+// ======================================================
+
 
 function createSplash() {
+
   splashStartTime = Date.now();
 
   splash = new BrowserWindow({
@@ -29,7 +59,6 @@ function createSplash() {
     height: 300,
     frame: false,
     icon: path.join(__dirname, "../../assets/icons/icon.ico"),
-    alwaysOnTop: false,
     resizable: false,
     center: true,
     webPreferences: {
@@ -41,25 +70,39 @@ function createSplash() {
 
   splash.loadFile(path.join(__dirname, "../renderer/splash.html"));
 
-  splash.webContents.on('did-finish-load', async () => {
+  splash.webContents.on('did-finish-load', () => {
+
     const version = app.getVersion();
     splash.webContents.send('set-version', version);
+
   });
+
 }
 
+
+// ======================================================
+// MAIN WINDOW
+// ======================================================
+
 function createMainWindow() {
+
   mainWindow = new BrowserWindow({
+
     width: 1200,
     height: 800,
     icon: path.join(__dirname, "../../assets/icons/icon.ico"),
     minWidth: 1024,
     minHeight: 768,
     show: false,
+
     webPreferences: {
+
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false
+
     }
+
   });
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
@@ -71,131 +114,149 @@ function createMainWindow() {
   mainWindow.once("ready-to-show", () => {
 
     const elapsed = Date.now() - splashStartTime;
-    const minTime = 3000; // Segundos mínimo
-
+    const minTime = 3000;
     const remaining = Math.max(minTime - elapsed, 0);
 
     setTimeout(() => {
+
       if (splash) splash.destroy();
 
       mainWindow.setOpacity(0);
       mainWindow.show();
 
       let opacity = 0;
+
       const fade = setInterval(() => {
         opacity += 0.05;
         mainWindow.setOpacity(opacity);
         if (opacity >= 1) clearInterval(fade);
       }, 20);
 
-      // Iniciar monitoreo en background cuando la ventana principal está lista
       startBackgroundMonitoring();
 
     }, remaining);
 
   });
-}
 
-// Updates Function (checkForUpdates + isNewerVersion)
 
-async function checkForUpdates() {
+  mainWindow.webContents.once("did-finish-load", () => {
 
-  return new Promise((resolve) => {
-
-    const options = {
-      hostname: "api.github.com",
-      path: "/repos/Agustin09812/neurolinks-control-app/releases/latest",
-      method: "GET",
-      headers: {
-        "User-Agent": "Neurolinks-Control",
-        "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
-        "Accept": "application/vnd.github+json"
-      }
-    };
-
-    const req = https.request(options, (res) => {
-
-      let data = "";
-
-      res.on("data", chunk => data += chunk);
-
-      res.on("end", () => {
-
-        try {
-
-          const json = JSON.parse(data);
-
-          const remoteVersion = json.tag_name?.replace("v", "");
-          const localVersion = app.getVersion();
-
-          if (!remoteVersion) return resolve(null);
-
-          if (isNewerVersion(remoteVersion, localVersion)) {
-
-            const asset = json.assets?.find(a => a.name.endsWith(".zip"));
-
-            if (!asset) return resolve(null);
-
-            return resolve({
-              version: remoteVersion,
-              url: asset.browser_download_url
-            });
-
-          }
-
-          resolve(null);
-
-        } catch {
-          resolve(null);
-        }
+    if (updateInfo) {
+      mainWindow.webContents.send("update-available", {
+        version: updateInfo.version,
+        notes: updateInfo.notes
 
       });
-
-    });
-
-    req.on("error", () => resolve(null));
-    req.end();
-
-  });
-
-}
-
-function isNewerVersion(remote, local) {
-
-  const r = remote.split('.').map(Number);
-  const l = local.split('.').map(Number);
-
-  for (let i = 0; i < r.length; i++) {
-    if ((r[i] || 0) > (l[i] || 0)) return true;
-    if ((r[i] || 0) < (l[i] || 0)) return false;
-  }
-
-  return false;
-}
-
-// =======================================================
-
-app.whenReady().then(() => {
-  if (!isDev) {
-    Menu.setApplicationMenu(null);
-  }
-  createSplash();
-
-  checkForUpdates().then(update => {
-
-    if (update) {
-
-      splash.webContents.send("update-available", update);
-
-    } else {
-
-      createMainWindow();
-
     }
 
   });
+
+
+}
+
+
+// ======================================================
+// APP READY
+// ======================================================
+
+app.whenReady().then(() => {
+
+  Menu.setApplicationMenu(null);
+  createSplash();
+
+  if (isDev) {
+
+    console.log("Modo desarrollo → no se chequean updates");
+    setTimeout(() => {
+      safeCreateMainWindow();
+    }, 2000);
+
+  } else {
+    autoUpdater.checkForUpdates();
+  }
+
 });
 
+
+// ======================================================
+// AUTO UPDATE
+// ======================================================
+
+autoUpdater.on("update-available", (info) => {
+
+  console.log("Nueva actualización detectada:", info.version);
+
+  updateInfo = {
+    version: info.version,
+    notes: [
+      "Mejoras y optimizaciones",
+      "Correcciones y arreglos de bugs",
+      "Actualizá a la última versión para tener las mejoras más recientes"
+    ]
+  };
+
+  if (splash) {
+
+    splash.webContents.send("update-available", {
+      version: updateInfo.version,
+      notes: updateInfo.notes
+    });
+
+  }
+
+  setTimeout(() => {
+    safeCreateMainWindow();
+  }, 1500);
+
+});
+
+
+autoUpdater.on("update-not-available", () => {
+  safeCreateMainWindow();
+});
+
+
+autoUpdater.on("download-progress", (progress) => {
+
+  const percent = Math.floor(progress.percent);
+  if (mainWindow) {
+    mainWindow.webContents.send("update-progress", percent);
+  }
+
+});
+
+
+autoUpdater.on("update-downloaded", () => {
+
+  dialog.showMessageBox({
+    type: "info",
+    buttons: ["Reiniciar ahora"],
+    title: "Actualización lista",
+    message: "La nueva versión está lista para instalar."
+  }).then(() => {
+    autoUpdater.quitAndInstall();
+  });
+
+});
+
+
+autoUpdater.on("error", (err) => {
+  console.error("Updater error:", err);
+  safeCreateMainWindow();
+});
+
+
+// ======================================================
+// START UPDATE
+// ======================================================
+
+ipcMain.handle("start-update", () => {
+  autoUpdater.downloadUpdate();
+});
+
+
+// --------------------------------------------------
+// --------------------------------------------------
 
 // --------------------------------------------------
 // OPEN EXTERNAL
