@@ -149,6 +149,8 @@ body {
 
 .main-content {
   display: block;
+  overflow: auto;
+  height: 100%;
 }
 
 /* =========================================================
