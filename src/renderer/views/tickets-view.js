@@ -10,6 +10,10 @@ let ticketFilters = {
     dateEnd: ""
 };
 
+// paginacion
+let currentPage = 1;
+const ITEMS_PER_PAGE = 15;
+
 async function renderTicketsView(filterClientId = "") {
     selectedProjectId = null;
     document.getElementById("dashboard-global").style.display = "none";
@@ -22,8 +26,6 @@ async function renderTicketsView(filterClientId = "") {
     if (secondary) secondary.remove();
     const secondaryVar = document.getElementById("integrated-var-container");
     if (secondaryVar) secondaryVar.remove();
-    const secondaryChat = document.getElementById("integrated-chat-container");
-    if (secondaryChat) secondaryChat.remove();
 
     if (filterClientId) {
         ticketFilters.client = filterClientId;
@@ -107,6 +109,20 @@ async function renderTicketsView(filterClientId = "") {
                                 </tr>
                             </thead>
                             <tbody id="tickets-table-body-view"></tbody>
+                            </table>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center p-3 border-top border-secondary">
+                                <button class="btn btn-sm btn-outline-light" onclick="changePage(-1)">
+                                    ← Anterior
+                                </button>
+
+                                <span id="pagination-info" class="small text-dim"></span>
+
+                                <button class="btn btn-sm btn-outline-light" onclick="changePage(1)">
+                                    Siguiente →
+                                </button>
+                            </div>
                         </table>
                     </div>
                 </div>
@@ -123,16 +139,23 @@ async function renderTicketsView(filterClientId = "") {
                         <form id="ticketFormView">
                             <div class="modal-body p-4">
                                 <input type="hidden" id="ticketIdView">
-                                <div class="row g-3">
-                                    <div class="col-md-8">
+
+                                <div class="row g-2">
+
+                                    <!-- TÍTULO -->
+                                    <div class="col-md-6">
                                         <label class="form-label text-dim small fw-bold required">TÍTULO DEL PROBLEMA</label>
                                         <input type="text" class="form-control text-light" id="ticketTitleView" required>
                                     </div>
-                                    <div class="col-md-4">
+
+                                    <!-- CLIENTE -->
+                                    <div class="col-md-3">
                                         <label class="form-label text-dim small fw-bold required">CLIENTE</label>
                                         <select class="form-select" id="ticketClientView" required></select>
                                     </div>
-                                    <div class="col-md-4">
+
+                                    <!-- TIPO -->
+                                    <div class="col-md-3">
                                         <label class="form-label text-dim small fw-bold">TIPO</label>
                                         <select class="form-select" id="ticketTypeView">
                                             <option value="Soporte">Soporte</option>
@@ -140,7 +163,9 @@ async function renderTicketsView(filterClientId = "") {
                                             <option value="Bugs">Bugs</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-4">
+
+                                    <!-- ESTADO -->
+                                    <div class="col-md-3">
                                         <label class="form-label text-dim small fw-bold">ESTADO</label>
                                         <select class="form-select" id="ticketStatusView">
                                             <option value="Abierto">Abierto</option>
@@ -148,7 +173,9 @@ async function renderTicketsView(filterClientId = "") {
                                             <option value="Cerrado">Cerrado</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-4">
+
+                                    <!-- PRIORIDAD -->
+                                    <div class="col-md-3">
                                         <label class="form-label text-dim small fw-bold">PRIORIDAD</label>
                                         <select class="form-select" id="ticketPriorityView">
                                             <option value="Baja">Baja</option>
@@ -156,12 +183,21 @@ async function renderTicketsView(filterClientId = "") {
                                             <option value="Alta">Alta</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-12">
+
+                                    <!-- DESCRIPCIÓN (PROTAGONISTA) -->
+                                    <div class="col-md-12 mt-2">
                                         <label class="form-label text-dim small fw-bold">DESCRIPCIÓN</label>
-                                        <textarea class="form-control text-light" id="ticketDescView" rows="4"></textarea>
+                                        <textarea 
+                                            class="form-control text-light" 
+                                            id="ticketDescView" 
+                                            rows="10"
+                                            style="min-height: 220px; resize: vertical;">
+                                        </textarea>
                                     </div>
+
                                 </div>
                             </div>
+
                             <div class="modal-footer p-3">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                                 <button type="submit" class="btn btn-success">Guardar Ticket</button>
@@ -211,18 +247,38 @@ async function loadTicketsData() {
 
         allTicketsView = await window.api.getTickets() || [];
 
+        window.ticketsData = allTicketsView || []; // Hash para tickets
+
         // Detectar nuevos tickets
+        // FIX: detección correcta de nuevos tickets + key única por notificación
+        // Antes se usaba `ticket.id`, pero `ticket` no existía en este scope,
+        // lo que generaba:
+        // 1) ReferenceError en algunos casos (rompiendo el flujo)
+        // 2) keys "ticket-undefined", haciendo que el sistema anti-duplicados
+        //    (notificationMemory) bloquee notificaciones reales
+        //
+        // Además, la lógica original solo comparaba cantidad de tickets,
+        // sin identificar cuáles eran nuevos.
+        //
+        // Este fix:
+        // ✔ Detecta exactamente qué tickets son nuevos
+        // ✔ Genera una notificación por cada ticket real
+        // ✔ Usa `t.id` como key única → evita duplicados incorrectos
+        // ✔ Mantiene consistencia en el sistema de notificaciones
         if (previousCount !== 0 && allTicketsView.length > previousCount) {
 
-            addNotification(
-                "ticket",
-                "Nuevo ticket recibido",
-                "Se recibió un nuevo ticket",
-                `ticket-${ticket.id}`
-            );
+            const newTickets = allTicketsView.slice(0, allTicketsView.length - previousCount);
 
-            showToast("Nuevo ticket recibido", "info");
+            newTickets.forEach(t => {
+                addNotification(
+                    "ticket",
+                    "Nuevo ticket recibido",
+                    `Ticket: ${t.titulo || "Sin título"}`,
+                    `ticket-${t.id}`
+                );
+            });
 
+            showToast("Nuevos tickets recibidos", "info");
         }
 
         lastTicketsCount = allTicketsView.length;
@@ -243,6 +299,7 @@ async function loadTicketsData() {
 
 function handleTicketFilter(key, val) {
     ticketFilters[key] = val;
+    currentPage = 1;
     renderTicketsList();
 }
 
@@ -253,6 +310,7 @@ function resetTicketFilters() {
     if (document.getElementById("view-filter-client")) document.getElementById("view-filter-client").value = "";
     if (document.getElementById("view-filter-date-start")) document.getElementById("view-filter-date-start").value = "";
     if (document.getElementById("view-filter-date-end")) document.getElementById("view-filter-date-end").value = "";
+    currentPage = 1;
     renderTicketsList();
 }
 
@@ -282,7 +340,10 @@ function renderTicketsList() {
         return;
     }
 
-    filtered.forEach(t => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;  // paginacion
+    const paginated = filtered.slice(start, start + ITEMS_PER_PAGE);  // paginacion
+
+    paginated.forEach(t => {
         const tr = document.createElement("tr");
         tr.className = "ticket-row";
         tr.innerHTML = `
@@ -297,13 +358,19 @@ function renderTicketsList() {
             <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
             <td class="text-end">
                 <div class="d-flex gap-2 justify-content-end">
-                    <button class="btn btn-sm btn-outline-light" onclick="openEditTicket('${t.id}')"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-light" onclick="openEditTicket('${t.id}')"><i class="bi bi-eye"></i></button>
                     <button class="btn btn-sm btn-outline-danger" onclick="handleDeleteTicket('${t.id}')"><i class="bi bi-trash"></i></button>
                 </div>
             </td>
         `;
         tbody.appendChild(tr);
     });
+    const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+    const info = document.getElementById("pagination-info");
+
+    if (info) {
+        info.textContent = `Página ${currentPage} de ${totalPages}`;
+    }
 }
 
 function openNewTicketModal() {
@@ -400,4 +467,15 @@ function exportTicketsToCSV() {
     document.body.removeChild(link);
 
     showToast("Reporte generado", "success");
+}
+
+function changePage(direction) { // paginacion
+    const totalPages = Math.ceil(allTicketsView.length / ITEMS_PER_PAGE);
+
+    currentPage += direction;
+
+    if (currentPage < 1) currentPage = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    renderTicketsList();
 }

@@ -30,6 +30,7 @@ let splash;
 let mainWindow;
 let splashStartTime;
 let updateInfo = null;
+let dashboardWindows = new Map();
 
 
 // ======================================================
@@ -293,6 +294,41 @@ ipcMain.handle('open-tickets-window', async () => {
   });
 
   ticketsWindow.loadFile(path.join(__dirname, '../renderer/pages/tickets.html'));
+});
+
+ipcMain.handle('open-dashboard-window', async (_, url) => {
+
+  if (dashboardWindows.has(url)) {
+    const existing = dashboardWindows.get(url);
+    if (!existing.isDestroyed()) {
+      existing.focus();
+      return;
+    }
+  }
+
+  const win = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
+    autoHideMenuBar: true,
+    backgroundColor: "#0f172a",
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  win.loadURL(url);
+  win.maximize();
+
+  dashboardWindows.set(url, win);
+
+  // limpiar cuando se cierra
+  win.on('closed', () => {
+    dashboardWindows.delete(url);
+  });
+
 });
 
 
@@ -629,6 +665,27 @@ ipcMain.handle('get-client-pending-tickets', async (_, clientId) => {
 
 ipcMain.handle('get-audit-logs', async () => {
   return await supabaseService.getAuditLogs();
+});
+
+// funcion para desvincular asistente
+ipcMain.handle('unlink-project-client', async (_, projectId) => {
+  try {
+
+    const result = await supabaseService.unlinkProjectClient(projectId);
+
+    await supabaseService.logAction(
+      'Desvincular Proyecto',
+      `Se desvinculó el proyecto ${projectId} del cliente`,
+      'clientes',
+      projectId
+    );
+
+    return result;
+
+  } catch (error) {
+    console.error("Error en unlink-project-client:", error);
+    throw error;
+  }
 });
 
 // --------------------------------------------------

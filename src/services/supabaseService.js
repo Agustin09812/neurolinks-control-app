@@ -62,13 +62,49 @@ const supabaseService = {
         return data;
     },
 
-    async deleteClient(id) {
-        const { error } = await supabase
-            .from('clientes')
-            .delete()
-            .eq('id', id);
-        if (error) throw error;
-        return true;
+    async deleteClient(clientId) {
+
+        try {
+
+            // 1. eliminar vínculos de proyectos
+            const { error: relError } = await supabase
+                .from('proyectos_railway')
+                .delete()
+                .eq('cliente_id', clientId);
+
+            if (relError) throw relError;
+
+            // 2. eliminar tickets
+            const { error: ticketError } = await supabase
+                .from('tickets')
+                .delete()
+                .eq('cliente_id', clientId);
+
+            if (ticketError) throw ticketError;
+
+            // 3. eliminar pagos
+            const { error: paymentError } = await supabase
+                .from('pagos')
+                .delete()
+                .eq('cliente_id', clientId);
+
+            if (paymentError) throw paymentError;
+
+            // 4. eliminar cliente
+            const { error } = await supabase
+                .from('clientes')
+                .delete()
+                .eq('id', clientId);
+
+            if (error) throw error;
+
+            return { success: true };
+
+        } catch (err) {
+            console.error("deleteClient error:", err);
+            throw err;
+        }
+
     },
 
     /**
@@ -104,6 +140,22 @@ const supabaseService = {
             .eq('cliente_id', clientId);
         if (error) throw error;
         return data.map(item => item.railway_project_id);
+    },
+
+    /**
+     * Funcion para desvincular asistente
+     */
+
+    async unlinkProjectClient(railwayProjectId) {
+
+        const { error } = await supabase
+            .from('proyectos_railway')
+            .delete()
+            .eq('railway_project_id', railwayProjectId);
+
+        if (error) throw error;
+
+        return true;
     },
 
     /**

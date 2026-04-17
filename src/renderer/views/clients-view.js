@@ -17,8 +17,6 @@ async function renderClientsView() {
     if (secondary) secondary.remove();
     const secondaryVar = document.getElementById("integrated-var-container");
     if (secondaryVar) secondaryVar.remove();
-    const secondaryChat = document.getElementById("integrated-chat-container");
-    if (secondaryChat) secondaryChat.remove();
 
     const view = document.getElementById("clients-view");
     view.style.display = "block";
@@ -219,6 +217,7 @@ async function loadClientsData() {
 
     try {
         allClients = await window.api.getClients() || [];
+        window.clientsData = allClients || []; // Hash para clients
         renderClientsList();
     } catch (err) {
         console.error("Error loading clients:", err);
@@ -395,14 +394,57 @@ async function loadClientProjectsInView(clientId) {
             container.innerHTML = '<div class="text-dim small p-2">No hay proyectos vinculados</div>';
         } else {
             myProjects.forEach(p => {
-                const btn = document.createElement("button");
-                btn.className = "btn btn-outline-custom btn-sm animate-fade";
-                btn.innerHTML = `<i class="bi bi-cpu me-2"></i>${p.name}`;
-                btn.onclick = () => {
+
+                const row = document.createElement("div");
+                row.className = "d-flex justify-content-between align-items-center w-100 animate-fade";
+
+                row.innerHTML = `
+                    <div class="d-flex align-items-center gap-2 project-info">
+                        <i class="bi bi-cpu"></i>
+                        <span>${p.name}</span>
+                    </div>
+
+                    <button class="btn btn-outline-danger btn-sm btn-unlink">
+                        <i class="bi bi-dash-circle"></i>
+                    </button>
+                `;
+
+                // abrir asistente
+                row.querySelector(".project-info").onclick = () => {
                     const item = document.querySelector(`.assistant-item[data-id="${p.id}"]`);
                     if (item) item.click();
                 };
-                container.appendChild(btn);
+
+                // desvincular
+                const btn = row.querySelector(".btn-unlink");
+
+                btn.onclick = async (e) => {
+                    e.stopPropagation();
+
+                    if (!confirm("¿Desvincular este asistente?")) return;
+
+                    btn.disabled = true;
+                    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+
+                    try {
+
+                        await window.api.unlinkProjectClient(p.id);
+
+                        showToast("Asistente desvinculado", "warning");
+
+                        await loadClientProjectsInView(clientId);
+
+                    } catch (err) {
+
+                        showToast("Error al desvincular", "danger");
+
+                        btn.disabled = false;
+                        btn.innerHTML = `<i class="bi bi-dash-circle"></i>`;
+                    }
+                };
+
+                container.appendChild(row);
+
             });
         }
     } catch (err) {

@@ -99,6 +99,7 @@ async function loadVariables(projectId, environmentId, serviceId) {
     try {
 
         const variables = await window.api.getServiceVariables(projectId, environmentId, serviceId);
+        window.variablesCache = variables || {}; // // Hash para variables
         const entries = Object.entries(variables || {});
 
         if (entries.length === 0) {

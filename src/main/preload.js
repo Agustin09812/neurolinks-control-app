@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('api', {
   openClients: () =>
     ipcRenderer.invoke('open-clients-window'),
 
+  openDashboardWindow: (url) =>
+    ipcRenderer.invoke('open-dashboard-window', url),
+
   // --------------------------------------------------
   // PROJECTS
   // --------------------------------------------------
@@ -139,7 +142,7 @@ contextBridge.exposeInMainWorld('api', {
   },
 
   // --------------------------------------------------
-  // SUPABASE / CRM
+  // SUPABASE / CRM / CLIENTS
   // --------------------------------------------------
 
   getClients: () =>
@@ -183,6 +186,9 @@ contextBridge.exposeInMainWorld('api', {
 
   getAuditLogs: () =>
     ipcRenderer.invoke('get-audit-logs'),
+
+  unlinkProjectClient: (projectId) =>
+    ipcRenderer.invoke('unlink-project-client', projectId), // funcion para desvincular asistente
 
   // --------------------------------------------------
   // NAVIGATION

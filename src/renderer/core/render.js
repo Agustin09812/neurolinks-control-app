@@ -6,6 +6,10 @@ let notifications = []; // Notifications system in app
 const notificationMemory = new Map(); // Notifications memory
 let renderToken = 0;
 
+window.clientsData = []; // Hash para clients
+window.ticketsData = []; // Hash para tickets
+window.variablesCache = {}; // Hash para variables
+
 // ========================================
 // ROUTER CENTRAL DE NAVEGACIÓN
 // ========================================
@@ -78,16 +82,38 @@ async function navigate(view) {
       break;
 
     case "clients":
+
+      try {
+        const data = await window.api.getClients();
+        window.clientsData = data;
+      } catch (e) {
+        console.error("Error loading clients:", e);
+      }
+
       document.getElementById(viewMap.clients).style.display = "block";
       renderClientsView?.();
       break;
 
     case "tickets":
+
+      try {
+        const data = await window.api.getTickets();
+        window.ticketsData = data; // 👈 clave
+      } catch (e) {
+        console.error("Error loading tickets:", e);
+      }
+
       document.getElementById(viewMap.tickets).style.display = "block";
       renderTicketsView?.();
       break;
 
     case "billing":
+
+      try {
+        const data = await window.api.getPayments?.();
+        window.billingData = data || [];
+      } catch (e) { }
+
       document.getElementById(viewMap.billing).style.display = "block";
       renderBillingView?.();
       break;
@@ -344,16 +370,15 @@ function renderAssistantsGrid() {
             Gestión técnica de proyectos desplegados en Railway
           </p>
         </div>
-        <input 
-          type="text" 
-          id="searchAssistants"
-          class="form-control form-control-sm bg-dark text-light border-secondary"
-          placeholder="Buscar asistente..."
-          style="width: 220px;"
-        >
-        <button class="btn btn-outline-light btn-sm" id="btnRefreshAssistants">
-             <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
-           </button>
+        <div class="d-flex gap-2">
+          <div class="input-group input-group-sm" style="width: 250px;">
+            <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control text-light" id="searchAssistants">
+          </div>
+          <button class="btn btn-outline-light btn-sm" id="btnRefreshAssistants">
+            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+          </button>
+        </div>
       </div>
       <div id="assistants-grid" class="row g-4"></div>
     </div>
@@ -891,7 +916,12 @@ async function updateDetailHeader(project) {
 
 function renderServices(project) {
 
-  if (isRefreshing) return;
+  // if (isRefreshing) return;
+  // FIX: evitar bloqueo del render inicial por smartRefresh
+  // `isRefreshing` podía estar activo cuando se abría el detail,
+  // impidiendo renderizar los servicios (panel vacío intermitente).
+  // Se elimina esta condición ya que el refresh en background
+  // no debe bloquear el render de UI.
 
   if (project.id !== selectedProjectId) return;
 
@@ -975,9 +1005,6 @@ function createServiceCard(service, project) {
   <div class="service-menu-item btn-vars">
   <i class="bi bi-sliders me-2"></i> Variables</div>
   <hr>
-  <div class="service-menu-item btn-webchat">
-  <i class="bi bi-chat-dots me-2"></i> Webchat</div>
-  <hr>
   <div class="service-menu-item btn-redeploy">
   <i class="bi bi-arrow-repeat me-2"></i> Redeploy</div>
  </div>
@@ -1022,19 +1049,6 @@ function createServiceCard(service, project) {
     setActiveServiceMenu(e.currentTarget);
 
     renderVariablesView(
-      service.projectId,
-      service.environmentId,
-      service.id,
-      service.name
-    );
-
-  });
-
-  div.querySelector(".btn-webchat")?.addEventListener("click", (e) => {
-
-    setActiveServiceMenu(e.currentTarget);
-
-    openWebchat(
       service.projectId,
       service.environmentId,
       service.id,
@@ -1395,51 +1409,15 @@ async function openDashboard(projectId, environmentId, serviceId) {
 
 function openFullDashboard(url) {
 
-  const detail = document.getElementById("assistant-detail");
+  if (!url) {
+    showToast("URL inválida", "danger");
+    return;
+  }
 
-  document.querySelector(".main-content").style.overflow = "hidden"; // bloqueamos el scrollbar del contenedor padre
+  window.api.openDashboardWindow(url);
 
-  detail.innerHTML = `
-    <div class="animate-fade d-flex flex-column" style="height:100vh;">
+  // Ahora abrimos el backoffice en una ventana externa dentro del programa para mayor comodidad
 
-      <!-- HEADER -->
-      <div class="d-flex justify-content-between align-items-center py-1 px-3 border-bottom border-secondary">
-
-        <button class="btn btn-outline-light btn-sm" id="btnBackToProject">
-          <i class="bi bi-arrow-left me-2"></i> Volver
-        </button>
-
-        <button class="btn btn-outline-info btn-sm"
-          onclick="window.api.openExternal('${url}')">
-          <i class="bi bi-box-arrow-up-right"></i>
-        </button>
-
-      </div>
-
-      <!-- IFRAME FULL -->
-      <iframe src="${url}"
-        style="height:calc(100vh - 100px);">
-      </iframe>
-
-    </div>
-  `;
-
-  document.getElementById("btnBackToProject").onclick = async () => {
-
-    document.querySelector(".main-content").style.overflow = "auto"; // restauramos el scroll al regresar
-
-    const detail = document.getElementById("assistant-detail");
-
-    detail.dataset.initialized = "";
-    detail.dataset.projectId = "";
-    detail.innerHTML = "";
-
-    const project = assistants.find(p => p.id === selectedProjectId);
-    if (project) {
-      renderDetail(project);
-    }
-
-  };
 }
 
 // --------------------------------------------------
@@ -1511,18 +1489,59 @@ function registerActivity() {
   window.addEventListener(evt, registerActivity);
 });
 
-function generateAssistantsHash() {
+// function generateAssistantsHash() {
 
-  if (!assistants) return ""
+//   if (!assistants) return ""
 
-  return assistants.map(project =>
+//   return assistants.map(project =>
 
+//     project.services.map(service =>
+//       `${service.id}-${service.status}-${service.deploymentId || ""}`
+//     ).join("|")
+
+//   ).join("#")
+
+// }
+
+function generateAssistantsHash() { // funcion hash ampliada
+
+  // -------------------------
+  // ASSISTANTS
+  // -------------------------
+  const assistantsHash = assistants?.map(project =>
     project.services.map(service =>
       `${service.id}-${service.status}-${service.deploymentId || ""}`
     ).join("|")
+  ).join("#") || "";
 
-  ).join("#")
+  // -------------------------
+  // CLIENTES
+  // -------------------------
+  const clientsHash = window.clientsData?.length
+    ? window.clientsData.map(c =>
+      `${c.id}-${c.updated_at || c.nombre || ""}`
+    ).join("|")
+    : "";
 
+  // -------------------------
+  // TICKETS
+  // -------------------------
+  const ticketsHash = window.ticketsData?.length
+    ? window.ticketsData.map(t =>
+      `${t.id}-${t.estado}-${t.updated_at || ""}`
+    ).join("|")
+    : "";
+
+  // -------------------------
+  // VARIABLES
+  // -------------------------
+  const variablesHash = window.variablesCache
+    ? Object.entries(window.variablesCache)
+      .map(([k, v]) => `${k}-${v}`)
+      .join("|")
+    : "";
+
+  return `${assistantsHash}||${clientsHash}||${ticketsHash}||${variablesHash}`;
 }
 
 async function smartRefresh() {
@@ -1536,6 +1555,16 @@ async function smartRefresh() {
     const previousHash = lastAssistantsHash;
 
     await loadAssistants(true);
+
+    try {
+      const clients = await window.api.getClients();
+      window.clientsData = clients;
+    } catch { }
+
+    try {
+      const tickets = await window.api.getTickets();
+      window.ticketsData = tickets;
+    } catch { }
 
     const currentHash = generateAssistantsHash();
 
@@ -1729,7 +1758,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 // =========================
 // DASHBOARD MAESTRO GLOBAL
 // =========================
+// FIX: asegurar consistencia de datos en dashboard
+// `assistants` es estado global y podía estar vacío o desactualizado,
+// generando métricas incorrectas (servicios, estados, etc).
+// Se fuerza `loadAssistants` antes de renderizar para garantizar datos actuales.
+// FIX: evitar render sin datos actualizados
+// Los botones llamaban solo a render (sin recargar datos),
+// mostrando información vieja en clientes/tickets.
+// Se asegura carga previa de datos antes de renderizar la vista.
 async function renderDashboard() {
+
+  await loadAssistants(false);
+
   selectedProjectId = null;
   document.querySelectorAll(".assistant-item").forEach(el => el.classList.remove("active-assistant"));
 
@@ -1790,7 +1830,7 @@ async function renderDashboard() {
 
           <!-- CARD CLIENTES -->
           <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="renderClientsView()">
+            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="loadClientsData(); renderClientsView();">
               <div class="display-5 fw-bold text-info">${activeClients.length}</div>
               <div class="text-uppercase small ls-1">Clientes Activos</div>
               <div class="mt-3">
