@@ -68,11 +68,6 @@ body {
    3. NAVBAR
 ========================================================= */
 
-.app-container {
-  display: flex;
-  height: 100vh;
-}
-
 /* SIDEBAR */
 
 .sidebar {
@@ -152,19 +147,8 @@ body {
   height: 100vh;
 }
 
-.topbar {
-  height: 60px;
-  border-bottom: 1px solid var(--border-soft);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-}
-
 .main-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
+  display: block;
 }
 
 /* =========================================================
@@ -813,4 +797,30 @@ body {
   border-radius: 50%;
   padding: 2px 6px;
   line-height: 1;
+}
+
+.notification-item {
+  padding: 14px 16px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.notification-item .fw-bold {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.notification-item .text-secondary {
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.notification-item .text-dim {
+  font-size: 11px;
+  opacity: 0.7;
 }

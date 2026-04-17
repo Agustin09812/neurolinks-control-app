@@ -26,7 +26,6 @@ async function navigate(view) {
     tickets: "tickets-view",
     billing: "billing-view",
     audit: "audit-view",
-    notifications: "notifications-view"
   };
 
   const views = Object.values(viewMap).concat(["assistant-detail"]);
@@ -222,6 +221,8 @@ function addNotification(type, title, message, key = null) {
   showNotificationToast(notification);
 
   console.log("Nueva notificación:", notification);
+
+  renderNotificationsPanel?.();
 }
 
 function showNotificationToast(notification) {
@@ -249,6 +250,21 @@ function markAllNotificationsRead() {
   updateNotificationsBadge();
 }
 
+function markNotificationAsRead(id) {
+  const notif = notifications.find(n => n.id === id);
+  if (!notif) return;
+  notif.read = true;
+  updateNotificationsBadge();
+  renderNotificationsPanel();
+}
+
+function clearAllNotifications() {
+  if (!confirm("¿Seguro que querés eliminar todas las notificaciones?")) return;
+  notifications = [];
+  updateNotificationsBadge();
+  renderNotificationsPanel();
+}
+
 function updateNotificationsBadge() {
 
   const badge = document.getElementById("notifications-badge");
@@ -264,6 +280,61 @@ function updateNotificationsBadge() {
 
   badge.style.display = "block";
   // badge.innerText = unread;
+}
+
+// --------------------------------------------------
+// NOTIFICATIONS PANEL (OFFCANVAS)
+// --------------------------------------------------
+
+function openNotificationsPanel() {
+
+  const canvasEl = document.getElementById("notificationsCanvas");
+  if (!canvasEl) return;
+
+  const canvas = bootstrap.Offcanvas.getOrCreateInstance(canvasEl);
+
+  renderNotificationsPanel();
+
+  canvas.show();
+}
+
+function renderNotificationsPanel() {
+
+  const container = document.getElementById("notifications-panel-list");
+  if (!container) return;
+
+  const list = getNotifications() || [];
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="glass-card p-3 text-center text-secondary">
+        No hay notificaciones
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = list.map(n => `
+
+        <div 
+          class="glass-card notification-item ${n.read ? "opacity-50" : ""}" 
+          onclick="markNotificationAsRead('${n.id}')"
+        >
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="fw-bold">${n.title}</div>
+            <div class="small text-secondary">
+              ${n.message}
+            </div>
+          </div>
+          <div class="small text-dim text-end" style="min-width:60px;">
+            ${new Date(n.date).toLocaleTimeString()}
+          </div>
+        </div>
+      </div>
+
+  `).join("");
+
 }
 
 // --------------------------------------------------
@@ -1688,7 +1759,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function initTooltips() {
 
     // eliminar tooltips anteriores (evita duplicados/glitches)
-    document.querySelectorAll('.sidebar-item').forEach(el => {
+    document.querySelectorAll('.sidebar-item, .has-tooltip').forEach(el => {
       if (el._tooltipInstance) {
         el._tooltipInstance.dispose();
         el._tooltipInstance = null;
@@ -1696,7 +1767,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // crear nuevos tooltips
-    document.querySelectorAll('.sidebar-item').forEach(el => {
+    document.querySelectorAll('.sidebar-item, .has-tooltip').forEach(el => {
 
       const tooltip = new bootstrap.Tooltip(el, {
         placement: 'right',

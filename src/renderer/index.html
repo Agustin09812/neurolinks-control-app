@@ -10,126 +10,97 @@
   <link rel="stylesheet" href="../../assets/css/styles.css">
 </head>
 
-<body class="bg-dark text-light vh-100 overflow-hidden d-flex flex-column">
+<body class="bg-dark text-light vh-100 overflow-hidden">
 
-  <div class="app-container">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
 
-    <!-- SIDEBAR -->
-    <div class="sidebar">
+    <div class="sidebar-menu">
 
-      <div class="sidebar-menu">
-
-        <div class="sidebar-item" id="btnDeployAssistant" title="Nuevo Proyecto">
-          <i class="bi bi-plus-lg"></i>
-        </div>
-
-        <div class="sidebar-item" data-view="dashboard" title="Dashboard">
-          <i class="bi bi-bar-chart"></i>
-        </div>
-
-        <div class="sidebar-item" data-view="clients" title="Clientes">
-          <i class="bi bi-people"></i>
-        </div>
-
-        <div class="sidebar-item" data-view="tickets" title="Tickets">
-          <i class="bi bi-ticket"></i>
-        </div>
-
-        <div class="sidebar-item" data-view="billing" title="Facturación">
-          <i class="bi bi-cash"></i>
-        </div>
-
-        <div class="sidebar-item" data-view="audit" title="Auditoría">
-          <i class="bi bi-clipboard-data"></i>
-        </div>
-
-        <div class="sidebar-item" data-view="assistants" title="Asistentes">
-          <i class="bi bi-cpu"></i>
-        </div>
-
+      <div class="sidebar-item" id="btnDeployAssistant" title="Nuevo Proyecto">
+        <i class="bi bi-plus-lg"></i>
       </div>
 
-      <!-- BOTTOM -->
-      <div class="sidebar-bottom">
+      <div class="sidebar-item" data-view="dashboard" title="Dashboard">
+        <i class="bi bi-bar-chart"></i>
+      </div>
 
-        <div class="sidebar-item" id="btn-updates" title="Actualizaciones">
-          <i class="bi bi-arrow-down-circle"></i>
-          <span id="updates-badge" class="sidebar-badge" style="display:none;">1</span>
-        </div>
+      <div class="sidebar-item" data-view="clients" title="Clientes">
+        <i class="bi bi-people"></i>
+      </div>
 
-        <div class="sidebar-item" id="btn-about" title="Acerca de">
-          <i class="bi bi-info-circle"></i>
-        </div>
+      <div class="sidebar-item" data-view="tickets" title="Tickets">
+        <i class="bi bi-ticket"></i>
+      </div>
 
-        <div class="sidebar-item" onclick="navigate('notifications')" title="Notificaciones">
-          <i class="bi bi-bell"></i>
-          <span id="notifications-badge" class="badge-dot"></span>
-        </div>
+      <div class="sidebar-item" data-view="billing" title="Facturación">
+        <i class="bi bi-cash"></i>
+      </div>
 
+      <div class="sidebar-item" data-view="audit" title="Auditoría">
+        <i class="bi bi-clipboard-data"></i>
+      </div>
+
+      <div class="sidebar-item" data-view="assistants" title="Asistentes">
+        <i class="bi bi-cpu"></i>
       </div>
 
     </div>
 
-    <!-- MAIN -->
-    <div class="main-wrapper">
+    <!-- BOTTOM -->
+    <div class="sidebar-bottom">
 
-      <!-- CONTENIDO -->
-      <div class="main-content">
+      <div class="sidebar-item" id="btn-updates" title="Actualizaciones">
+        <i class="bi bi-arrow-down-circle"></i>
+        <span id="updates-badge" class="sidebar-badge" style="display:none;">1</span>
+      </div>
 
-        <!-- CONTENT WRAPPER -->
-        <div class="flex-grow-1 overflow-hidden d-flex flex-column">
+      <div class="sidebar-item" id="btn-about" title="Acerca de">
+        <i class="bi bi-info-circle"></i>
+      </div>
 
-          <!-- DASHBOARD -->
-          <div id="dashboard-global" class="flex-grow-1 overflow-auto p-4">
-          </div>
-
-          <!-- ASISTANTS GRID (NUEVO) -->
-          <div id="assistants-view" class="flex-grow-1 overflow-auto p-4">
-          </div>
-
-          <!-- DETALLE DEL ASISTENTE -->
-          <div id="assistant-detail" class="flex-grow-1 overflow-auto p-4" style="display:none;">
-            <div id="detail-base-content">
-              <h5 class="text-secondary">Seleccioná un asistente</h5>
-            </div>
-          </div>
-
-          <!-- CLIENTES -->
-          <div id="clients-view" class="flex-grow-1 overflow-auto p-4">
-          </div>
-
-          <!-- TICKETS -->
-          <div id="tickets-view" class="flex-grow-1 overflow-auto p-4">
-          </div>
-
-          <!-- FACTURACIÓN -->
-          <div id="billing-view" class="flex-grow-1 overflow-auto p-4">
-          </div>
-
-          <!-- AUDITORÍA -->
-          <div id="audit-view" class="flex-grow-1 overflow-auto p-4">
-          </div>
-
-          <!-- LOGS -->
-          <div id="logs-view" class="flex-grow-1 overflow-auto p-4">
-          </div>
-
-          <!-- VARIABLES -->
-          <div id="variables-view" class="flex-grow-1 overflow-auto p-4"></div>
-
-          <!-- WEBCHAT -->
-          <div id="webchat-view" class="flex-grow-1 overflow-auto p-4"></div>
-
-          <!-- NOTIFICACIONES -->
-          <div id="notifications-view" class="flex-grow-1 overflow-auto p-4" title="Notificaciones"></div>
-
-        </div>
-
+      <div class="sidebar-item" onclick="openNotificationsPanel()" title="Notificaciones">
+        <i class="bi bi-bell"></i>
+        <span id="notifications-badge" class="badge-dot"></span>
       </div>
 
     </div>
 
   </div>
+
+  <!-- MAIN -->
+  <div class="main-wrapper">
+    <!-- CONTENIDO -->
+    <div class="main-content">
+      <!-- DASHBOARD -->
+      <div id="dashboard-global" class="flex-grow-1 overflow-auto p-4">
+      </div>
+      <!-- ASISTANTS GRID (NUEVO) -->
+      <div id="assistants-view" class="flex-grow-1 overflow-auto p-4">
+      </div>
+      <!-- DETALLE DEL ASISTENTE -->
+      <div id="assistant-detail" class="flex-grow-1 overflow-auto p-4" style="display:none;">
+        <div id="detail-base-content">
+          <h5 class="text-secondary">Seleccioná un asistente</h5>
+        </div>
+      </div>
+      <!-- CLIENTES -->
+      <div id="clients-view" class="flex-grow-1 overflow-auto p-4"></div>
+      <!-- TICKETS -->
+      <div id="tickets-view" class="flex-grow-1 overflow-auto p-4"></div>
+      <!-- FACTURACIÓN -->
+      <div id="billing-view" class="flex-grow-1 overflow-auto p-4"></div>
+      <!-- AUDITORÍA -->
+      <div id="audit-view" class="flex-grow-1 overflow-auto p-4"></div>
+      <!-- LOGS -->
+      <div id="logs-view" class="flex-grow-1 overflow-auto p-4"></div>
+      <!-- VARIABLES -->
+      <div id="variables-view" class="flex-grow-1 overflow-auto p-4"></div>
+      <!-- WEBCHAT -->
+      <div id="webchat-view" class="flex-grow-1 overflow-auto p-4"></div>
+    </div>
+  </div>
+
 
   <!-- RENAME PROJECT MODAL -->
   <div class="modal fade" id="renameProjectModal" tabindex="-1">
@@ -328,9 +299,43 @@
     </div>
   </div>
 
+  <!-- OFFCANVAS NOTIFICATIONS -->
+  <div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="notificationsCanvas" style="width: 400px;">
+    <div class="offcanvas-header border-bottom border-secondary">
+      <h5 class="offcanvas-title fw-bold">
+        <i class="bi bi-bell me-2"></i> Notificaciones
+      </h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div class="d-flex justify-content-between mb-3">
+        <div class="d-flex gap-2">
+
+          <!-- Marcar como leídas -->
+          <button class="btn btn-outline-light btn-sm has-tooltip" onclick="markAllNotificationsRead()"
+            title="Marcar como leídas">
+            <i class="bi bi-envelope-open"></i>
+          </button>
+
+          <!-- Vaciar notificaciones -->
+          <button class="btn btn-outline-danger btn-sm has-tooltip" onclick="clearAllNotifications()"
+            title="Vaciar notificaciones">
+            <i class="bi bi-trash"></i>
+          </button>
+
+        </div>
+        <!-- <button class="btn btn-outline-info btn-sm" onclick="testNotification()">
+          Test
+        </button> -->
+      </div>
+      <div id="notifications-panel-list" class="d-flex flex-column gap-3"></div>
+    </div>
+  </div>
+
 
   <!-- JS -->
   <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="core/render.js" defer></script>
   <script src="views/clients-view.js" defer></script>
   <script src="views/tickets-view.js" defer></script>
   <script src="views/billing-view.js" defer></script>
@@ -339,8 +344,6 @@
   <script src="views/variables-view.js" defer></script>
   <script src="views/webchat-view.js" defer></script>
   <script src="views/dashboard-view.js" defer></script>
-  <script src="views/notifications-view.js" defer></script>
-  <script src="core/render.js" defer></script>
   <!-- Templates de despliegue -->
   <script src="core/deploy-template.js" defer></script>
 </body>
