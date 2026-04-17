@@ -132,6 +132,12 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke("start-update");
   },
 
+  onUpdateDownloaded: (callback) => {
+    ipcRenderer.on("update-downloaded", () => {
+      callback();
+    });
+  },
+
   // --------------------------------------------------
   // SUPABASE / CRM
   // --------------------------------------------------

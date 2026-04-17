@@ -1,12 +1,12 @@
 function renderNotificationsView() {
 
-  const view = document.getElementById("notifications-view");
+    const view = document.getElementById("notifications-view");
 
-  if (!view) return;
+    if (!view) return;
 
-  const list = getNotifications();
+    const list = getNotifications();
 
-  view.innerHTML = `
+    view.innerHTML = `
     
     <div class="animate-fade mt-4">
 

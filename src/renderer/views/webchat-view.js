@@ -1,40 +1,69 @@
-
 async function renderWebchatView(serviceDomain, serviceName) {
 
-    const panel = document.getElementById("detail-side-panel");
-    if (!panel) return;
+  let url = serviceDomain;
+  if (!url.endsWith('/')) url += '/';
+  url += 'webchat';
 
-    let url = serviceDomain;
-    if (!url.endsWith('/')) url += '/';
-    url += 'webchat';
+  // 🔥 ocultar todo
+  document.getElementById("assistant-detail").style.display = "none";
+  document.getElementById("logs-view").style.display = "none";
+  document.getElementById("variables-view").style.display = "none";
 
-    panel.innerHTML = `
-        <div class="glass-card p-0 border-top border-primary border-3 overflow-hidden shadow-lg animate-fade-up"
-            style="height: 100%; border-radius: 15px;">
+  const view = document.getElementById("webchat-view");
+  if (!view) return;
 
-            <div class="d-flex justify-content-between align-items-center p-3
-                        bg-dark bg-opacity-50 border-bottom border-secondary border-opacity-20">
-                <h5 class="mb-0 text-primary fw-bold">
-                    <i class="bi bi-chat-dots me-2"></i> Webchat: ${serviceName}
-                </h5>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-info"
-                        onclick="window.api.openExternal('${url}')"
-                        title="Abrir en Navegador">
-                        <i class="bi bi-box-arrow-up-right"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-light"
-                        onclick="document.getElementById('detail-side-panel').innerHTML = ''">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-            </div>
+  view.style.display = "block";
 
-            <iframe src="${url}"
-                style="width: 100%; height: calc(100% - 62px); border: none; background: #f8f9fa;"
-                allow="clipboard-read; clipboard-write; microphone; camera">
-            </iframe>
+  view.innerHTML = `
+      <div class="animate-fade mt-4">
+
+        <!-- HEADER -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+
+          <h5 class="fw-bold text-info mb-0">
+            <i class="bi bi-chat-dots me-2"></i>
+            Webchat: ${serviceName}
+          </h5>
+
+          <div class="d-flex gap-2">
+
+            <button class="btn btn-outline-info btn-sm"
+              onclick="window.api.openExternal('${url}')">
+              <i class="bi bi-box-arrow-up-right"></i>
+            </button>
+
+            <button class="btn btn-outline-light btn-sm" id="btnBackToDetail">
+              <i class="bi bi-arrow-left"></i>
+            </button>
+
+          </div>
 
         </div>
+
+        <!-- IFRAME FULL -->
+        <div class="glass-card p-0 overflow-hidden" style="height: calc(100vh - 180px);">
+
+          <iframe 
+            src="${url}"
+            style="width:100%; height:100%; border:none; background:#0a0c14;"
+            allow="clipboard-read; clipboard-write; microphone; camera">
+          </iframe>
+
+        </div>
+
+      </div>
     `;
+
+  // volver al detalle
+  document.getElementById("btnBackToDetail").onclick = () => {
+
+    clearActiveServiceMenu();
+
+    view.style.display = "none";
+
+    const detail = document.getElementById("assistant-detail");
+    detail.style.display = "block";
+
+  };
+
 }

@@ -68,79 +68,103 @@ body {
    3. NAVBAR
 ========================================================= */
 
-.nav-top {
+.app-container {
+  display: flex;
+  height: 100vh;
+}
+
+/* SIDEBAR */
+
+.sidebar {
+  width: 70px;
+  min-width: 70px;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 0;
+  z-index: 1000;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ITEMS */
+
+.sidebar-item {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s ease;
   position: relative;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  transition: all 0.25s ease;
-  color: var(--text-dim) !important;
-  padding-left: 8px;
-  padding-right: 8px;
 }
 
-#btnNotifications {
-  color: var(--text-dim) !important;
-  transition: all 0.25s ease;
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
 }
 
-#btnNotifications:hover {
-  color: var(--text-main) !important;
-  transform: translateY(-1px);
+.sidebar-item.active {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: #000;
 }
 
-/* Hover */
-.nav-top:hover {
-  color: var(--text-main) !important;
-  transform: translateY(-1px);
-}
+/* NOTIFICATION DOT */
 
-/* Línea animada */
-.nav-top::after {
-  content: "";
+.badge-dot {
   position: absolute;
-  bottom: 4px;
-  left: 50%;
-  width: 0%;
-  height: 2px;
-  background: var(--accent-primary);
-  transition: all 0.3s ease;
-  transform: translateX(-50%);
-  border-radius: 2px;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: red;
+  border-radius: 50%;
+  display: none;
 }
 
-/* Hover underline */
-.nav-top:hover::after {
-  width: 60%;
+/* MAIN */
+
+.main-wrapper {
+  margin-left: 70px;
+  width: calc(100% - 70px);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
 
-/* Active */
-.nav-top.active {
-  color: var(--text-main) !important;
-  font-weight: 600;
+.topbar {
+  height: 60px;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
 }
 
-.nav-top.active::after {
-  width: 80%;
-  background: linear-gradient(90deg,
-      var(--accent-primary),
-      var(--accent-secondary));
-}
-
-.view-transition {
-  animation: fadeInView 0.3s ease;
-}
-
-@keyframes fadeInView {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
 }
 
 /* =========================================================
@@ -564,8 +588,9 @@ body {
   font-size: 12px;
   line-height: 1.35;
   white-space: pre-wrap;
-  text-wrap: balance;
+  word-break: break-all;
 }
+
 
 /* =========================================================
    17. SERVICES BUTTONS MENU
@@ -623,6 +648,76 @@ body {
   background: rgba(0, 210, 255, 0.15);
   color: #00d2ff;
   border: 1px solid rgba(0, 210, 255, 0.3);
+}
+
+/* =========================================================
+   18. LOGS STYLES  
+========================================================= */
+
+.log-line {
+  font-family: monospace;
+  font-size: 12px;
+  padding: 3px 6px;
+  display: flex;
+  gap: 8px;
+  border-left: 3px solid transparent;
+}
+
+/* TIME */
+.log-time {
+  color: #6c757d;
+  min-width: 75px;
+}
+
+/* LABEL */
+.log-label {
+  font-weight: bold;
+  min-width: 60px;
+}
+
+/* MSG */
+.log-msg {
+  flex: 1;
+  word-break: break-word;
+}
+
+/* ESTILOS */
+.log-info {
+  border-left-color: #0dcaf0;
+}
+
+.log-info .log-label {
+  color: #0dcaf0;
+}
+
+.log-warn {
+  border-left-color: #ffc107;
+}
+
+.log-warn .log-label {
+  color: #ffc107;
+}
+
+.log-error {
+  border-left-color: #ff4d4f;
+  background: rgba(255, 77, 79, 0.05);
+}
+
+.log-error .log-label {
+  color: #ff4d4f;
+}
+
+.log-debug {
+  border-left-color: #adb5bd;
+}
+
+.log-debug .log-label {
+  color: #adb5bd;
+}
+
+/* hover */
+.log-line:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 /* =========================================================
@@ -705,4 +800,17 @@ body {
   100% {
     transform: scale(1);
   }
+}
+
+.sidebar-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #ff3b3b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 50%;
+  padding: 2px 6px;
+  line-height: 1;
 }

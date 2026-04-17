@@ -11,22 +11,22 @@
 
 <body>
 
-    <nav class="navbar navbar-expand-lg border-bottom sticky-top">
-        <div class="container-fluid">
-            <span class="navbar-brand d-flex align-items-center fw-bold">
-                <i class="bi bi-people-fill text-danger me-2 fs-4"></i> NEUROLINKS <span
-                    class="text-danger ms-1">CLIENTES</span>
-            </span>
-            <div class="d-flex gap-3">
-                <button class="btn btn-outline-custom" onclick="window.api.openTickets()">
-                    <i class="bi bi-ticket-perforated me-2"></i> Gestión de Tickets
-                </button>
-                <button class="btn btn-premium" onclick="openNewClientModal()">
-                    <i class="bi bi-person-plus-fill me-2"></i> Nuevo Cliente
-                </button>
-            </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center fw-bold">
+            <i class="bi bi-people-fill text-danger me-2 fs-4"></i>
+            <span>NEUROLINKS <span class="text-danger">CLIENTES</span></span>
         </div>
-    </nav>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-custom btn-sm" onclick="window.api.openTickets()">
+                <i class="bi bi-ticket-perforated me-1"></i> Tickets
+            </button>
+
+            <button class="btn btn-premium btn-sm" onclick="openNewClientModal()">
+                <i class="bi bi-person-plus-fill me-1"></i> Nuevo
+            </button>
+        </div>
+    </div>
 
     <div class="container-fluid py-4 px-4">
         <!-- Filtros -->

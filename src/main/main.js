@@ -171,6 +171,7 @@ app.whenReady().then(() => {
 });
 
 
+
 // ======================================================
 // AUTO UPDATE
 // ======================================================
@@ -220,6 +221,11 @@ autoUpdater.on("download-progress", (progress) => {
 
 
 autoUpdater.on("update-downloaded", () => {
+
+  // avisar al renderer
+  if (mainWindow) {
+    mainWindow.webContents.send("update-downloaded");
+  }
 
   dialog.showMessageBox({
     type: "info",

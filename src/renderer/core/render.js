@@ -14,20 +14,22 @@ async function navigate(view) {
 
   localStorage.setItem("activeView", view);
 
-  const views = [
-    "dashboard-global",
-    "assistants-view",
-    "assistant-detail",
-    "clients-view",
-    "tickets-view",
-    "billing-view",
-    "audit-view",
-    "notifications-view"
-  ];
+  // Mapeo correcto de vistas → IDs reales
+  const viewMap = {
+    dashboard: "dashboard-global",
+    assistants: "assistants-view",
+    clients: "clients-view",
+    tickets: "tickets-view",
+    billing: "billing-view",
+    audit: "audit-view",
+    notifications: "notifications-view"
+  };
 
-  const activeViewEl = document.getElementById(`${view}-view`)
-    || document.getElementById("dashboard-global");
+  const views = Object.values(viewMap).concat(["assistant-detail"]);
 
+  const activeViewEl = document.getElementById(viewMap[view]);
+
+  // Animación
   if (activeViewEl) {
     activeViewEl.classList.add("view-transition");
     setTimeout(() => {
@@ -35,31 +37,32 @@ async function navigate(view) {
     }, 300);
   }
 
+  // Ocultar todas
   views.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
 
-  // Reset active state del navbar
-  document.querySelectorAll(".nav-top").forEach(btn => {
+  // Reset active sidebar
+  document.querySelectorAll(".sidebar-item").forEach(btn => {
     btn.classList.remove("active");
   });
 
-  // Activar botón correcto
-  const activeBtn = document.querySelector(`.nav-top[data-view="${view}"]`);
+  // Activar botón actual
+  const activeBtn = document.querySelector(`.sidebar-item[data-view="${view}"]`);
   if (activeBtn) activeBtn.classList.add("active");
 
-  // Mostrar vista correcta
+  // Render de vista
   switch (view) {
 
     case "dashboard":
-      document.getElementById("dashboard-global").style.display = "block";
+      document.getElementById(viewMap.dashboard).style.display = "block";
       renderDashboard?.();
       break;
 
     case "assistants":
 
-      // reset detail panel si estaba abierto
+      // Reset detail panel
       const detail = document.getElementById("assistant-detail");
       if (detail) {
         detail.dataset.initialized = "";
@@ -69,39 +72,48 @@ async function navigate(view) {
 
       await loadAssistants(false);
 
-      document.getElementById("assistants-view").style.display = "block";
+      document.getElementById(viewMap.assistants).style.display = "block";
 
       renderAssistantsGrid?.();
-
       break;
 
     case "clients":
-      document.getElementById("clients-view").style.display = "block";
+      document.getElementById(viewMap.clients).style.display = "block";
       renderClientsView?.();
       break;
 
     case "tickets":
-      document.getElementById("tickets-view").style.display = "block";
+      document.getElementById(viewMap.tickets).style.display = "block";
       renderTicketsView?.();
       break;
 
     case "billing":
-      document.getElementById("billing-view").style.display = "block";
+      document.getElementById(viewMap.billing).style.display = "block";
       renderBillingView?.();
       break;
 
     case "audit":
-      document.getElementById("audit-view").style.display = "block";
+      document.getElementById(viewMap.audit).style.display = "block";
       renderAuditView?.();
       break;
 
     case "notifications":
-      document.getElementById("notifications-view").style.display = "block";
+      document.getElementById(viewMap.notifications).style.display = "block";
       renderNotificationsView?.();
       break;
 
   }
 
+}
+
+// --------------------------------------------------
+// FUNCION PARA SACAR ELEMENTO ACTIVE DE MENUS
+// --------------------------------------------------
+
+function clearActiveServiceMenu() {
+  document
+    .querySelectorAll(".service-menu-item.active")
+    .forEach(el => el.classList.remove("active"));
 }
 
 // --------------------------------------------------
@@ -225,7 +237,7 @@ function updateNotificationsBadge() {
   }
 
   badge.style.display = "block";
-  badge.innerText = unread;
+  // badge.innerText = unread;
 }
 
 // --------------------------------------------------
@@ -257,8 +269,16 @@ async function loadAssistants(preserveSelection = true) {
 
   const isAssistantsView = document.getElementById("assistants-view").style.display === "block";
 
+  const gridExists = document.getElementById("assistants-grid");
+
   if (isAssistantsView) {
-    renderAssistantsGrid();
+
+    if (!gridExists) {
+      renderAssistantsGrid(); // primera vez
+    } else {
+      patchAssistantsGrid(); // actualiza sin romper input
+    }
+
   }
 }
 
@@ -324,6 +344,13 @@ function renderAssistantsGrid() {
             Gestión técnica de proyectos desplegados en Railway
           </p>
         </div>
+        <input 
+          type="text" 
+          id="searchAssistants"
+          class="form-control form-control-sm bg-dark text-light border-secondary"
+          placeholder="Buscar asistente..."
+          style="width: 220px;"
+        >
         <button class="btn btn-outline-light btn-sm" id="btnRefreshAssistants">
              <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
            </button>
@@ -366,7 +393,10 @@ function renderAssistantsGrid() {
     const hasUpdate = project.services.some(s => s.isUpdatable);
 
     col.innerHTML = `
-      <div class="glass-card p-4 h-100 assistant-card hover-lift" style="cursor:pointer;">
+      <div class="glass-card p-4 h-100 assistant-card hover-lift"
+      data-id="${project.id}" 
+      data-name="${project.name.toLowerCase()}"
+      style="cursor:pointer;">
         <div class="d-flex justify-content-between align-items-start mb-3">
           <h5 class="fw-bold mb-0 text-truncate" style="max-width: 75%;">
             ${project.name}
@@ -412,6 +442,79 @@ function renderAssistantsGrid() {
 
     grid.appendChild(col);
   });
+
+  const searchInput = document.getElementById("searchAssistants");
+
+  if (searchInput) {
+
+    searchInput.addEventListener("input", (e) => {
+
+      const value = e.target.value.toLowerCase();
+
+      let visible = 0;
+
+      document.querySelectorAll(".assistant-card").forEach(card => {
+
+        const name = card.dataset.name;
+        const col = card.closest("[class*='col-']");
+
+        if (name.includes(value)) {
+          col.style.display = "";
+          visible++;
+        } else {
+          col.style.display = "none";
+        }
+
+      });
+
+      // Mensaje vacío
+      let empty = document.getElementById("empty-search");
+
+      if (visible === 0) {
+        if (!empty) {
+          document.getElementById("assistants-grid").insertAdjacentHTML("beforeend", `
+          <div id="empty-search" class="col-12 text-center text-secondary py-5">
+            No se encontraron asistentes
+          </div>
+        `);
+        }
+      } else {
+        if (empty) empty.remove();
+      }
+
+    });
+
+  }
+}
+
+function patchAssistantsGrid() {
+
+  const grid = document.getElementById("assistants-grid");
+  if (!grid) return;
+
+  assistants.forEach(project => {
+
+    const card = grid.querySelector(`[data-id="${project.id}"]`);
+    if (!card) return;
+
+    const badge = card.querySelector(".badge");
+    if (!badge) return;
+
+    const statusColor =
+      project.status === "online" ? "success" :
+        project.status === "error" ? "danger" :
+          project.status === "checking" ? "warning" :
+            "secondary";
+
+    badge.className = `
+      badge bg-${statusColor} bg-opacity-10 text-${statusColor}
+      border border-${statusColor} border-opacity-25
+    `;
+
+    badge.innerText = project.status.toUpperCase();
+
+  });
+
 }
 
 // --------------------------------------------------
@@ -465,6 +568,18 @@ async function renderDetail(project, isRefresh = false) {
 
     patchServices(project);
 
+    if (project.services?.length > 0) {
+
+      const s = project.services[0];
+
+      openDashboard(
+        s.projectId,
+        s.environmentId,
+        s.id
+      );
+
+    }
+
   }
 }
 
@@ -491,7 +606,7 @@ function renderDetailStructure(project) {
   detail.style.display = "block";
 
   detail.innerHTML = `
-<div class="animate-fade mt-4">
+<div class="animate-fade">
 
   <!-- BOTÓN VOLVER -->
   <div class="d-flex justify-content-between align-items-center mb-4">
@@ -543,9 +658,7 @@ function renderDetailStructure(project) {
                 </button>
               </li>
 
-              <li>
-                <hr class="dropdown-divider">
-              </li>
+              <li><hr class="dropdown-divider"></li>
 
               <li>
                 <button class="dropdown-item text-danger btn-delete-project">
@@ -624,6 +737,9 @@ function renderDetailStructure(project) {
   detail.querySelector(".btn-delete-project").addEventListener("click", () => {
     handleDeleteProject(project.id);
   });
+
+  const getMainService = () => project.services?.[0];
+
 }
 
 async function updateDetailHeader(project) {
@@ -786,7 +902,7 @@ function renderServices(project) {
 
   const freshProject = assistants.find(a => a.id === project.id);
 
-  if (!freshProject || !freshProject.services) {
+  if (!freshProject || !freshProject.services || freshProject.services.length === 0) {
     container.innerHTML = `
       <div class="text-center text-secondary py-4">
         Cargando servicios...
@@ -799,6 +915,18 @@ function renderServices(project) {
     const card = createServiceCard(service, freshProject);
     container.appendChild(card);
   });
+
+  if (freshProject.services.length > 0) {
+
+    const s = freshProject.services[0];
+
+    openDashboard(
+      s.projectId,
+      s.environmentId,
+      s.id
+    );
+
+  }
 }
 
 function createServiceCard(service, project) {
@@ -838,42 +966,22 @@ function createServiceCard(service, project) {
     Último deploy: ${formatDate(service.createdAt)}
   </div>
 
-  <!-- MENU -->
   <div class="service-menu-wrapper">
+ <div class="service-menu">
 
-    <div class="service-menu">
-
-      <div class="service-menu-item btn-logs">
-        <i class="bi bi-terminal me-2"></i> Logs
-      </div>
-
-      <hr>
-
-      <div class="service-menu-item btn-vars">
-        <i class="bi bi-sliders me-2"></i> Variables
-      </div>
-
-      <hr>
-
-      <div class="service-menu-item btn-dashboard">
-        <i class="bi bi-speedometer2 me-2"></i> Dashboard
-      </div>
-
-      <hr>
-
-      <div class="service-menu-item btn-webchat">
-        <i class="bi bi-chat-dots me-2"></i> Webchat
-      </div>
-
-      <hr>
-
-      <div class="service-menu-item btn-redeploy">
-        <i class="bi bi-arrow-repeat me-2"></i> Redeploy
-      </div>
-
-    </div>
-
-  </div>
+  <div class="service-menu-item btn-logs">
+  <i class="bi bi-terminal me-2"></i> Logs</div>
+  <hr>
+  <div class="service-menu-item btn-vars">
+  <i class="bi bi-sliders me-2"></i> Variables</div>
+  <hr>
+  <div class="service-menu-item btn-webchat">
+  <i class="bi bi-chat-dots me-2"></i> Webchat</div>
+  <hr>
+  <div class="service-menu-item btn-redeploy">
+  <i class="bi bi-arrow-repeat me-2"></i> Redeploy</div>
+ </div>
+</div>
 `;
 
   function setActiveServiceMenu(el) {
@@ -918,18 +1026,6 @@ function createServiceCard(service, project) {
       service.environmentId,
       service.id,
       service.name
-    );
-
-  });
-
-  div.querySelector(".btn-dashboard")?.addEventListener("click", (e) => {
-
-    setActiveServiceMenu(e.currentTarget);
-
-    openDashboard(
-      service.projectId,
-      service.environmentId,
-      service.id
     );
 
   });
@@ -1297,6 +1393,55 @@ async function openDashboard(projectId, environmentId, serviceId) {
   }
 }
 
+function openFullDashboard(url) {
+
+  const detail = document.getElementById("assistant-detail");
+
+  document.querySelector(".main-content").style.overflow = "hidden"; // bloqueamos el scrollbar del contenedor padre
+
+  detail.innerHTML = `
+    <div class="animate-fade d-flex flex-column" style="height:100vh;">
+
+      <!-- HEADER -->
+      <div class="d-flex justify-content-between align-items-center py-1 px-3 border-bottom border-secondary">
+
+        <button class="btn btn-outline-light btn-sm" id="btnBackToProject">
+          <i class="bi bi-arrow-left me-2"></i> Volver
+        </button>
+
+        <button class="btn btn-outline-info btn-sm"
+          onclick="window.api.openExternal('${url}')">
+          <i class="bi bi-box-arrow-up-right"></i>
+        </button>
+
+      </div>
+
+      <!-- IFRAME FULL -->
+      <iframe src="${url}"
+        style="height:calc(100vh - 100px);">
+      </iframe>
+
+    </div>
+  `;
+
+  document.getElementById("btnBackToProject").onclick = async () => {
+
+    document.querySelector(".main-content").style.overflow = "auto"; // restauramos el scroll al regresar
+
+    const detail = document.getElementById("assistant-detail");
+
+    detail.dataset.initialized = "";
+    detail.dataset.projectId = "";
+    detail.innerHTML = "";
+
+    const project = assistants.find(p => p.id === selectedProjectId);
+    if (project) {
+      renderDetail(project);
+    }
+
+  };
+}
+
 // --------------------------------------------------
 // WEBCHAT
 // --------------------------------------------------
@@ -1494,18 +1639,55 @@ document.addEventListener("DOMContentLoaded", async () => {
   const el = document.getElementById("app-version");
   if (el) el.textContent = "v" + version;
 
-  document.querySelectorAll(".nav-top").forEach(btn => {
+  document.querySelectorAll(".sidebar-item").forEach(btn => {
     btn.addEventListener("click", async () => {
+
       const view = btn.dataset.view;
+
+      if (!view) return;
 
       if (view === "assistants" && assistants.length === 0) {
         await loadAssistants(false);
-        lastAssistantsHash = generateAssistantsHash(); // Al cargar la app, inicializamos el HASH
+        lastAssistantsHash = generateAssistantsHash();
       }
 
       navigate(view);
+
     });
   });
+
+  function initTooltips() {
+
+    // eliminar tooltips anteriores (evita duplicados/glitches)
+    document.querySelectorAll('.sidebar-item').forEach(el => {
+      if (el._tooltipInstance) {
+        el._tooltipInstance.dispose();
+        el._tooltipInstance = null;
+      }
+    });
+
+    // crear nuevos tooltips
+    document.querySelectorAll('.sidebar-item').forEach(el => {
+
+      const tooltip = new bootstrap.Tooltip(el, {
+        placement: 'right',
+        trigger: 'hover',
+        delay: { show: 200, hide: 100 }
+      });
+
+      // guardar instancia para controlarla después
+      el._tooltipInstance = tooltip;
+
+      // aseguramos que se cierre SIEMPRE al salir
+      el.addEventListener('mouseleave', () => {
+        tooltip.hide();
+      });
+
+    });
+
+  }
+
+  initTooltips();
 
   // Cargar datos iniciales
   await loadAssistants(false);
@@ -1514,6 +1696,33 @@ document.addEventListener("DOMContentLoaded", async () => {
   navigate(savedView);
 
   document.body.classList.remove("app-preload");
+
+  // --------------------------------------
+  // BOTÓN ABOUT
+  // --------------------------------------
+  const btnAbout = document.getElementById("btn-about");
+
+  if (btnAbout) {
+    btnAbout.addEventListener("click", async () => {
+
+      const modalEl = document.getElementById("aboutModal");
+      if (!modalEl) {
+        console.error("aboutModal no existe");
+        return;
+      }
+
+      const version = await window.api.getAppVersion();
+
+      const versionEl = document.getElementById("about-version");
+      if (versionEl) {
+        versionEl.textContent = "v" + version;
+      }
+
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      modal.show();
+
+    });
+  }
 
 });
 
@@ -1563,7 +1772,7 @@ async function renderDashboard() {
     });
 
     dash.innerHTML = `
-      <div class="animate-fade mt-4">
+      <div class="animate-fade">
         <h2 class="mb-4 fw-bold">DASHBOARD</h2>
         
         <div class="row g-4 mb-5">
@@ -1687,21 +1896,38 @@ window.api.onSelectProject((projectId) => {
 
 let updateData = null;
 
+// CUANDO HAY UPDATE
 window.api.onUpdateAvailable((data) => {
 
   updateData = data;
-  const banner = document.getElementById("update-banner");
-  const version = document.getElementById("update-version");
-  if (!banner) return;
-  banner.classList.add("show");
-  version.textContent = `v${data.version}`;
+
+  const badge = document.getElementById("updates-badge");
+  if (badge) {
+    badge.style.display = "inline-block";
+    badge.innerText = "1";
+  }
 
 });
 
+// --------------------------------------------------
+// CUANDO YA SE DESCARGÓ
+// --------------------------------------------------
 
-// ABRIR MODAL CON CAMBIOS
+window.api.onUpdateDownloaded(() => {
 
-document.getElementById("btnViewChanges")?.addEventListener("click", () => {
+  const badge = document.getElementById("updates-badge");
+
+  if (badge) {
+    badge.style.display = "none";
+  }
+
+});
+
+// --------------------------------------------------
+// ABRIR MODAL
+// --------------------------------------------------
+
+function openUpdateModal() {
 
   if (!updateData) return;
 
@@ -1713,9 +1939,7 @@ document.getElementById("btnViewChanges")?.addEventListener("click", () => {
   const releaseNotes = updateData.notes || [];
 
   if (Array.isArray(releaseNotes)) {
-    notes.innerHTML = releaseNotes
-      .map(n => "• " + n)
-      .join("<br>");
+    notes.innerHTML = releaseNotes.map(n => "• " + n).join("<br>");
   } else {
     notes.textContent = releaseNotes;
   }
@@ -1723,26 +1947,47 @@ document.getElementById("btnViewChanges")?.addEventListener("click", () => {
   const modal = new bootstrap.Modal(document.getElementById("updateModal"));
   modal.show();
 
+  // 🚫 NO tocar el badge acá
+
+}
+
+// --------------------------------------------------
+// BOTÓN SIDEBAR
+// --------------------------------------------------
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const btn = document.getElementById("btn-updates");
+
+  if (btn) {
+    btn.addEventListener("click", openUpdateModal);
+  }
+
 });
 
-
-// BOTON ACTUALIZAR
+// --------------------------------------------------
+// BOTÓN ACTUALIZAR
+// --------------------------------------------------
 
 document.getElementById("btnModalUpdate")?.addEventListener("click", () => {
 
   if (!confirm("¿Descargar e instalar la nueva versión?")) return;
+
   window.api.startUpdate();
 
 });
 
-
-// PROGRESO DE DESCARGA
+// --------------------------------------------------
+// PROGRESO
+// --------------------------------------------------
 
 window.api.onUpdateProgress((percent) => {
 
   const progress = document.getElementById("update-progress");
   const bar = document.getElementById("update-progress-bar");
+
   if (!progress) return;
+
   progress.classList.remove("d-none");
   bar.style.width = percent + "%";
 
