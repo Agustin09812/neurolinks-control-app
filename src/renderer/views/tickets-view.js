@@ -12,7 +12,7 @@ let ticketFilters = {
 
 // paginacion
 let currentPage = 1;
-const ITEMS_PER_PAGE = 15;
+const ITEMS_PER_PAGE = 5;
 
 async function renderTicketsView(filterClientId = "") {
     selectedProjectId = null;

@@ -17,32 +17,49 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
         <div class="variables-panel animate-fade-up">
 
             <!-- HEADER -->
-            <div class="variables-header">
-                <h5 class="text-warning m-0">
-                    <i class="bi bi-sliders me-2"></i> Variables: ${serviceName}
-                </h5>
+            <div class="variables-header d-flex justify-content-between align-items-center mb-3">
+
+                <div>
+                    <h5 class="text-warning m-0">
+                        <i class="bi bi-sliders me-2"></i> Variables: ${serviceName}
+                    </h5>
+                    <small class="text-secondary">Configuración del servicio</small>
+                </div>
 
                 <div class="d-flex gap-2">
                     <button class="btn btn-sm btn-warning" id="btn-add-var">
                         <i class="bi bi-plus-lg"></i>
                     </button>
-
+        
                     <button class="btn btn-sm btn-outline-light" id="btnBackVars">
                         <i class="bi bi-arrow-left"></i>
                     </button>
                 </div>
+        
+            </div>
+
+            <!-- SEARCH -->
+            <div class="mb-3">
+                <input 
+                    type="text" 
+                    id="vars-search" 
+                    class="form-control form-control-sm text-light"
+                    placeholder="Buscar variable..."
+                >
             </div>
 
             <!-- FORM -->
-            <div id="vars-form" class="variables-form d-none">
+            <div id="vars-form" class="variables-form d-none mb-3">
                 <div class="row g-2">
                     <div class="col-md-5">
                         <input type="text" id="new-var-name"
-                            class="form-control form-control-sm text-light">
+                            class="form-control form-control-sm text-light"
+                            placeholder="Nombre">
                     </div>
                     <div class="col-md-5">
                         <input type="text" id="new-var-value"
-                            class="form-control form-control-sm text-light">
+                            class="form-control form-control-sm text-light"
+                            placeholder="Valor">
                     </div>
                     <div class="col-md-2 d-grid">
                         <button class="btn btn-warning btn-sm" id="btn-save-var">
@@ -103,25 +120,25 @@ async function loadVariables(projectId, environmentId, serviceId) {
         }
 
         grid.innerHTML = entries.map(([key, value]) => `
-            <div class="var-row">
-
-                <div class="var-info">
-                    <div class="var-key">${key}</div>
-                    <div class="var-value">${value}</div>
+            <div class="var-card">
+                <div class="var-card-header">
+                    <div class="var-key-row">
+                        <span class="var-key">${key}</span>
+                        <div class="var-actions-inline">
+                            <span class="badge badge-edit"
+                                onclick="openEditModal('${projectId}', '${environmentId}', '${serviceId}', \`${key}\`, \`${value}\`)">
+                                <i class="bi bi-pencil"></i>
+                            </span>
+                            <span class="badge badge-delete"
+                                onclick="handleDeleteVariable('${projectId}', '${environmentId}', '${serviceId}', '${key}')">
+                                <i class="bi bi-trash"></i>
+                            </span>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="var-actions">
-                    <button class="btn btn-sm btn-outline-info"
-                        onclick="openEditModal('${projectId}', '${environmentId}', '${serviceId}', \`${key}\`, \`${value}\`)">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-
-                    <button class="btn btn-sm btn-outline-danger"
-                        onclick="handleDeleteVariable('${projectId}', '${environmentId}', '${serviceId}', '${key}')">
-                        <i class="bi bi-trash"></i>
-                    </button>
+                <div class="var-card-body">
+                    <pre class="var-value">${value}</pre>
                 </div>
-
             </div>
         `).join("");
 
@@ -133,6 +150,32 @@ async function loadVariables(projectId, environmentId, serviceId) {
             </div>
         `;
     }
+
+    const searchInput = document.getElementById("vars-search");
+
+    if (searchInput) {
+
+        searchInput.oninput = (e) => {
+
+            const value = e.target.value.toLowerCase();
+
+            document.querySelectorAll(".var-card").forEach(card => {
+
+                const key = card.querySelector(".var-key").textContent.toLowerCase();
+                const val = card.querySelector(".var-value").textContent.toLowerCase();
+
+                if (key.includes(value) || val.includes(value)) {
+                    card.style.display = "";
+                } else {
+                    card.style.display = "none";
+                }
+
+            });
+
+        };
+
+    }
+
 }
 
 

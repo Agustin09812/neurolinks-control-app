@@ -775,8 +775,8 @@ function renderDetailStructure(project) {
         </div>
 
         <!-- BADGES -->
-        <div id="header-badges"
-             class="d-flex gap-2 flex-wrap">
+        <div id="header-badges" class="d-flex gap-2 flex-wrap">
+          <span class="badge bg-secondary">Cargando...</span>
         </div>
 
       </div>
@@ -849,14 +849,14 @@ async function updateDetailHeader(project) {
   if (!badgesContainer || !statusContainer) return;
 
   // =========================
-  // ACTUALIZAR TÍTULO (SI CAMBIÓ)
+  // TÍTULO
   // =========================
   if (titleEl && titleEl.textContent !== project.name) {
     titleEl.textContent = project.name;
   }
 
   // =========================
-  // CONTADORES
+  // CONTADORES (SYNC)
   // =========================
   const online = project.services.filter(s => s.status === "online").length;
   const error = project.services.filter(s => s.status === "error").length;
@@ -869,6 +869,15 @@ async function updateDetailHeader(project) {
   `;
 
   // =========================
+  // RENDER BASE (IMPORTANTE)
+  // =========================
+  badgesContainer.innerHTML = `
+    <div class="badges-row">
+      <span class="badge bg-secondary">Cargando...</span>
+    </div>
+  `;
+
+  // =========================
   // CLIENTE
   // =========================
   let clientBadge = "";
@@ -876,49 +885,44 @@ async function updateDetailHeader(project) {
   let linkButton = "";
 
   try {
+
     const linkedClient = await window.api.getProjectClient(project.id);
     if (selectedProjectId !== currentProjectId) return;
 
     if (!linkedClient || !linkedClient.clientes) {
 
       linkButton = `
-          <span 
-            class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn"
-            style="cursor:pointer;font-size:11px;padding:4px 8px;">
-
-            <i class="bi bi-link-45deg me-1"></i>
-            Vincular cliente
-
-          </span>
-        `;
+        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn"
+              style="cursor:pointer;font-size:11px;padding:4px 8px;">
+          <i class="bi bi-link-45deg me-1"></i>
+          Vincular cliente
+        </span>
+      `;
 
     } else {
 
       clientBadge = `
-          <span 
-            class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn">
-
-            <i class="bi bi-person-fill me-1"></i>
-            ${linkedClient.clientes.nombre}
-
-          </span>
-        `;
+        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn">
+          <i class="bi bi-person-fill me-1"></i>
+          ${linkedClient.clientes.nombre}
+        </span>
+      `;
 
       const count = await window.api.getClientPendingTickets(linkedClient.clientes.id);
       if (selectedProjectId !== currentProjectId) return;
 
       if (count > 0) {
         ticketsBadge = `
-          <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 badge-ticket-btn">
+          <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">
             <i class="bi bi-ticket-perforated-fill me-1"></i>
-            <span>${count} Tickets</span>
+            ${count} Tickets
           </div>
         `;
       } else {
         ticketsBadge = `
-          <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 badge-pending-btn">
+          <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
             <i class="bi bi-check-circle-fill me-1"></i>
-            <span>Sin pendientes</span>
+            Sin pendientes
           </div>
         `;
       }
@@ -934,29 +938,24 @@ async function updateDetailHeader(project) {
   let whatsappBadge = "";
 
   try {
+
     const wsStatus = await window.api.getWhatsAppStatus(project.id);
     if (selectedProjectId !== currentProjectId) return;
 
     if (wsStatus?.connected) {
       whatsappBadge = `
-        <span 
-          class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"
-          style="font-size:11px;padding:4px 8px;">
-
+        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"
+              style="font-size:11px;padding:4px 8px;">
           <i class="bi bi-whatsapp me-1"></i>
           Conectado
-
         </span>
       `;
     } else {
       whatsappBadge = `
-        <span 
-          class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25"
-          style="font-size:11px;padding:4px 8px;">
-
+        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25"
+              style="font-size:11px;padding:4px 8px;">
           <i class="bi bi-whatsapp me-1"></i>
           Desconectado
-
         </span>
       `;
     }
@@ -966,21 +965,19 @@ async function updateDetailHeader(project) {
   }
 
   // =========================
-  // RENDER FINAL
+  // RENDER FINAL (PROTEGIDO)
   // =========================
+  if (selectedProjectId !== currentProjectId) return;
+
   badgesContainer.innerHTML = `
     <div class="badges-row">
       ${clientBadge || linkButton}
       ${ticketsBadge}
       ${whatsappBadge}
     </div>
-
   `;
 
-  // Re-attach eventos después de render
-  const linkBtn = badgesContainer.querySelector(".btn-link-client");
-  if (linkBtn) linkBtn.onclick = () => openLinkClient(project.id);
-
+  // eventos
   const clientEl = badgesContainer.querySelector(".badge-client-btn");
   if (clientEl) clientEl.onclick = () => openLinkClient(project.id);
 }
@@ -1625,7 +1622,7 @@ async function smartRefresh() {
 
     const previousHash = lastAssistantsHash;
 
-    await loadAssistants(true);
+    await loadAssistants(false);
 
     try {
       const clients = await window.api.getClients();

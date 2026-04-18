@@ -582,19 +582,6 @@ body {
    16. VARIABLES-VIEW
 ========================================================= */
 
-.variable-name {
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-.variable-value {
-  font-family: monospace;
-  font-size: 12px;
-  line-height: 1.35;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
 .variables-panel {
   height: calc(100vh - 140px);
   display: flex;
@@ -616,37 +603,124 @@ body {
   margin-bottom: 12px;
 }
 
-/* GRID FULL HEIGHT */
+/* GRID */
 .variables-grid {
   flex: 1;
   overflow-y: auto;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   padding-top: 10px;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 10px;
 }
 
-.var-row {
+/* CARD */
+.var-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+
+  transition: all 0.2s ease;
+}
+
+.var-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+/* HEADER INTERNO */
+.var-card-header {
+  margin-bottom: 8px;
+}
+
+/* KEY + ACTIONS */
+.var-key-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 8px;
 }
 
+/* KEY */
 .var-key {
-  font-weight: bold;
+  font-weight: 600;
+  font-size: 12px;
   color: #ffc107;
+  background: rgba(255, 193, 7, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+/* VALUE */
+.var-card-body {
+  max-height: 120px;
+  overflow: hidden;
 }
 
 .var-value {
-  font-size: 13px;
-  color: #ddd;
-  word-break: break-all;
+  font-family: monospace;
+  font-size: 12px;
+  color: #ccc;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 6px 8px;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+  max-height: 100px;
+  overflow: auto;
 }
 
-.var-actions {
+/* ACTIONS INLINE */
+.var-actions-inline {
   display: flex;
   gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.var-card:hover .var-actions-inline {
+  opacity: 1;
+}
+
+/* BADGES */
+.badge-edit {
+  background: rgba(13, 202, 240, 0.15);
+  color: #0dcaf0;
+  cursor: pointer;
+  padding: 5px 7px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.badge-edit:hover {
+  background: rgba(13, 202, 240, 0.3);
+}
+
+.badge-delete {
+  background: rgba(220, 53, 69, 0.15);
+  color: #dc3545;
+  cursor: pointer;
+  padding: 5px 7px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.badge-delete:hover {
+  background: rgba(220, 53, 69, 0.3);
+}
+
+/* SEARCH */
+#vars-search {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#vars-search:focus {
+  border-color: #ffc107;
+  box-shadow: none;
 }
 
 

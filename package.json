@@ -1,6 +1,6 @@
 {
   "name": "neurolinks-control",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "CRM Gestión Neurolinks",
   "author": "Neurolinks",
   "main": "src/main/main.js",
