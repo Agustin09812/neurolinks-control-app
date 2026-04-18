@@ -3,7 +3,7 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
     const panel = document.getElementById("variables-view");
     if (!panel) return;
 
-    // ocultar otras vistas (igual que logs)
+    // ocultar otras vistas
     document.getElementById("dashboard-global").style.display = "none";
     document.getElementById("assistant-detail").style.display = "none";
     document.getElementById("clients-view").style.display = "none";
@@ -11,61 +11,54 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
     document.getElementById("billing-view").style.display = "none";
     document.getElementById("audit-view").style.display = "none";
 
-    // mostrar variables
     panel.style.display = "block";
 
     panel.innerHTML = `
-    <div class="glass-card p-4 border-top border-warning border-3 animate-fade-up d-flex flex-column" style="height: calc(100vh - 160px);">
+        <div class="variables-panel animate-fade-up">
 
-    <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-shrink-0">
-        <h5 class="mb-0 text-warning">
-            <i class="bi bi-sliders me-2"></i> Variables: ${serviceName}
-        </h5>
+            <!-- HEADER -->
+            <div class="variables-header">
+                <h5 class="text-warning m-0">
+                    <i class="bi bi-sliders me-2"></i> Variables: ${serviceName}
+                </h5>
 
-        <div class="d-flex gap-2">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-warning" id="btn-add-var">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
 
-            <button class="btn btn-sm btn-warning" id="btn-add-var">
-                <i class="bi bi-plus-lg"></i>
-            </button>
+                    <button class="btn btn-sm btn-outline-light" id="btnBackVars">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+                </div>
+            </div>
 
-            <button class="btn btn-sm btn-outline-light" id="btnBackVars">
-                <i class="bi bi-arrow-left"></i>
-            </button>
+            <!-- FORM -->
+            <div id="vars-form" class="variables-form d-none">
+                <div class="row g-2">
+                    <div class="col-md-5">
+                        <input type="text" id="new-var-name"
+                            class="form-control form-control-sm text-light">
+                    </div>
+                    <div class="col-md-5">
+                        <input type="text" id="new-var-value"
+                            class="form-control form-control-sm text-light">
+                    </div>
+                    <div class="col-md-2 d-grid">
+                        <button class="btn btn-warning btn-sm" id="btn-save-var">
+                            Guardar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRID -->
+            <div id="vars-grid" class="variables-grid">
+                <div class="text-secondary">Cargando variables...</div>
+            </div>
 
         </div>
-    </div>
-
-    <!-- FORM -->
-    <div id="vars-form" class="mb-3 d-none flex-shrink-0">
-        <div class="row g-2">
-            <div class="col-md-5">
-                <input type="text" id="new-var-name"
-                    class="form-control form-control-sm text-light"
-                    placeholder="Nombre">
-            </div>
-            <div class="col-md-5">
-                <input type="text" id="new-var-value"
-                    class="form-control form-control-sm text-light"
-                    placeholder="Valor">
-            </div>
-            <div class="col-md-2 d-grid">
-                <button class="btn btn-warning btn-sm" id="btn-save-var">
-                    Guardar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- GRID -->
-    <div id="vars-grid"
-        class="flex-grow-1 overflow-auto"
-        style="min-height:0;">
-        <div class="text-secondary">Cargando variables...</div>
-    </div>
-
-</div>
-`;
+        `;
 
     // volver
     document.getElementById("btnBackVars").onclick = () => {
@@ -74,18 +67,19 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
         document.getElementById("assistant-detail").style.display = "block";
     };
 
-    // mostrar form
+    // toggle form
     document.getElementById("btn-add-var").onclick = () => {
         document.getElementById("vars-form").classList.toggle("d-none");
     };
 
-    // guardar
+    // guardar nueva variable
     document.getElementById("btn-save-var").onclick = () => {
-        handleAddVariable(projectId, environmentId, serviceId, serviceName);
+        handleAddVariable(projectId, environmentId, serviceId);
     };
 
     loadVariables(projectId, environmentId, serviceId);
 }
+
 
 // --------------------------------------------------
 // LOAD VARIABLES
@@ -99,7 +93,8 @@ async function loadVariables(projectId, environmentId, serviceId) {
     try {
 
         const variables = await window.api.getServiceVariables(projectId, environmentId, serviceId);
-        window.variablesCache = variables || {}; // // Hash para variables
+        window.variablesCache = variables || {};
+
         const entries = Object.entries(variables || {});
 
         if (entries.length === 0) {
@@ -108,17 +103,24 @@ async function loadVariables(projectId, environmentId, serviceId) {
         }
 
         grid.innerHTML = entries.map(([key, value]) => `
-            <div class="d-flex justify-content-between align-items-start border-bottom border-secondary py-2">
+            <div class="var-row">
 
-                <div style="min-width:0; max-width:100%;" class="me-3">
-                    <div class="fw-bold text-warning">${key}</div>
-                    <div class="small text-light variable-value">${value}</div>
+                <div class="var-info">
+                    <div class="var-key">${key}</div>
+                    <div class="var-value">${value}</div>
                 </div>
 
-                <button class="btn btn-sm btn-outline-danger"
-                    onclick="handleDeleteVariable('${projectId}', '${environmentId}', '${serviceId}', '${key}')">
-                    <i class="bi bi-trash"></i>
-                </button>
+                <div class="var-actions">
+                    <button class="btn btn-sm btn-outline-info"
+                        onclick="openEditModal('${projectId}', '${environmentId}', '${serviceId}', \`${key}\`, \`${value}\`)">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+
+                    <button class="btn btn-sm btn-outline-danger"
+                        onclick="handleDeleteVariable('${projectId}', '${environmentId}', '${serviceId}', '${key}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
 
             </div>
         `).join("");
@@ -133,11 +135,12 @@ async function loadVariables(projectId, environmentId, serviceId) {
     }
 }
 
+
 // --------------------------------------------------
 // ADD VARIABLE
 // --------------------------------------------------
 
-async function handleAddVariable(pId, eId, sId, sName) {
+async function handleAddVariable(pId, eId, sId) {
 
     const name = document.getElementById("new-var-name").value.trim();
     const value = document.getElementById("new-var-value").value.trim();
@@ -165,6 +168,7 @@ async function handleAddVariable(pId, eId, sId, sName) {
     }
 }
 
+
 // --------------------------------------------------
 // DELETE VARIABLE
 // --------------------------------------------------
@@ -187,3 +191,83 @@ async function handleDeleteVariable(pId, eId, sId, name) {
 
     }
 }
+
+
+// --------------------------------------------------
+// EDIT (MODAL)
+// --------------------------------------------------
+
+let editContext = {
+    projectId: null,
+    environmentId: null,
+    serviceId: null,
+    originalKey: null
+};
+
+function openEditModal(pId, eId, sId, key, value) {
+
+    editContext = {
+        projectId: pId,
+        environmentId: eId,
+        serviceId: sId,
+        originalKey: key
+    };
+
+    document.getElementById("var-name").value = key;
+    document.getElementById("var-value").value = value;
+
+    const modal = new bootstrap.Modal(document.getElementById("editModal"));
+    modal.show();
+}
+
+
+// --------------------------------------------------
+// SAVE EDIT
+// --------------------------------------------------
+
+document.addEventListener("click", async (e) => {
+
+    if (e.target.id !== "btn-save-variable") return;
+
+    const newKey = document.getElementById("var-name").value.trim();
+    const newValue = document.getElementById("var-value").value;
+
+    if (!newKey) {
+        showToast("Nombre requerido", "warning");
+        return;
+    }
+
+    try {
+
+        if (editContext.originalKey !== newKey) {
+            await window.api.deleteVariable(
+                editContext.projectId,
+                editContext.environmentId,
+                editContext.serviceId,
+                editContext.originalKey
+            );
+        }
+
+        await window.api.upsertVariable(
+            editContext.projectId,
+            editContext.environmentId,
+            editContext.serviceId,
+            newKey,
+            newValue
+        );
+
+        showToast("Variable actualizada", "success");
+
+        bootstrap.Modal.getInstance(document.getElementById("editModal")).hide();
+
+        loadVariables(
+            editContext.projectId,
+            editContext.environmentId,
+            editContext.serviceId
+        );
+
+    } catch (err) {
+        showToast("Error: " + err.message, "danger");
+    }
+
+});

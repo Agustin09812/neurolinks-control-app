@@ -97,7 +97,7 @@ async function navigate(view) {
 
       try {
         const data = await window.api.getTickets();
-        window.ticketsData = data; // 👈 clave
+        window.ticketsData = data;
       } catch (e) {
         console.error("Error loading tickets:", e);
       }
@@ -896,8 +896,7 @@ async function updateDetailHeader(project) {
 
       clientBadge = `
           <span 
-            class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn"
-            style="cursor:pointer;font-size:11px;padding:4px 8px;">
+            class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn">
 
             <i class="bi bi-person-fill me-1"></i>
             ${linkedClient.clientes.nombre}
@@ -910,15 +909,15 @@ async function updateDetailHeader(project) {
 
       if (count > 0) {
         ticketsBadge = `
-          <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 p-2 d-flex align-items-center gap-2">
-            <i class="bi bi-ticket-perforated-fill"></i>
+          <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 badge-ticket-btn">
+            <i class="bi bi-ticket-perforated-fill me-1"></i>
             <span>${count} Tickets</span>
           </div>
         `;
       } else {
         ticketsBadge = `
-          <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 p-2 d-flex align-items-center gap-2">
-            <i class="bi bi-check-circle-fill"></i>
+          <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 badge-pending-btn">
+            <i class="bi bi-check-circle-fill me-1"></i>
             <span>Sin pendientes</span>
           </div>
         `;
@@ -970,10 +969,11 @@ async function updateDetailHeader(project) {
   // RENDER FINAL
   // =========================
   badgesContainer.innerHTML = `
-    ${linkButton}
-    ${clientBadge}
-    ${ticketsBadge}
-    ${whatsappBadge}
+    <div class="badges-row">
+      ${clientBadge || linkButton}
+      ${ticketsBadge}
+      ${whatsappBadge}
+    </div>
 
   `;
 
@@ -1889,7 +1889,7 @@ async function renderDashboard() {
         <div class="row g-4 mb-5">
           <!-- CARD BOTS -->
           <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100">
+            <div class="glass-card p-4 text-center h-100 rounded">
               <div class="display-5 fw-bold text-success">${assistants.length}</div>
               <div class="text-uppercase small ls-1">Proyectos Totales</div>
               <div class="mt-3 small text-secondary">
@@ -1901,7 +1901,7 @@ async function renderDashboard() {
 
           <!-- CARD CLIENTES -->
           <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="loadClientsData(); renderClientsView();">
+            <div class="glass-card p-4 text-center h-100 rounded" style="cursor:pointer" onclick="loadClientsData(); renderClientsView();">
               <div class="display-5 fw-bold text-info">${activeClients.length}</div>
               <div class="text-uppercase small ls-1">Clientes Activos</div>
               <div class="mt-3">
@@ -1912,7 +1912,7 @@ async function renderDashboard() {
 
           <!-- CARD TICKETS -->
           <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100" style="cursor:pointer" onclick="renderTicketsView()">
+            <div class="glass-card p-4 text-center h-100 rounded" style="cursor:pointer" onclick="renderTicketsView()">
               <div class="display-5 fw-bold text-warning">${pendingTickets.length}</div>
               <div class="text-uppercase small ls-1">Tickets Pendientes</div>
               <div class="mt-3">
@@ -1923,7 +1923,7 @@ async function renderDashboard() {
 
           <!-- CARD SALUD -->
           <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100">
+            <div class="glass-card p-4 text-center h-100 rounded">
               <div class="display-5 fw-bold ${errorServices > 0 ? 'text-danger' : 'text-success'}">
                  ${errorServices > 0 ? 'ALERTA' : 'OK'}
               </div>
@@ -1937,7 +1937,7 @@ async function renderDashboard() {
 
         <div class="row g-4">
           <div class="col-md-6">
-            <div class="glass-card p-4">
+            <div class="glass-card p-4 rounded">
                <h5 class="mb-3">Último Ticket</h5>
                ${pendingTickets.length > 0 ? `
                   <div class="p-3 border border-secondary rounded bg-dark-hover">
@@ -1951,7 +1951,7 @@ async function renderDashboard() {
             </div>
           </div>
           <div class="col-md-6">
-             <div class="glass-card p-4">
+             <div class="glass-card p-4 rounded">
                <h5 class="mb-3">Acciones Rápidas</h5>
                <div class="d-grid gap-2">
                   <button class="btn btn-outline-light text-start btn-sm" onclick="renderClientsView()">

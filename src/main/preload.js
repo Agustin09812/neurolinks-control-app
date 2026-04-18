@@ -9,9 +9,6 @@ contextBridge.exposeInMainWorld('api', {
   openExternal: (url) =>
     ipcRenderer.invoke('open-external', url),
 
-  openClients: () =>
-    ipcRenderer.invoke('open-clients-window'),
-
   openDashboardWindow: (url) =>
     ipcRenderer.invoke('open-dashboard-window', url),
 
@@ -55,11 +52,8 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('delete-service', serviceId),
 
   // --------------------------------------------------
-  // LOGS
+  // LOGS (INTEGRADO)
   // --------------------------------------------------
-
-  openLogs: (deploymentId) =>
-    ipcRenderer.invoke('open-logs-window', deploymentId),
 
   fetchDeploymentLogs: (deploymentId) =>
     ipcRenderer.invoke('fetch-deployment-logs', deploymentId),
@@ -67,18 +61,9 @@ contextBridge.exposeInMainWorld('api', {
   downloadLogs: (deploymentId, serviceName) =>
     ipcRenderer.invoke('download-logs', deploymentId, serviceName),
 
-  onLoadLogs: (callback) => {
-    ipcRenderer.on('load-logs', (_, deploymentId) => {
-      callback(deploymentId);
-    });
-  },
-
   // --------------------------------------------------
-  // VARIABLES
+  // VARIABLES (INTEGRADO)
   // --------------------------------------------------
-
-  openVariables: (projectId, environmentId, serviceId) =>
-    ipcRenderer.invoke('open-variables-window', projectId, environmentId, serviceId),
 
   getServiceVariables: (projectId, environmentId, serviceId) =>
     ipcRenderer.invoke('get-service-variables', projectId, environmentId, serviceId),
@@ -89,22 +74,16 @@ contextBridge.exposeInMainWorld('api', {
   deleteVariable: (projectId, environmentId, serviceId, name) =>
     ipcRenderer.invoke('delete-variable', projectId, environmentId, serviceId, name),
 
-  onLoadVariables: (callback) => {
-    ipcRenderer.on('load-variables', (_, context) => {
-      callback(context);
-    });
-  },
-
   // --------------------------------------------------
-  // GER SERVICE DOMAINS
-  // -------------------------------------------------
+  // SERVICE DOMAINS
+  // --------------------------------------------------
 
   getServiceDomains: (projectId, environmentId, serviceId) =>
     ipcRenderer.invoke('get-service-domains', projectId, environmentId, serviceId),
 
   // --------------------------------------------------
   // APP VERSION
-  // -------------------------------------------------
+  // --------------------------------------------------
 
   getAppVersion: () =>
     ipcRenderer.invoke('get-app-version'),
@@ -142,7 +121,7 @@ contextBridge.exposeInMainWorld('api', {
   },
 
   // --------------------------------------------------
-  // SUPABASE / CRM / CLIENTS
+  // SUPABASE / CRM / CLIENTS (INTEGRADO)
   // --------------------------------------------------
 
   getClients: () =>
@@ -166,8 +145,9 @@ contextBridge.exposeInMainWorld('api', {
   getClientProjects: (clientId) =>
     ipcRenderer.invoke('get-client-projects', clientId),
 
-  openTickets: () =>
-    ipcRenderer.invoke('open-tickets-window'),
+  // --------------------------------------------------
+  // TICKETS (INTEGRADO)
+  // --------------------------------------------------
 
   getTickets: (filters) =>
     ipcRenderer.invoke('get-tickets', filters),
@@ -184,15 +164,19 @@ contextBridge.exposeInMainWorld('api', {
   getClientPendingTickets: (clientId) =>
     ipcRenderer.invoke('get-client-pending-tickets', clientId),
 
+  // --------------------------------------------------
+  // AUDIT
+  // --------------------------------------------------
+
   getAuditLogs: () =>
     ipcRenderer.invoke('get-audit-logs'),
 
   unlinkProjectClient: (projectId) =>
-    ipcRenderer.invoke('unlink-project-client', projectId), // funcion para desvincular asistente
+    ipcRenderer.invoke('unlink-project-client', projectId),
 
   // --------------------------------------------------
   // NAVIGATION
-  // -------------------------------------------------
+  // --------------------------------------------------
 
   onSelectProject: (callback) => {
     ipcRenderer.on('select-project', (_, projectId) => {
@@ -206,6 +190,7 @@ contextBridge.exposeInMainWorld('api', {
   // --------------------------------------------------
   // BILLING / PAGOS
   // --------------------------------------------------
+
   getClientPayments: (clientId) =>
     ipcRenderer.invoke('get-client-payments', clientId),
 

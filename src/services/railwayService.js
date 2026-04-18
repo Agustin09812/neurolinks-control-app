@@ -231,19 +231,27 @@ const railwayService = {
 
   async deleteVariable(projectId, environmentId, serviceId, name) {
     const query = `
-      mutation variableDelete($input: VariableDeleteInput!) {
-        variableDelete(input: $input)
-      }
-    `;
-    return await railwayQuery(query, {
+    mutation variableDelete($input: VariableDeleteInput!) {
+      variableDelete(input: $input)
+    }
+  `;
+
+    const result = await railwayQuery(query, {
       input: {
         projectId,
         environmentId,
         serviceId,
-        name,
-        skipDeploys: true
+        name
       }
     });
+
+    // 🔥 IMPORTANTE: manejar errores
+    if (result.errors) {
+      console.error("Error eliminando variable:", result.errors);
+      throw new Error(result.errors[0].message);
+    }
+
+    return result.data;
   },
 
   async getServiceDomains(projectId, environmentId, serviceId) {

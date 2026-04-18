@@ -4,10 +4,28 @@ GLOBAL STYLESHEET
 
 /* Forzar color en tablas dentro de glass-card */
 .glass-card .table,
-.glass-card .table tbody td,
-.glass-card .table tbody tr,
 .glass-card .table thead th {
+  color: var(--bg-deep) !important;
+}
+
+/* Forzar color en tablas dentro de glass-card */
+.glass-card .table tbody td,
+.glass-card .table tbody tr {
   color: var(--text-main) !important;
+}
+
+#clients-view .glass-card.overflow-hidden {
+  min-height: 525px;
+  display: flex;
+  flex-direction: column;
+}
+
+#clients-view .table-responsive {
+  flex: 1;
+}
+
+input::placeholder {
+  color: rgba(255, 255, 255, 0.835) !important;
 }
 
 /* Forzar icono calendario blanco */
@@ -160,14 +178,6 @@ body {
 .glass-card {
   background: var(--bg-card);
   backdrop-filter: blur(15px);
-  border-radius: var(--radius-lg);
-  transition: var(--transition-smooth);
-}
-
-.glass-card:hover {
-  transform: translateY(-5px);
-  border-color: rgba(0, 210, 255, 0.3);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
 }
 
 .glass-header {
@@ -311,15 +321,23 @@ body {
    10. BUTTON SYSTEM
 ========================================================= */
 
-.badge-client-btn {
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 8px;
+.badges-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-.badge-client-btn:active {
-  transform: scale(0.98);
+.badge-client-btn,
+.badge-ticket-btn,
+.badge-pending.btn {
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+
 }
+
 
 .btn-update-mini {
   width: 20px;
@@ -577,6 +595,60 @@ body {
   word-break: break-all;
 }
 
+.variables-panel {
+  height: calc(100vh - 140px);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: transparent;
+}
+
+/* HEADER */
+.variables-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+/* FORM */
+.variables-form {
+  margin-bottom: 12px;
+}
+
+/* GRID FULL HEIGHT */
+.variables-grid {
+  flex: 1;
+  overflow-y: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 10px;
+}
+
+.var-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.var-key {
+  font-weight: bold;
+  color: #ffc107;
+}
+
+.var-value {
+  font-size: 13px;
+  color: #ddd;
+  word-break: break-all;
+}
+
+.var-actions {
+  display: flex;
+  gap: 6px;
+}
+
 
 /* =========================================================
    17. SERVICES BUTTONS MENU
@@ -640,34 +712,84 @@ body {
    18. LOGS STYLES  
 ========================================================= */
 
-.log-line {
-  font-family: monospace;
-  font-size: 12px;
-  padding: 3px 6px;
+.logs-panel {
+  height: calc(100vh - 80px);
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.logs-header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.logs-terminal {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: #0b0b0b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 16px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #e6e6e6;
+}
+
+/* SCROLL */
+.logs-terminal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.logs-terminal::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+}
+
+/* LINEA */
+.log-line {
+  display: grid;
+  grid-template-columns: 90px 70px 1fr;
+  align-items: center;
+  padding: 4px 8px;
+  gap: 10px;
   border-left: 3px solid transparent;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+/* HOVER */
+.log-line:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* TIME */
 .log-time {
   color: #6c757d;
-  min-width: 75px;
+  font-size: 11px;
 }
 
 /* LABEL */
 .log-label {
   font-weight: bold;
-  min-width: 60px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
 }
 
 /* MSG */
 .log-msg {
-  flex: 1;
   word-break: break-word;
+  font-size: 13px;
 }
 
-/* ESTILOS */
+/* TIPOS */
+
 .log-info {
   border-left-color: #0dcaf0;
 }
@@ -678,6 +800,7 @@ body {
 
 .log-warn {
   border-left-color: #ffc107;
+  background: rgba(255, 193, 7, 0.05);
 }
 
 .log-warn .log-label {
@@ -686,28 +809,31 @@ body {
 
 .log-error {
   border-left-color: #ff4d4f;
-  background: rgba(255, 77, 79, 0.05);
+  background: rgba(255, 77, 79, 0.08);
 }
 
 .log-error .log-label {
   color: #ff4d4f;
 }
 
+.log-error .log-msg {
+  color: #ffb3b3;
+  /* 🔥 más legible */
+  font-weight: 500;
+}
+
+/* DEBUG */
 .log-debug {
   border-left-color: #adb5bd;
+  opacity: 0.7;
 }
 
 .log-debug .log-label {
   color: #adb5bd;
 }
 
-/* hover */
-.log-line:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
 /* =========================================================
-   UPDATE BANNER
+   19. LOGS STYLES  
 ========================================================= */
 
 .update-banner {
@@ -825,4 +951,71 @@ body {
 .notification-item .text-dim {
   font-size: 11px;
   opacity: 0.7;
+}
+
+/* =========================================================
+   20. LOGS STYLES  
+========================================================= */
+
+.template-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.template-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 255, 150, 0.4);
+  box-shadow: 0 10px 25px rgba(0, 255, 150, 0.08);
+}
+
+.template-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.template-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(0, 255, 150, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00ff9c;
+  font-size: 18px;
+}
+
+/* DESC */
+.template-desc {
+  font-size: 13px;
+  color: #aaa;
+  min-height: 40px;
+  margin-bottom: 12px;
+}
+
+/* =========================================================
+   21. DASHBOARD STYLE
+========================================================= */
+
+.dashboard-access {
+  background: radial-gradient(circle at top, rgba(0, 255, 150, 0.05), transparent);
+}
+
+.dashboard-icon {
+  width: 70px;
+  height: 70px;
+  border-radius: 16px;
+  background: rgba(0, 255, 150, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: #00ff9c;
+  box-shadow: 0 0 20px rgba(0, 255, 150, 0.15);
 }

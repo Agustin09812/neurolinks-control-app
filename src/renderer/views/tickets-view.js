@@ -37,7 +37,7 @@ async function renderTicketsView(filterClientId = "") {
     <div class="d-flex justify-content-center align-items-center h-100" id="tickets-loading">
                 <div class="spinner-border text-light" role="status"></div>
             </div>
-        <div class="animate-fade mt-4">
+        <div class="animate-fade">
             <div id="tickets-content" style="display:none;">
                  <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="fw-bold mb-0" style="color: var(--text-main)">SISTEMA DE TICKETS</h2>
@@ -46,45 +46,62 @@ async function renderTicketsView(filterClientId = "") {
                     </button>
                 </div>
     
-                <div class="glass-card p-4 mb-4">
-                    <div class="row g-3">
+                <!-- FILTROS COMPACTOS -->
+                <div class="glass-card p-2 mb-3 rounded">
+                    <div class="row g-2 align-items-end">
+
                         <div class="col-md-2">
-                            <label class="small text-dim fw-bold mb-2">ESTADO</label>
-                            <select class="form-select select-sm" id="view-filter-status" onchange="handleTicketFilter('status', this.value)">
-                                <option value="">Todos</option>
+                            <select class="form-select form-select-sm"
+                                id="view-filter-status"
+                                onchange="handleTicketFilter('status', this.value)">
+                                <option value="">Estado</option>
                                 <option value="Abierto">Abierto</option>
                                 <option value="En Progreso">En Progreso</option>
                                 <option value="Cerrado">Cerrado</option>
                             </select>
                         </div>
+
                         <div class="col-md-2">
-                            <label class="small text-dim fw-bold mb-2">PRIORIDAD</label>
-                            <select class="form-select select-sm" id="view-filter-priority" onchange="handleTicketFilter('priority', this.value)">
-                                <option value="">Todas</option>
+                            <select class="form-select form-select-sm"
+                                id="view-filter-priority"
+                                onchange="handleTicketFilter('priority', this.value)">
+                                <option value="">Prioridad</option>
                                 <option value="Baja">Baja</option>
                                 <option value="Media">Media</option>
                                 <option value="Alta">Alta</option>
                             </select>
                         </div>
+
                         <div class="col-md-3">
-                            <label class="small text-dim fw-bold mb-2">CLIENTE</label>
-                            <select class="form-select select-sm" id="view-filter-client" onchange="handleTicketFilter('client', this.value)">
-                                <option value="">Todos los clientes</option>
+                            <select class="form-select form-select-sm"
+                                id="view-filter-client"
+                                onchange="handleTicketFilter('client', this.value)">
+                                <option value="">Cliente</option>
                             </select>
                         </div>
+
                         <div class="col-md-2">
-                            <label class="small text-dim fw-bold mb-2">DESDE</label>
-                            <input type="date" class="form-control form-control-sm text-light" id="view-filter-date-start" onchange="handleTicketFilter('dateStart', this.value)">
+                            <input type="date"
+                                class="form-control form-control-sm text-light"
+                                id="view-filter-date-start"
+                                onchange="handleTicketFilter('dateStart', this.value)">
                         </div>
+
                         <div class="col-md-2">
-                            <label class="small text-dim fw-bold mb-2">HASTA</label>
-                            <input type="date" class="form-control form-control-sm text-light" id="view-filter-date-end" onchange="handleTicketFilter('dateEnd', this.value)">
+                            <input type="date"
+                                class="form-control form-control-sm text-light"
+                                id="view-filter-date-end"
+                                onchange="handleTicketFilter('dateEnd', this.value)">
                         </div>
-                        <div class="col-md-1 d-flex align-items-end">
-                            <button class="btn btn-outline-custom w-100 btn-sm" onclick="resetTicketFilters()" title="Limpiar Filtros">
+
+                        <div class="col-md-1">
+                            <button class="btn btn-outline-custom btn-sm w-100"
+                                onclick="resetTicketFilters()"
+                                title="Limpiar filtros">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
                         </div>
+
                     </div>
                 </div>
     
@@ -94,18 +111,18 @@ async function renderTicketsView(filterClientId = "") {
                     </button>
                 </div>
     
-                <div class="glass-card overflow-hidden">
+                <div class="glass-card overflow-hidden rounded">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead>
                                 <tr>
-                                    <th style="color: var(--bg-deep) !important">ID / Título</th>
-                                    <th style="color: var(--bg-deep) !important">Cliente</th>
-                                    <th style="color: var(--bg-deep) !important">Tipo</th>
-                                    <th style="color: var(--bg-deep) !important">Estado</th>
-                                    <th style="color: var(--bg-deep) !important">Prioridad</th>
-                                    <th style="color: var(--bg-deep) !important">Creado</th>
-                                    <th class="text-end" style="color: var(--bg-deep) !important">Acciones</th>
+                                    <th>ID / Título</th>
+                                    <th>Cliente</th>
+                                    <th>Tipo</th>
+                                    <th>Estado</th>
+                                    <th>Prioridad</th>
+                                    <th>Creado</th>
+                                    <th class="text-end">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="tickets-table-body-view"></tbody>

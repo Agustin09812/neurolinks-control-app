@@ -8,22 +8,24 @@ async function renderDashboardView(serviceDomain) {
   url += 'dashboard';
 
   panel.innerHTML = `
-    <div class="d-flex flex-column justify-content-center align-items-center h-100 text-center">
-
-      <i class="bi bi-speedometer2 text-success" style="font-size:48px;"></i>
-
-      <h4 class="mt-3 text-light">Backoffice</h4>
-
-      <p class="text-secondary mb-4">
-        Accedé al panel completo del sistema
-      </p>
-
-      <button class="btn btn-success btn-lg px-5" id="btnOpenBackoffice">
-        Abrir Backoffice
-      </button>
-
-    </div>
-  `;
+        <div class="dashboard-access h-100 d-flex flex-column justify-content-center align-items-center text-center px-4">
+          <div class="dashboard-icon mb-3">
+            <i class="bi bi-speedometer2"></i>
+          </div>
+          <h3 class="fw-bold text-light mb-2">
+            Panel del Asistente
+          </h3>
+          <p class="text-secondary mb-4" style="max-width: 320px;">
+            Accedé al backoffice completo para gestionar conversaciones, variables y configuraciones en tiempo real.
+          </p>
+          <div class="d-flex flex-column gap-2 w-100" style="max-width: 280px;">  
+            <button class="btn btn-success btn-lg w-100" id="btnOpenBackoffice">
+              <i class="bi bi-box-arrow-up-right me-2"></i>
+              Abrir Back Office
+            </button>
+          </div>
+        </div>
+      `;
 
   document.getElementById("btnOpenBackoffice").onclick = () => {
     clearActiveServiceMenu();

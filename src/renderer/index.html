@@ -149,12 +149,21 @@
 
           <div id="deploy-step-1">
             <div class="row mb-3 px-3">
-              <div class="input-group">
-                <input type="text" id="template-search-input" class="form-control bg-dark text-light border-secondary"
-                  value="">
-                <button class="btn btn-primary" id="btn-search-templates">
-                  <i class="bi bi-search text-light"></i> Buscar
-                </button>
+              <div class="row mb-3 px-3">
+                <div class="input-group input-group-sm">
+
+                  <span class="input-group-text bg-dark border-secondary text-secondary">
+                    <i class="bi bi-search"></i>
+                  </span>
+
+                  <input type="text" id="template-search-input" class="form-control bg-dark text-light border-secondary"
+                    placeholder="Buscar templates...">
+
+                  <button type="button" class="btn btn-success" id="btn-search-templates">
+                    Buscar
+                  </button>
+
+                </div>
               </div>
             </div>
             <div class="row g-3" id="templates-container">
@@ -329,6 +338,36 @@
         </button> -->
       </div>
       <div id="notifications-panel-list" class="d-flex flex-column gap-3"></div>
+    </div>
+  </div>
+
+  <!-- EDIT VARIABLE MODAL -->
+  <div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark text-light border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title">Editar Variable</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre</label>
+            <input type="text" id="var-name" class="form-control bg-dark text-light border-secondary">
+          </div>
+          <div>
+            <label class="form-label">Valor</label>
+            <textarea id="var-value" rows="4" class="form-control bg-dark text-light border-secondary"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+          <button class="btn btn-outline-success btn-sm" id="btn-save-variable">
+            Guardar
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

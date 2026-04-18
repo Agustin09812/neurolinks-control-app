@@ -24,29 +24,33 @@ function renderTemplates(templates) {
   container.innerHTML = templates.map(template => {
 
     return `
-      <div class="col-md-6">
-        <div class="border border-secondary rounded p-3 h-100 d-flex flex-column bg-dark">
+              <div class="col-md-6">
+                <div class="template-card h-100 d-flex flex-column">
 
-          <h6 class="fw-bold text-success">${template.name}</h6>
+                  <div class="template-header">
+                    <div class="template-icon">
+                      <i class="bi bi-box"></i>
+                    </div>
+                    <div>
+                      <h6 class="fw-bold mb-0">${template.name}</h6>
+                      <span class="badge bg-secondary mt-1">${template.category || "General"}</span>
+                    </div>
+                  </div>
 
-          <p class="small text-secondary mb-3" style="min-height: 40px;">
-            ${template.description || "Sin descripción disponible."}
-          </p>
+                  <p class="template-desc">
+                    ${template.description || "Sin descripción disponible."}
+                  </p>
 
-          <div class="small mb-3">
-             <span class="badge bg-secondary">${template.category || "Desconocido"}</span>
-          </div>
+                  <div class="mt-auto">
+                    <button class="btn btn-success btn-sm w-100"
+                      onclick="selectTemplate('${template.id}')">
+                      Usar Template
+                    </button>
+                  </div>
 
-          <div class="mt-auto">
-            <button class="btn btn-outline-success btn-sm w-100"
-              onclick="selectTemplate('${template.id}')">
-              Seleccionar
-            </button>
-          </div>
-
-        </div>
-      </div>
-    `;
+                </div>
+              </div>
+            `;
 
   }).join("");
 
@@ -153,9 +157,11 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const btnSearch = document.getElementById("btn-search-templates");
-  if (btnSearch) {
-    btnSearch.onclick = performSearch;
-  }
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#btn-search-templates")) {
+      performSearch();
+    }
+  });
 
   const inputSearch = document.getElementById("template-search-input");
   if (inputSearch) {

@@ -1,6 +1,20 @@
 let logInterval = null;
 
+let logsContext = {
+    deploymentId: null
+};
+
+let logsBuffer = []; // para streaming incremental
+
+
+// --------------------------------------------------
+// RENDER
+// --------------------------------------------------
+
 async function renderLogsView(deploymentId, serviceName) {
+
+    logsContext.deploymentId = deploymentId;
+    logsBuffer = []; // reset buffer
 
     const panel = document.getElementById("logs-view");
     if (!panel) return;
@@ -11,7 +25,7 @@ async function renderLogsView(deploymentId, serviceName) {
         logInterval = null;
     }
 
-    // ocultar otras vistas (igual que clients/tickets)
+    // ocultar otras vistas
     document.getElementById("dashboard-global").style.display = "none";
     document.getElementById("assistant-detail").style.display = "none";
     document.getElementById("clients-view").style.display = "none";
@@ -22,81 +36,81 @@ async function renderLogsView(deploymentId, serviceName) {
     // mostrar logs
     panel.style.display = "block";
 
-    // render UI
     panel.innerHTML = `
-<div class="glass-card p-4 border-top border-info border-3 animate-fade-up d-flex flex-column"
-     style="height: calc(100vh - 160px);">
+            <div class="logs-panel animate-fade-up">
 
-    <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-shrink-0">
-        <h5 class="mb-0 text-info">
-            <i class="bi bi-terminal me-2"></i> Logs: ${serviceName}
-        </h5>
+                <!-- HEADER -->
+                <div class="logs-header">
+                    <h5 class="text-info m-0">
+                        <i class="bi bi-terminal me-2"></i> Logs: ${serviceName}
+                    </h5>
 
-        <div class="d-flex gap-2">
-            <button class="btn btn-sm btn-outline-info" id="btn-download-integrated-logs">
-                <i class="bi bi-download me-1"></i>
-            </button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-info" id="btn-download-integrated-logs">
+                            <i class="bi bi-download"></i>
+                        </button>
 
-            <button class="btn btn-sm btn-outline-light" id="btnBackLogs">
-                <i class="bi bi-arrow-left"></i>
-            </button>
-        </div>
-    </div>
+                        <button class="btn btn-sm btn-outline-light" id="btnBackLogs">
+                            <i class="bi bi-arrow-left"></i>
+                        </button>
+                    </div>
+                </div>
 
-    <div id="log-terminal"
-        class="bg-black text-success p-3 rounded font-monospace small overflow-auto flex-grow-1"
-        style="min-height:0; line-height:1.4; border:1px solid #333;">
-        <div class="text-secondary">Cargando logs...</div>
-    </div>
+                <!-- TERMINAL -->
+                <div id="log-terminal" class="logs-terminal">
+                    <div class="text-secondary">Cargando logs...</div>
+                </div>
 
-</div>
-`;
+            </div>
+            `;
 
-    // botón volver
+    // volver
     document.getElementById("btnBackLogs").onclick = () => {
 
         clearActiveServiceMenu();
 
-        // cortar intervalo
         if (logInterval) {
             clearInterval(logInterval);
             logInterval = null;
         }
 
+        logsContext.deploymentId = null;
+
         panel.style.display = "none";
         document.getElementById("assistant-detail").style.display = "block";
     };
 
-    // descargar logs
+    // descargar
     document.getElementById("btn-download-integrated-logs").onclick = async () => {
         try {
             const res = await window.api.downloadLogs(deploymentId, serviceName);
             if (res.success) {
                 showToast(`Logs guardados en: ${res.path}`, "success");
             }
-        } catch (err) {
+        } catch {
             showToast("Error al descargar logs", "danger");
         }
     };
 
     // primera carga
-    fetchLogs(deploymentId);
+    await fetchLogs(deploymentId);
 
-    // auto refresh
+    // refresh
     logInterval = setInterval(() => fetchLogs(deploymentId), 3000);
 }
 
 
 // --------------------------------------------------
-// FETCH LOGS
+// FETCH LOGS (STREAMING PRO)
 // --------------------------------------------------
 
 async function fetchLogs(deploymentId) {
 
+    // cortar si cambió contexto
+    if (deploymentId !== logsContext.deploymentId) return;
+
     const terminal = document.getElementById("log-terminal");
 
-    // si saliste de la vista → cortar interval
     if (!terminal) {
         if (logInterval) {
             clearInterval(logInterval);
@@ -109,51 +123,88 @@ async function fetchLogs(deploymentId) {
 
         const logs = await window.api.fetchDeploymentLogs(deploymentId);
 
-        if (logs && Array.isArray(logs) && logs.length > 0) {
+        // ❌ doble check (race condition fix)
+        if (deploymentId !== logsContext.deploymentId) return;
 
-            const displayLogs = logs.slice(-1000).map(l => {
+        if (!logs || !Array.isArray(logs) || logs.length === 0) {
+            if (logsBuffer.length === 0) {
+                terminal.innerHTML = '<div class="text-secondary italic">No hay logs disponibles.</div>';
+            }
+            return;
+        }
 
-                const raw = l.message || "";
-                const time = l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : '';
+        // detectar logs nuevos
+        const newLogs = logs.slice(logsBuffer.length);
 
-                let type = "info";
-                let label = "INFO";
+        if (newLogs.length === 0) return;
 
-                if (raw.includes("ERROR")) {
-                    type = "error";
-                    label = "ERROR";
-                } else if (raw.includes("WARN")) {
-                    type = "warn";
-                    label = "WARN";
-                } else if (raw.includes("DEBUG")) {
-                    type = "debug";
-                    label = "DEBUG";
-                }
+        logsBuffer = logs;
 
-                return `
-        <div class="log-line log-${type}">
-            <span class="log-time">[${time}]</span>
-            <span class="log-label">${label}</span>
-            <span class="log-msg">${raw}</span>
-        </div>
-    `;
-            }).join('');
+        const fragment = document.createDocumentFragment();
 
-            terminal.innerHTML = displayLogs;
+        newLogs.forEach(l => {
 
+            const raw = l.message || "";
+            const time = l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : '';
+
+            let type = "info";
+            let label = "INFO";
+
+            const msg = raw.toLowerCase();
+
+            if (msg.includes("error") || msg.includes("fail") || msg.includes("exception")) {
+                type = "error";
+                label = "ERROR";
+            } else if (msg.includes("warn")) {
+                type = "warn";
+                label = "WARN";
+            } else if (msg.includes("debug")) {
+                type = "debug";
+                label = "DEBUG";
+            }
+
+            const div = document.createElement("div");
+            div.className = `log-line log-${type}`;
+            div.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-label">${label}</span>
+                <span class="log-msg">${raw}</span>
+            `;
+
+            fragment.appendChild(div);
+        });
+
+        // limpiar "Cargando..."
+        if (terminal.children.length === 1 && terminal.textContent.includes("Cargando")) {
+            terminal.innerHTML = "";
+        }
+
+        terminal.appendChild(fragment);
+
+        // mantener máximo 1000 líneas
+        while (terminal.children.length > 1000) {
+            terminal.removeChild(terminal.firstChild);
+        }
+
+        const isAtBottom =
+            terminal.scrollTop + terminal.clientHeight >= terminal.scrollHeight - 10;
+
+        // append logs
+        terminal.appendChild(fragment);
+
+        // mantener máximo 1000 líneas
+        while (terminal.children.length > 1000) {
+            terminal.removeChild(terminal.firstChild);
+        }
+
+        // solo scrollea si YA estaba abajo
+        if (isAtBottom) {
             terminal.scrollTop = terminal.scrollHeight;
-
-        } else {
-
-            terminal.innerHTML =
-                '<div class="text-secondary italic">No hay logs disponibles.</div>';
-
         }
 
     } catch (err) {
 
         terminal.innerHTML =
             `<div class="text-danger">Error al cargar logs: ${err.message}</div>`;
-
     }
 }

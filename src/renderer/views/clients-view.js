@@ -2,6 +2,9 @@
 let allClients = [];
 let clientsSearchQuery = "";
 let clientsPlanFilter = "";
+// PAGINACIÓN
+let currentClientsPage = 1;
+const CLIENTS_PER_PAGE = 5;
 
 async function renderClientsView() {
     selectedProjectId = null;
@@ -24,7 +27,7 @@ async function renderClientsView() {
     <div class="d-flex justify-content-center align-items-center h-100" id="clients-loading">
                 <div class="spinner-border text-light" role="status"></div>
             </div>
-        <div class="animate-fade mt-4">
+        <div class="animate-fade">
             <div id="clients-content" style="display:none;">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="fw-bold mb-0">GESTIÓN DE <span class="text-light">CLIENTES</span></h2>
@@ -41,21 +44,25 @@ async function renderClientsView() {
                     </div>
                 </div>
     
-                <!-- Filtros -->
-                <div class="glass-card p-4 mb-4">
-                    <div class="row g-3">
+                <!-- Filtros COMPACTOS -->
+                <div class="glass-card p-2 mb-3 rounded">
+                    <div class="row g-2">
+
                         <div class="col-md-6">
-                            <label class="small text-dim fw-bold mb-2">BUSCAR CLIENTE</label>
-                            <div class="input-group">
+                            <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-dark border-secondary text-dim">
                                     <i class="bi bi-search text-secondary"></i>
                                 </span>
-                                <input type="text" class="form-control text-light" id="clientsSearch" onkeyup="handleClientsSearch(this.value)">
+                                <input type="text"
+                                    class="form-control form-control-sm text-light"
+                                    placeholder="Buscar cliente..."
+                                    onkeyup="handleClientsSearch(this.value)">
                             </div>
                         </div>
+
                         <div class="col-md-6">
-                            <label class="small text-dim fw-bold mb-2">FILTRAR POR PLAN</label>
-                            <select class="form-select" id="clientsFilterPlan" onchange="handleClientsFilterPlan(this.value)">
+                            <select class="form-select form-select-sm"
+                                onchange="handleClientsFilterPlan(this.value)">
                                 <option value="">Todos los planes</option>
                                 <option value="Standard">Standard</option>
                                 <option value="Premium">Premium</option>
@@ -63,19 +70,20 @@ async function renderClientsView() {
                                 <option value="Baja">Baja</option>
                             </select>
                         </div>
+
                     </div>
                 </div>
     
                 <!-- Tabla -->
-                <div class="glass-card overflow-hidden">
+                <div class="glass-card overflow-hidden rounded">
                     <div class="table-responsive">
                         <table class="table align-middle">
                             <thead>
                                 <tr>
-                                    <th style="color: var(--bg-deep) !important">Cliente</th>
-                                    <th style="color: var(--bg-deep) !important">Empresa / Contacto</th>
-                                    <th style="color: var(--bg-deep) !important">Plan</th>
-                                    <th style="color: var(--bg-deep) !important">Tickets</th>
+                                    <th>Cliente</th>
+                                    <th>Empresa / Contacto</th>
+                                    <th>Plan</th>
+                                    <th>Tickets</th>
                                 </tr>
                             </thead>
                             <tbody id="clients-table-body">
@@ -232,11 +240,13 @@ async function loadClientsData() {
 
 function handleClientsSearch(val) {
     clientsSearchQuery = val.toLowerCase();
+    currentClientsPage = 1; // reset
     renderClientsList();
 }
 
 function handleClientsFilterPlan(val) {
     clientsPlanFilter = val;
+    currentClientsPage = 1; // reset
     renderClientsList();
 }
 
@@ -245,32 +255,53 @@ function resetClientsFilters() {
     document.getElementById("clientsFilterPlan").value = "";
     clientsSearchQuery = "";
     clientsPlanFilter = "";
+    currentClientsPage = 1; // reset
     renderClientsList();
 }
 
 async function renderClientsList() {
     const tbody = document.getElementById("clients-table-body");
     if (!tbody) return;
+
     tbody.innerHTML = "";
 
     const filtered = allClients.filter(c => {
-        const matchesSearch = c.nombre.toLowerCase().includes(clientsSearchQuery) ||
+        const matchesSearch =
+            c.nombre.toLowerCase().includes(clientsSearchQuery) ||
             (c.empresa && c.empresa.toLowerCase().includes(clientsSearchQuery)) ||
             (c.email && c.email.toLowerCase().includes(clientsSearchQuery));
-        const matchesPlan = clientsPlanFilter === "" || c.plan === clientsPlanFilter;
+
+        const matchesPlan =
+            clientsPlanFilter === "" || c.plan === clientsPlanFilter;
+
         return matchesSearch && matchesPlan;
     });
 
     if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center text-dim py-5">No se encontraron clientes</td></tr>';
+
+        // eliminar paginación si no hay resultados
+        const old = document.getElementById("clients-pagination");
+        if (old) old.remove();
+
         return;
     }
 
-    // Renderizar filas básicas inmediatamente sin esperar a los tickets
-    for (const c of filtered) {
+    // ----------------------
+    // PAGINACIÓN DATA
+    // ----------------------
+    const totalPages = Math.ceil(filtered.length / CLIENTS_PER_PAGE);
+    const start = (currentClientsPage - 1) * CLIENTS_PER_PAGE;
+    const pageData = filtered.slice(start, start + CLIENTS_PER_PAGE);
+
+    // ----------------------
+    // RENDER FILAS
+    // ----------------------
+    for (const c of pageData) {
         const tr = document.createElement("tr");
         tr.id = `row-${c.id}`;
         tr.style.cursor = "pointer";
+
         tr.onclick = (e) => {
             if (e.target.closest('button')) return;
             toggleClientDetails(c.id, c.nombre);
@@ -291,7 +322,11 @@ async function renderClientsList() {
                 <div class="small text-dim">${c.telefono || '-'}</div>
             </td>
             <td>
-                <span class="badge ${c.plan === 'Premium' ? 'bg-danger text-white' : c.plan === 'Enterprise' ? 'bg-warning text-dark' : c.plan === 'Baja' ? 'bg-secondary' : 'border border-secondary text-dim'}">
+                <span class="badge ${c.plan === 'Premium' ? 'bg-danger text-white' :
+                c.plan === 'Enterprise' ? 'bg-warning text-dark' :
+                    c.plan === 'Baja' ? 'bg-secondary' :
+                        'border border-secondary text-dim'
+            }">
                     ${c.plan || 'Standard'}
                 </span>
                 ${(() => {
@@ -300,6 +335,7 @@ async function renderClientsList() {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const isExpired = vDate < today;
+
                 return `
                         <div class="x-small mt-1 ${isExpired ? 'text-danger fw-bold animate-pulse' : 'text-dim'}">
                             <i class="bi ${isExpired ? 'bi-exclamation-triangle-fill' : 'bi-calendar-event'} me-1"></i>
@@ -318,15 +354,20 @@ async function renderClientsList() {
         const detailsTr = document.createElement("tr");
         detailsTr.id = `details-${c.id}`;
         detailsTr.className = "details-row";
+
         detailsTr.innerHTML = `
             <td colspan="4">
                 <div class="details-container">
                     <div>
-                        <h6 class="text-accent-clients fw-bold mb-3"><i class="bi bi-rocket-takeoff me-2"></i>PROYECTOS VINCULADOS</h6>
+                        <h6 class="text-accent-clients fw-bold mb-3">
+                            <i class="bi bi-rocket-takeoff me-2"></i>PROYECTOS VINCULADOS
+                        </h6>
                         <div id="projects-container-${c.id}" class="d-flex flex-wrap gap-2"></div>
                     </div>
                     <div class="border-start border-secondary ps-4">
-                        <h6 class="text-accent-clients fw-bold mb-3"><i class="bi bi-gear me-2"></i>ACCIONES RÁPIDAS</h6>
+                        <h6 class="text-accent-clients fw-bold mb-3">
+                            <i class="bi bi-gear me-2"></i>ACCIONES RÁPIDAS
+                        </h6>
                         <div class="d-grid gap-2">
                             <button class="btn btn-outline-light btn-sm text-start" onclick="openEditClient('${c.id}')">
                                 <i class="bi bi-pencil me-2"></i> Editar Perfil
@@ -349,21 +390,50 @@ async function renderClientsList() {
         tbody.appendChild(detailsTr);
     }
 
-    // Cargar los tickets en segundo plano después de renderizar la tabla
+    // ----------------------
+    // TICKETS (async)
+    // ----------------------
     filtered.forEach(async (c) => {
         try {
             const pendingTickets = await window.api.getClientPendingTickets(c.id);
             const td = document.getElementById(`pending-tickets-${c.id}`);
             if (td) {
-                td.innerHTML = pendingTickets > 0 ?
-                    `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 px-2 py-1 rounded small">${pendingTickets} pendientes</span>` :
-                    '<span class="text-dim small">Al día</span>';
+                td.innerHTML = pendingTickets > 0
+                    ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 px-2 py-1 rounded small">${pendingTickets} pendientes</span>`
+                    : '<span class="text-dim small">Al día</span>';
             }
-        } catch (e) {
+        } catch {
             const td = document.getElementById(`pending-tickets-${c.id}`);
             if (td) td.innerHTML = '<span class="text-dim small">-</span>';
         }
     });
+
+    // ----------------------
+    // PAGINACIÓN UI
+    // ----------------------
+    const old = document.getElementById("clients-pagination");
+    if (old) old.remove();
+
+    const pagination = document.createElement("div");
+    pagination.id = "clients-pagination";
+    pagination.className = "d-flex justify-content-between align-items-center p-3 border-top border-secondary";
+
+    pagination.innerHTML = `
+        <button class="btn btn-sm btn-outline-light" ${currentClientsPage === 1 ? 'disabled' : ''} onclick="changeClientsPage(-1)">
+            ← Anterior
+        </button>
+
+        <span class="small text-dim">
+            Página ${currentClientsPage} de ${totalPages}
+        </span>
+
+        <button class="btn btn-sm btn-outline-light" ${currentClientsPage === totalPages ? 'disabled' : ''} onclick="changeClientsPage(1)">
+            Siguiente →
+        </button>
+    `;
+
+    const wrapper = document.querySelector("#clients-view .glass-card.overflow-hidden");
+    if (wrapper) wrapper.appendChild(pagination);
 }
 
 async function toggleClientDetails(clientId, clientName) {
@@ -628,4 +698,26 @@ async function handleDeletePayment(id, clientId) {
     } catch (err) {
         showToast("Error al eliminar pago", "danger");
     }
+}
+
+function changeClientsPage(direction) {
+
+    const filtered = allClients.filter(c => {
+        const matchesSearch = c.nombre.toLowerCase().includes(clientsSearchQuery) ||
+            (c.empresa && c.empresa.toLowerCase().includes(clientsSearchQuery)) ||
+            (c.email && c.email.toLowerCase().includes(clientsSearchQuery));
+
+        const matchesPlan = clientsPlanFilter === "" || c.plan === clientsPlanFilter;
+
+        return matchesSearch && matchesPlan;
+    });
+
+    const totalPages = Math.ceil(filtered.length / CLIENTS_PER_PAGE);
+
+    currentClientsPage += direction;
+
+    if (currentClientsPage < 1) currentClientsPage = 1;
+    if (currentClientsPage > totalPages) currentClientsPage = totalPages;
+
+    renderClientsList();
 }

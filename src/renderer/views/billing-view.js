@@ -26,7 +26,7 @@ async function renderBillingView() {
     const view = document.getElementById("billing-view");
     view.style.display = "block";
     view.innerHTML = `
-        <div class="animate-fade mt-4">
+        <div class="animate-fade">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h2 class="fw-bold mb-0 text-light" style="color: var(--text-main)">CONTROL DE PAGOS</h2>
@@ -45,17 +45,28 @@ async function renderBillingView() {
                 </div>
             </div>
 
-            <!-- FILTROS ESTILO TICKETS -->
-            <div class="glass-card p-4 mb-4">
-                <div class="row g-3">
+            <!-- FILTROS COMPACTOS -->
+            <div class="glass-card p-2 mb-3 rounded">
+                <div class="row g-2 align-items-end">
+
                     <div class="col-md-3">
-                        <label class="small text-dim fw-bold mb-2">BUSCAR CLIENTE</label>
-                        <input type="text" class="form-control form-control-sm text-light" id="bill-filter-client" onkeyup="handleBillingFilter('client', this.value)">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-dark border-secondary text-dim">
+                                <i class="bi bi-search text-secondary"></i>
+                            </span>
+                            <input type="text"
+                                class="form-control form-control-sm text-light"
+                                placeholder="Cliente..."
+                                id="bill-filter-client"
+                                onkeyup="handleBillingFilter('client', this.value)">
+                        </div>
                     </div>
+
                     <div class="col-md-3">
-                        <label class="small text-dim fw-bold mb-2">MÉTODO DE PAGO</label>
-                        <select class="form-select form-select-sm" id="bill-filter-method" onchange="handleBillingFilter('method', this.value)">
-                            <option value="">Todos</option>
+                        <select class="form-select form-select-sm"
+                            id="bill-filter-method"
+                            onchange="handleBillingFilter('method', this.value)">
+                            <option value="">Método</option>
                             <option value="Transferencia">Transferencia</option>
                             <option value="Efectivo">Efectivo</option>
                             <option value="Mercado Pago">Mercado Pago</option>
@@ -63,28 +74,35 @@ async function renderBillingView() {
                             <option value="Otro">Otro</option>
                         </select>
                     </div>
+
                     <div class="col-md-3">
-                        <label class="small text-dim fw-bold mb-2">DESDE</label>
-                        <input type="date" class="form-control form-control-sm text-light" id="bill-filter-start" onchange="handleBillingFilter('dateStart', this.value)">
+                        <input type="date"
+                            class="form-control form-control-sm text-light"
+                            id="bill-filter-start"
+                            onchange="handleBillingFilter('dateStart', this.value)">
                     </div>
+
                     <div class="col-md-3">
-                        <label class="small text-dim fw-bold mb-2">HASTA</label>
-                        <input type="date" class="form-control form-control-sm text-light" id="bill-filter-end" onchange="handleBillingFilter('dateEnd', this.value)">
+                        <input type="date"
+                            class="form-control form-control-sm text-light"
+                            id="bill-filter-end"
+                            onchange="handleBillingFilter('dateEnd', this.value)">
                     </div>
+
                 </div>
             </div>
 
-            <div class="glass-card p-0 overflow-hidden shadow-lg border-secondary">
+            <div class="glass-card p-0 overflow-hidden border-secondary rounded">
                 <div class="table-responsive">
                     <table class="table align-middle">
                         <thead>
                             <tr>
-                                <th class="ps-4" style="color: var(--bg-deep) !important">Fecha</th>
-                                <th style="color: var(--bg-deep) !important">Cliente</th>
-                                <th style="color: var(--bg-deep) !important">Concepto</th>
-                                <th style="color: var(--bg-deep) !important">Monto</th>
-                                <th class="text-center" style="color: var(--bg-deep) !important">Método</th>
-                                <th class="text-center" style="color: var(--bg-deep) !important">Acciones</th>
+                                <th class="ps-4">Fecha</th>
+                                <th>Cliente</th>
+                                <th>Concepto</th>
+                                <th>Monto</th>
+                                <th>Método</th>
+                                <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="billing-table-body">

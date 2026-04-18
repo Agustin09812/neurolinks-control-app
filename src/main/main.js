@@ -266,36 +266,6 @@ ipcMain.handle('open-external', async (_, url) => {
   return shell.openExternal(url);
 });
 
-ipcMain.handle('open-clients-window', async () => {
-  const clientsWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
-
-  clientsWindow.loadFile(path.join(__dirname, '../renderer/pages/clients.html'));
-});
-
-ipcMain.handle('open-tickets-window', async () => {
-  const ticketsWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
-
-  ticketsWindow.loadFile(path.join(__dirname, '../renderer/pages/tickets.html'));
-});
-
 ipcMain.handle('open-dashboard-window', async (_, url) => {
 
   if (dashboardWindows.has(url)) {
@@ -416,61 +386,6 @@ ipcMain.handle('delete-service', async (_, serviceId) => {
     console.error("Error en delete-service:", error);
     throw error;
   }
-});
-
-
-// --------------------------------------------------
-// OPEN LOGS WINDOW
-// --------------------------------------------------
-
-ipcMain.handle('open-logs-window', async (_, deploymentId) => {
-
-  const logsWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
-
-  logsWindow.loadFile(path.join(__dirname, '../renderer/pages/logs.html'));
-
-  logsWindow.webContents.on('did-finish-load', () => {
-    logsWindow.webContents.send('load-logs', deploymentId);
-  });
-
-});
-
-// --------------------------------------------------
-// OPEN VARIABLES WINDOW
-// --------------------------------------------------
-
-ipcMain.handle('open-variables-window', async (_, projectId, environmentId, serviceId) => {
-
-  const variablesWindow = new BrowserWindow({
-    width: 1000,
-    height: 700,
-    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
-
-  variablesWindow.loadFile(path.join(__dirname, '../renderer/pages/variables.html'));
-
-  variablesWindow.webContents.on('did-finish-load', () => {
-    variablesWindow.webContents.send('load-variables', {
-      projectId,
-      environmentId,
-      serviceId
-    });
-  });
-
 });
 
 // --------------------------------------------------
