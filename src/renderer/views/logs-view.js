@@ -127,9 +127,47 @@ async function fetchLogs(deploymentId) {
         if (deploymentId !== logsContext.deploymentId) return;
 
         if (!logs || !Array.isArray(logs) || logs.length === 0) {
+
             if (logsBuffer.length === 0) {
-                terminal.innerHTML = '<div class="text-secondary italic">No hay logs disponibles.</div>';
+
+                // 🔥 detectar si es deploy fallido
+                const isFailed = window.currentDeploymentStatus === "FAILED"
+                    || window.currentDeploymentStatus === "CRASHED";
+
+                if (isFailed) {
+
+                    terminal.innerHTML = `
+                <div class="text-danger mb-3">
+                    ❌ Este deployment falló durante el build.<br>
+                    Railway no expone estos logs vía API.
+                </div>
+
+                <button class="btn btn-sm btn-outline-danger" id="btn-open-railway">
+                    <i class="bi bi-box-arrow-up-right me-2"></i>
+                    Abrir en Railway
+                </button>
+            `;
+
+                    document.getElementById("btn-open-railway")?.addEventListener("click", () => {
+
+                        if (window.currentProjectId && window.currentServiceId) {
+                            window.api.openExternal(
+                                `https://railway.com/project/${window.currentProjectId}`
+                            );
+                        }
+
+                    });
+
+                } else {
+
+                    terminal.innerHTML = `
+                <div class="text-secondary italic">
+                    No hay logs disponibles.
+                </div>
+            `;
+                }
             }
+
             return;
         }
 

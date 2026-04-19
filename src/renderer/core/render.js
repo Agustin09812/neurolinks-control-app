@@ -1108,6 +1108,10 @@ function createServiceCard(service, project) {
 
     setActiveServiceMenu(e.currentTarget);
 
+    window.currentDeploymentStatus = service.railwayStatus;
+    window.currentProjectId = service.projectId;
+    window.currentServiceId = service.id;
+
     renderLogsView(service.deploymentId, service.name);
 
   });
