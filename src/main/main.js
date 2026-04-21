@@ -361,16 +361,7 @@ ipcMain.handle('redeploy-service', async (_, serviceId, environmentId) => {
   }
 });
 
-ipcMain.handle('deploy-service-update', async (_, serviceId, environmentId) => {
-  try {
-    const result = await railwayService.deployServiceUpdate(serviceId, environmentId);
-    await supabaseService.logAction('Deploy Update', `Deploy de actualización disponible para servicio ID: ${serviceId}`, 'servicios', serviceId);
-    return result;
-  } catch (error) {
-    console.error("Error en deploy-service-update:", error);
-    throw error;
-  }
-});
+
 
 
 // --------------------------------------------------
@@ -662,8 +653,9 @@ async function startBackgroundMonitoring() {
     try {
       const assistants = await railwayService.getAssistants();
 
-      assistants.forEach(a => {
-        a.services.forEach(async (s) => {
+      // OPT-03b FIX: Use for...of instead of async forEach to properly await
+      for (const a of assistants) {
+        for (const s of a.services) {
           const key = `${a.id}-${s.id}`;
           const oldStatus = lastAssistantsState.get(key);
           const newStatus = s.status;
@@ -676,13 +668,12 @@ async function startBackgroundMonitoring() {
             }
 
             // Intentar auto-recuperación (redeploy automático)
-            // Se pasa el objeto proyecto 'a' y servicio 's'
             await tryAutoRedeploy(a, s);
           }
 
           lastAssistantsState.set(key, newStatus);
-        });
-      });
+        }
+      }
     } catch (err) {
       console.error("Error en monitoreo background:", err.message);
     }

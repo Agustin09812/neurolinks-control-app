@@ -15,13 +15,7 @@ let currentPage = 1;
 const ITEMS_PER_PAGE = 5;
 
 async function renderTicketsView(filterClientId = "") {
-    selectedProjectId = null;
-    document.getElementById("dashboard-global").style.display = "none";
-    document.getElementById("assistant-detail").style.display = "none";
-    document.getElementById("clients-view").style.display = "none";
-    document.getElementById("billing-view").style.display = "none";
-    document.getElementById("audit-view").style.display = "none";
-
+    // FIX: selectedProjectId y ocultamiento de vistas se manejan en navigate()
     const secondary = document.getElementById("integrated-log-container");
     if (secondary) secondary.remove();
     const secondaryVar = document.getElementById("integrated-var-container");
@@ -40,7 +34,7 @@ async function renderTicketsView(filterClientId = "") {
         <div class="animate-fade">
             <div id="tickets-content" style="display:none;">
                  <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="fw-bold mb-0" style="color: var(--text-main)">SISTEMA DE TICKETS</h2>
+                    <h2 class="fw-bold mb-0 text-main">SISTEMA DE TICKETS</h2>
                     <button class="btn btn-outline-light btn-sm" onclick="openNewTicketModal()">
                         <i class="bi bi-plus-circle me-2"></i> Nuevo Ticket
                     </button>
@@ -127,20 +121,20 @@ async function renderTicketsView(filterClientId = "") {
                             </thead>
                             <tbody id="tickets-table-body-view"></tbody>
                             </table>
-                            </div>
+                    </div>
 
-                            <div class="d-flex justify-content-between align-items-center p-3 border-top border-secondary">
-                                <button class="btn btn-sm btn-outline-light" onclick="changePage(-1)">
-                                    ← Anterior
-                                </button>
+                    <!-- FIX: Paginación movida dentro del glass-card wrapper
+                         pero fuera de la tabla. Antes había un </table> duplicado -->
+                    <div class="d-flex justify-content-between align-items-center p-3 border-top border-secondary">
+                        <button class="btn btn-sm btn-outline-light" onclick="changePage(-1)">
+                            ← Anterior
+                        </button>
 
-                                <span id="pagination-info" class="small text-dim"></span>
+                        <span id="pagination-info" class="small text-dim"></span>
 
-                                <button class="btn btn-sm btn-outline-light" onclick="changePage(1)">
-                                    Siguiente →
-                                </button>
-                            </div>
-                        </table>
+                        <button class="btn btn-sm btn-outline-light" onclick="changePage(1)">
+                            Siguiente →
+                        </button>
                     </div>
                 </div>
             </div>
@@ -162,7 +156,7 @@ async function renderTicketsView(filterClientId = "") {
                                     <!-- TÍTULO -->
                                     <div class="col-md-6">
                                         <label class="form-label text-dim small fw-bold required">TÍTULO DEL PROBLEMA</label>
-                                        <input type="text" class="form-control text-light" id="ticketTitleView" required>
+                                        <input type="text" class="form-control text-main" id="ticketTitleView" required>
                                     </div>
 
                                     <!-- CLIENTE -->
@@ -205,10 +199,9 @@ async function renderTicketsView(filterClientId = "") {
                                     <div class="col-md-12 mt-2">
                                         <label class="form-label text-dim small fw-bold">DESCRIPCIÓN</label>
                                         <textarea 
-                                            class="form-control text-light" 
+                                            class="form-control text-main ticket-textarea" 
                                             id="ticketDescView" 
-                                            rows="10"
-                                            style="min-height: 220px; resize: vertical;">
+                                            rows="10">
                                         </textarea>
                                     </div>
 
@@ -455,23 +448,34 @@ async function handleDeleteTicket(id) {
 }
 
 function exportTicketsToCSV() {
-    if (allTicketsView.length === 0) {
+    // FIX: Exportar datos filtrados, no todos (el usuario espera lo que ve)
+    const filtered = allTicketsView.filter(t => {
+        const matchStatus = !ticketFilters.status || t.estado === ticketFilters.status;
+        const matchPriority = !ticketFilters.priority || t.prioridad === ticketFilters.priority;
+        const matchClient = !ticketFilters.client || t.cliente_id === ticketFilters.client;
+        return matchStatus && matchPriority && matchClient;
+    });
+
+    if (filtered.length === 0) {
         showToast("No hay tickets para exportar", "warning");
         return;
     }
 
+    // FIX: Escapar comas y comillas para evitar corrupción del CSV
+    const escapeCSV = (val) => `"${String(val).replace(/"/g, '""')}"`;
+
     const headers = ["ID", "Título", "Cliente", "Tipo", "Estado", "Prioridad", "Creado"];
-    const rows = allTicketsView.map(t => [
-        t.id,
-        t.titulo,
-        t.clientes ? t.clientes.nombre : 'Sin cliente',
-        t.tipo,
-        t.estado,
-        t.prioridad || 'Baja',
-        new Date(t.created_at).toLocaleDateString()
+    const rows = filtered.map(t => [
+        escapeCSV(t.id),
+        escapeCSV(t.titulo),
+        escapeCSV(t.clientes ? t.clientes.nombre : 'Sin cliente'),
+        escapeCSV(t.tipo),
+        escapeCSV(t.estado),
+        escapeCSV(t.prioridad || 'Baja'),
+        escapeCSV(new Date(t.created_at).toLocaleDateString())
     ]);
 
-    let csvContent = "data:text/csv;charset=utf-8,"
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"
         + headers.join(",") + "\n"
         + rows.map(e => e.join(",")).join("\n");
 
@@ -487,7 +491,20 @@ function exportTicketsToCSV() {
 }
 
 function changePage(direction) { // paginacion
-    const totalPages = Math.ceil(allTicketsView.length / ITEMS_PER_PAGE);
+    // BUG-05 FIX: Use filtered data for totalPages (not all tickets)
+    const filtered = allTicketsView.filter(t => {
+        const matchStatus = !ticketFilters.status || t.estado === ticketFilters.status;
+        const matchPriority = !ticketFilters.priority || t.prioridad === ticketFilters.priority;
+        const matchClient = !ticketFilters.client || t.cliente_id === ticketFilters.client;
+        let matchDate = true;
+        if (ticketFilters.dateStart || ticketFilters.dateEnd) {
+            const ticketDate = new Date(t.created_at).toISOString().split('T')[0];
+            if (ticketFilters.dateStart && ticketDate < ticketFilters.dateStart) matchDate = false;
+            if (ticketFilters.dateEnd && ticketDate > ticketFilters.dateEnd) matchDate = false;
+        }
+        return matchStatus && matchPriority && matchClient && matchDate;
+    });
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
 
     currentPage += direction;
 

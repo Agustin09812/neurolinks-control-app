@@ -6,6 +6,16 @@ let logsContext = {
 
 let logsBuffer = []; // para streaming incremental
 
+// FIX: Permite que navigate() limpie el interval al cambiar de vista.
+// Sin esto, el polling de logs seguía corriendo en background (20 req/min extra).
+window.stopLogsStreaming = function () {
+    if (logInterval) {
+        clearInterval(logInterval);
+        logInterval = null;
+    }
+    logsContext.deploymentId = null;
+};
+
 
 // --------------------------------------------------
 // RENDER
@@ -25,13 +35,10 @@ async function renderLogsView(deploymentId, serviceName) {
         logInterval = null;
     }
 
-    // ocultar otras vistas
-    document.getElementById("dashboard-global").style.display = "none";
+    // FIX: Logs se abre desde el menú de servicios, no desde navigate().
+    // Necesita ocultar assistant-detail porque lo reemplaza visualmente.
+    // Las demás vistas (clients, tickets, etc.) ya las maneja navigate().
     document.getElementById("assistant-detail").style.display = "none";
-    document.getElementById("clients-view").style.display = "none";
-    document.getElementById("tickets-view").style.display = "none";
-    document.getElementById("billing-view").style.display = "none";
-    document.getElementById("audit-view").style.display = "none";
 
     // mostrar logs
     panel.style.display = "block";
@@ -109,6 +116,18 @@ async function fetchLogs(deploymentId) {
     // cortar si cambió contexto
     if (deploymentId !== logsContext.deploymentId) return;
 
+    try {
+        // FIX: Usar variable global `assistants` (de render.js) en vez de llamar
+        // a getAssistants() cada 3s. Esto eliminaba ~20 req/min extra a la API.
+        const service = assistants
+            .flatMap(p => p.services)
+            .find(s => s.deploymentId === deploymentId);
+
+        if (service) {
+            window.currentDeploymentStatus = service.railwayStatus;
+        }
+    } catch { }
+
     const terminal = document.getElementById("log-terminal");
 
     if (!terminal) {
@@ -123,22 +142,40 @@ async function fetchLogs(deploymentId) {
 
         const logs = await window.api.fetchDeploymentLogs(deploymentId);
 
-        // ❌ doble check (race condition fix)
+        // doble check (race condition fix)
         if (deploymentId !== logsContext.deploymentId) return;
 
         if (!logs || !Array.isArray(logs) || logs.length === 0) {
 
             if (logsBuffer.length === 0) {
 
-                // 🔥 detectar si es deploy fallido
-                const isFailed = window.currentDeploymentStatus === "FAILED"
-                    || window.currentDeploymentStatus === "CRASHED";
+                const status = window.currentDeploymentStatus;
 
-                if (isFailed) {
+                // DETECTAR DEPLOY
+                const isDeploying =
+                    status === "BUILDING" ||
+                    status === "DEPLOYING";
+
+                const isFailed =
+                    status === "FAILED" ||
+                    status === "CRASHED";
+
+                if (isDeploying) {
+
+                    terminal.innerHTML = `
+                <div class="text-info mb-3">
+                <div class="spinner-border spinner-border-sm me-2"></div>
+                    <h5 class="fw-bold">Deployment en progreso...</h5><br>
+                    Esperando logs del servicio.
+                </div>
+            `;
+
+                } else if (isFailed) {
 
                     terminal.innerHTML = `
                 <div class="text-danger mb-3">
-                    ❌ Este deployment falló durante el build.<br>
+                <div class="spinner-border spinner-border-sm me-2"></div>
+                   <h5 class="fw-bold">Este deployment falló durante el build.</h5><br>
                     Railway no expone estos logs vía API.
                 </div>
 
@@ -149,13 +186,11 @@ async function fetchLogs(deploymentId) {
             `;
 
                     document.getElementById("btn-open-railway")?.addEventListener("click", () => {
-
-                        if (window.currentProjectId && window.currentServiceId) {
+                        if (window.currentProjectId) {
                             window.api.openExternal(
                                 `https://railway.com/project/${window.currentProjectId}`
                             );
                         }
-
                     });
 
                 } else {
@@ -215,13 +250,6 @@ async function fetchLogs(deploymentId) {
         // limpiar "Cargando..."
         if (terminal.children.length === 1 && terminal.textContent.includes("Cargando")) {
             terminal.innerHTML = "";
-        }
-
-        terminal.appendChild(fragment);
-
-        // mantener máximo 1000 líneas
-        while (terminal.children.length > 1000) {
-            terminal.removeChild(terminal.firstChild);
         }
 
         const isAtBottom =

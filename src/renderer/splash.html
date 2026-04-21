@@ -9,7 +9,15 @@
   <link rel="stylesheet" href="../../assets/css/styles.css">
 </head>
 
-<body class="d-flex justify-content-center align-items-center vh-100 text-light">
+<body class="d-flex justify-content-center align-items-center vh-100 text-light" data-theme="dark">
+
+  <!-- Cargar tema guardado antes del render para evitar flash -->
+  <script>
+    try {
+      const t = localStorage.getItem('theme') || 'dark';
+      document.body.dataset.theme = t;
+    } catch(e) {}
+  </script>
 
   <div class="text-center splash-container">
 

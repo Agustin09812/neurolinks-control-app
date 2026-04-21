@@ -8,17 +8,10 @@ let billingFilters = {
 };
 
 async function renderBillingView() {
-    selectedProjectId = null;
-
-    // Hide other views
-    document.getElementById("dashboard-global").style.display = "none";
-    document.getElementById("assistant-detail").style.display = "none";
-    document.getElementById("clients-view").style.display = "none";
-    document.getElementById("tickets-view").style.display = "none";
-    document.getElementById("audit-view").style.display = "none";
+    // FIX: selectedProjectId y ocultamiento de vistas se manejan en navigate()
 
     // Limpiar contenedores secundarios
-    ["integrated-log-container", "integrated-var-container", "integrated-chat-container"].forEach(id => {
+    ["integrated-log-container", "integrated-var-container"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.remove();
     });
@@ -29,7 +22,7 @@ async function renderBillingView() {
         <div class="animate-fade">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h2 class="fw-bold mb-0 text-light" style="color: var(--text-main)">CONTROL DE PAGOS</h2>
+                    <h2 class="fw-bold mb-0 text-light text-main">CONTROL DE PAGOS</h2>
                     <p class="text-secondary small mb-0">Gestión financiera y facturación histórica</p>
                 </div>
                 <div class="d-flex gap-2">
@@ -136,15 +129,15 @@ async function renderBillingView() {
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold">FECHA</label>
-                                    <input type="date" class="form-control text-light" id="payDateGlobal" required>
+                                    <input type="date" class="form-control text-main" id="payDateGlobal" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold">MONTO ($)</label>
-                                    <input type="number" class="form-control text-light" id="payAmountGlobal" required>
+                                    <input type="number" class="form-control text-main" id="payAmountGlobal" required>
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label small fw-bold">CONCEPTO</label>
-                                    <input type="text" class="form-control text-light" id="payConceptGlobal" placeholder="Ej: Abono Mensual Febrero" required>
+                                    <input type="text" class="form-control text-main" id="payConceptGlobal" placeholder="Ej: Abono Mensual Febrero" required>
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label small fw-bold">MÉTODO DE PAGO</label>
@@ -307,23 +300,42 @@ async function deleteGlobalPayment(id) {
 }
 
 function exportBillingToCSV() {
-    // ... same implementation as before, maybe using the filtered list
-    const listToExport = allPayments; // Or should it be 'filtered'? Let's keep all for now or the filtered one.
-    // User probably wants the filtered one if they are filtering.
-    // Let's use all for safety or just follow the context.
+    // FIX: Exportar datos filtrados, no todos. El usuario espera lo que ve en pantalla.
+    // BUG-06 FIX: Now includes date filters
+    let listToExport = allPayments.filter(p => {
+        const clientMatch = !billingFilters.client || (p.clientes && p.clientes.nombre.toLowerCase().includes(billingFilters.client.toLowerCase()));
+        const methodMatch = !billingFilters.method || p.metodo === billingFilters.method;
+
+        let dateMatch = true;
+        const pDate = new Date(p.fecha);
+        if (billingFilters.dateStart) {
+            const start = new Date(billingFilters.dateStart);
+            dateMatch = dateMatch && (pDate >= start);
+        }
+        if (billingFilters.dateEnd) {
+            const end = new Date(billingFilters.dateEnd);
+            end.setHours(23, 59, 59);
+            dateMatch = dateMatch && (pDate <= end);
+        }
+
+        return clientMatch && methodMatch && dateMatch;
+    });
 
     if (listToExport.length === 0) {
         showToast("No hay datos para exportar", "warning");
         return;
     }
 
+    // FIX: Escapar comas y comillas para evitar corrupción del CSV
+    const escapeCSV = (val) => `"${String(val).replace(/"/g, '""')}"`;
+
     const headers = ["Fecha", "Cliente", "Concepto", "Monto", "Método"];
     const rows = listToExport.map(p => [
-        new Date(p.fecha).toLocaleDateString(),
-        p.clientes ? p.clientes.nombre : 'Sin Cliente',
-        p.concepto,
+        escapeCSV(new Date(p.fecha).toLocaleDateString()),
+        escapeCSV(p.clientes ? p.clientes.nombre : 'Sin Cliente'),
+        escapeCSV(p.concepto),
         p.monto,
-        p.metodo
+        escapeCSV(p.metodo)
     ]);
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF"

@@ -156,7 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  const btnSearch = document.getElementById("btn-search-templates");
+  // BUG-09 FIX: Removed unused btnSearch variable
   document.addEventListener("click", (e) => {
     if (e.target.closest("#btn-search-templates")) {
       performSearch();

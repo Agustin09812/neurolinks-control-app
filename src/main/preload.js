@@ -45,8 +45,8 @@ contextBridge.exposeInMainWorld('api', {
   redeployService: (serviceId, environmentId) =>
     ipcRenderer.invoke('redeploy-service', serviceId, environmentId),
 
-  deployServiceUpdate: (serviceId, environmentId) =>
-    ipcRenderer.invoke('deploy-service-update', serviceId, environmentId),
+  // BUG-09b: Removed deployServiceUpdate — dead code (handleDeployUpdate was removed)
+
 
   deleteService: (serviceId) =>
     ipcRenderer.invoke('delete-service', serviceId),

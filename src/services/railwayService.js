@@ -145,12 +145,28 @@ const railwayService = {
   },
 
   async deployServiceUpdate(serviceId, environmentId) {
+
     const query = `
-      mutation serviceInstanceDeployV2($serviceId: String!, $environmentId: String!) {
-        serviceInstanceDeployV2(serviceId: $serviceId, environmentId: $environmentId)
+    mutation serviceInstanceDeployV2($input: ServiceInstanceDeployV2Input!) {
+      serviceInstanceDeployV2(input: $input)
+    }
+  `;
+
+    const variables = {
+      input: {
+        serviceId,
+        environmentId
       }
-    `;
-    return await railwayQuery(query, { serviceId, environmentId });
+    };
+
+    const res = await railwayQuery(query, variables);
+
+    if (res.errors) {
+      console.error(res.errors);
+      throw new Error(res.errors[0].message);
+    }
+
+    return res.data;
   },
 
   async deleteService(serviceId) {

@@ -2,14 +2,9 @@ let auditLogs = [];
 let filteredAuditLogs = [];
 
 async function renderAuditView() {
+    // FIX: Ocultamiento de vistas se maneja en navigate()
 
-    document.getElementById("dashboard-global").style.display = "none";
-    document.getElementById("assistant-detail").style.display = "none";
-    document.getElementById("clients-view").style.display = "none";
-    document.getElementById("tickets-view").style.display = "none";
-    document.getElementById("billing-view").style.display = "none";
-
-    ["integrated-log-container", "integrated-var-container", "integrated-chat-container"].forEach(id => {
+    ["integrated-log-container", "integrated-var-container"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.remove();
     });
@@ -25,11 +20,11 @@ async function renderAuditView() {
                     <h2 class="fw-bold mb-0">REGISTRO DE ACTIVIDAD</h2>
                 </div>
                 <div class="d-flex gap-2">
-                    <div class="input-group input-group-sm" style="width: 250px;">
+                    <div class="input-group input-group-sm search-input-group">
                         <span class="input-group-text bg-dark border-secondary text-secondary">
                             <i class="bi bi-search"></i>
                         </span>
-                        <input type="text" class="form-control text-light" id="auditSearch" onkeyup="filterAuditLogs()">
+                        <input type="text" class="form-control text-main" id="auditSearch" onkeyup="filterAuditLogs()">
                     </div>
                     <button class="btn btn-outline-light btn-sm" onclick="loadAuditLogs()">
                         <i class="bi bi-arrow-clockwise me-2"></i>Actualizar
@@ -38,7 +33,7 @@ async function renderAuditView() {
             </div>
 
             <div class="glass-card p-0 overflow-hidden rounded">
-                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                <div class="table-responsive audit-table-scroll">
                     <table class="table table-hover mb-0 align-middle">
                         <thead>
                             <tr>

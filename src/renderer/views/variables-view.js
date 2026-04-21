@@ -3,13 +3,10 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
     const panel = document.getElementById("variables-view");
     if (!panel) return;
 
-    // ocultar otras vistas
-    document.getElementById("dashboard-global").style.display = "none";
+    // FIX: Variables se abre desde el menú de servicios, no desde navigate().
+    // Necesita ocultar assistant-detail porque lo reemplaza visualmente.
+    // Las demás vistas (clients, tickets, etc.) ya las maneja navigate().
     document.getElementById("assistant-detail").style.display = "none";
-    document.getElementById("clients-view").style.display = "none";
-    document.getElementById("tickets-view").style.display = "none";
-    document.getElementById("billing-view").style.display = "none";
-    document.getElementById("audit-view").style.display = "none";
 
     panel.style.display = "block";
 
@@ -119,28 +116,57 @@ async function loadVariables(projectId, environmentId, serviceId) {
             return;
         }
 
-        grid.innerHTML = entries.map(([key, value]) => `
-            <div class="var-card">
+        grid.innerHTML = entries.map(([key, value]) => {
+            // BUG-01 FIX: Escape values to prevent XSS/HTML breakage
+            const escapeHtml = (str) => String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/`/g, '&#96;');
+
+            const safeKey = escapeHtml(key);
+            const safeValue = escapeHtml(value);
+
+            return `
+            <div class="var-card" data-var-key="${safeKey}" data-var-value="${safeValue}"
+                 data-project-id="${projectId}" data-env-id="${environmentId}" data-service-id="${serviceId}">
                 <div class="var-card-header">
                     <div class="var-key-row">
-                        <span class="var-key">${key}</span>
+                        <span class="var-key">${safeKey}</span>
                         <div class="var-actions-inline">
-                            <span class="badge badge-edit"
-                                onclick="openEditModal('${projectId}', '${environmentId}', '${serviceId}', \`${key}\`, \`${value}\`)">
+                            <span class="badge badge-edit btn-edit-var">
                                 <i class="bi bi-pencil"></i>
                             </span>
-                            <span class="badge badge-delete"
-                                onclick="handleDeleteVariable('${projectId}', '${environmentId}', '${serviceId}', '${key}')">
+                            <span class="badge badge-delete btn-delete-var">
                                 <i class="bi bi-trash"></i>
                             </span>
                         </div>
                     </div>
                 </div>
                 <div class="var-card-body">
-                    <pre class="var-value">${value}</pre>
+                    <pre class="var-value">${safeValue}</pre>
                 </div>
             </div>
-        `).join("");
+        `}).join("");
+
+        // Event delegation for edit/delete buttons (safe, no inline onclick)
+        grid.addEventListener("click", (e) => {
+            const card = e.target.closest(".var-card");
+            if (!card) return;
+            const k = card.dataset.varKey;
+            const v = card.dataset.varValue;
+            const pId = card.dataset.projectId;
+            const eId = card.dataset.envId;
+            const sId = card.dataset.serviceId;
+
+            if (e.target.closest(".btn-edit-var")) {
+                openEditModal(pId, eId, sId, k, v);
+            } else if (e.target.closest(".btn-delete-var")) {
+                handleDeleteVariable(pId, eId, sId, k);
+            }
+        });
 
     } catch (err) {
 

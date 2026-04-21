@@ -10,7 +10,15 @@
   <link rel="stylesheet" href="../../assets/css/styles.css">
 </head>
 
-<body class="bg-dark text-light vh-100">
+<body class="bg-dark text-light vh-100 app-preload" data-theme="dark">
+
+  <!-- Cargar tema ANTES del render para evitar flash de tema incorrecto -->
+  <script>
+    try {
+      const t = localStorage.getItem('theme') || 'dark';
+      document.body.dataset.theme = t;
+    } catch(e) {}
+  </script>
 
   <!-- SIDEBAR -->
   <div class="sidebar">
@@ -49,6 +57,11 @@
 
     <!-- BOTTOM -->
     <div class="sidebar-bottom">
+
+      <!-- Theme Toggle -->
+      <div class="sidebar-item" id="btn-theme-toggle" title="Cambiar tema">
+        <i class="bi bi-moon-stars" id="theme-icon"></i>
+      </div>
 
       <div class="sidebar-item" id="btn-updates" title="Actualizaciones">
         <i class="bi bi-arrow-down-circle"></i>
@@ -96,8 +109,7 @@
       <div id="logs-view" class="flex-grow-1 overflow-auto p-4"></div>
       <!-- VARIABLES -->
       <div id="variables-view" class="flex-grow-1 overflow-auto p-4"></div>
-      <!-- WEBCHAT -->
-      <div id="webchat-view" class="flex-grow-1 overflow-auto p-4"></div>
+      <!-- FIX: Se eliminó webchat-view — feature removida, el archivo JS no existía (404) -->
     </div>
   </div>
 
@@ -105,7 +117,7 @@
   <!-- RENAME PROJECT MODAL -->
   <div class="modal fade" id="renameProjectModal" tabindex="-1">
     <div class="modal-dialog">
-      <div class="modal-content bg-dark text-light border-secondary">
+      <div class="modal-content glass-card">
 
         <div class="modal-header border-secondary">
           <h5 class="modal-title">Renombrar Proyecto</h5>
@@ -133,7 +145,7 @@
   <!-- DEPLOY ASSISTANT MODAL -->
   <div class="modal fade" id="deployAssistantModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered">
-      <div class="modal-content bg-dark text-light border-secondary">
+      <div class="modal-content glass-card">
 
         <div class="modal-header border-secondary">
           <div>
@@ -149,7 +161,6 @@
 
           <div id="deploy-step-1">
             <div class="row mb-3 px-3">
-              <div class="row mb-3 px-3">
                 <div class="input-group input-group-sm">
 
                   <span class="input-group-text bg-dark border-secondary text-secondary">
@@ -165,7 +176,6 @@
 
                 </div>
               </div>
-            </div>
             <div class="row g-3" id="templates-container">
             </div>
           </div>
@@ -206,7 +216,7 @@
   <!-- LINK CLIENT MODAL -->
   <div class="modal fade" id="linkClientModal" tabindex="-1">
     <div class="modal-dialog">
-      <div class="modal-content bg-dark text-light border-secondary">
+      <div class="modal-content glass-card">
 
         <div class="modal-header border-secondary">
           <h5 class="modal-title">Vincular Cliente</h5>
@@ -237,7 +247,7 @@
   <!-- UPDATE MODAL -->
   <div class="modal fade" id="updateModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content bg-dark text-light border-warning">
+      <div class="modal-content glass-card border-warning">
         <div class="modal-header border-warning">
           <h5 class="modal-title">
             Nueva versión disponible
@@ -344,7 +354,7 @@
   <!-- EDIT VARIABLE MODAL -->
   <div class="modal fade" id="editModal" tabindex="-1">
     <div class="modal-dialog">
-      <div class="modal-content bg-dark text-light border-secondary">
+      <div class="modal-content glass-card">
         <div class="modal-header border-secondary">
           <h5 class="modal-title">Editar Variable</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -381,7 +391,7 @@
   <script src="views/audit-view.js" defer></script>
   <script src="views/logs-view.js" defer></script>
   <script src="views/variables-view.js" defer></script>
-  <script src="views/webchat-view.js" defer></script>
+  <!-- FIX: Se eliminó webchat-view.js — archivo no existía, generaba 404 silencioso -->
   <script src="views/dashboard-view.js" defer></script>
   <!-- Templates de despliegue -->
   <script src="core/deploy-template.js" defer></script>

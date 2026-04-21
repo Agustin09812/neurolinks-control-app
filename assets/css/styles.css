@@ -1,11 +1,75 @@
 /* =========================================================
 GLOBAL STYLESHEET
+=========================================================
+
+   CLASES FALTANTES:
+   Las siguientes clases se usan en JS/HTML pero no tenían
+   definición CSS, causando que no se aplique ningún estilo.
 ========================================================= */
 
-/* Forzar color en tablas dentro de glass-card */
+/* FIX: Clase usada en clients-view y billing-view para nombres de clientes */
+.text-accent-clients {
+  color: var(--accent-secondary);
+}
+
+/* FIX: Clase usada en clients-view para resaltar fila seleccionada */
+.bg-accent-glass {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* FIX: Clase usada en assistant cards para efecto hover */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* FIX: Clase usada en tickets-view botón reset filtros */
+.btn-outline-custom {
+  color: var(--text-dim);
+  border: 1px solid var(--border-light);
+  background: transparent;
+}
+
+.btn-outline-custom:hover {
+  color: var(--text-main);
+  border-color: var(--text-main);
+}
+
+/* FIX: Clase usada en clients-view para vencimientos expirados */
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* FIX: Clase usada en navigate() para transición entre vistas */
+.view-transition {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* FIX: Clase usada en DOMContentLoaded para ocultar contenido pre-carga */
+.app-preload {
+  opacity: 0;
+}
+
+/* STYLE-01 FIX: Use text-dim for table headers instead of bg-deep */
 .glass-card .table,
 .glass-card .table thead th {
-  color: var(--bg-deep) !important;
+  color: var(--text-dim) !important;
 }
 
 /* Forzar color en tablas dentro de glass-card */
@@ -35,28 +99,33 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* =========================================================
-   1. DESIGN SYSTEM (TOKENS)
+   1. DESIGN SYSTEM (TOKENS) — DARK MODE (default)
 ========================================================= */
 
 :root {
-  --bg-deep: #0a0c14;
-  --bg-sidebar: rgba(15, 17, 26, 0.95);
-  --bg-card: rgba(26, 29, 43, 0.7);
-  --bg-glass: rgba(20, 23, 35, 0.85);
+  --bg-deep: #0b0f1a;
+  --bg-sidebar: rgba(12, 16, 28, 0.92);
+  --bg-card: rgba(22, 27, 45, 0.549);
+  --bg-glass: rgba(18, 22, 38, 0.75);
+  --bg-input: #161925;
 
-  --accent-primary: #00d2ff;
-  --accent-secondary: #f093fb;
+  --accent-primary: #38bdf8;
+  --accent-secondary: #c084fc;
 
-  --success: #2ed573;
-  --error: #ff4757;
-  --warning: #ffa502;
-  --info: #00d2ff;
+  --success: #34d399;
+  --error: #f87171;
+  --warning: #fbbf24;
+  --info: #38bdf8;
 
-  --text-main: #e6e6e6;
-  --text-dim: #888;
+  --text-main: #e2e8f0;
+  --text-dim: #64748b;
 
-  --border-soft: rgba(255, 255, 255, 0.05);
-  --border-light: rgba(255, 255, 255, 0.1);
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --border-light: rgba(255, 255, 255, 0.12);
+
+  --glass-blur: blur(20px) saturate(1.8);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -64,6 +133,443 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   --transition-fast: 0.2s ease;
   --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =========================================================
+   1b. LIGHT MODE TOKENS
+========================================================= */
+
+[data-theme="light"] {
+  --bg-deep: #f1f5f9;
+  --bg-sidebar: rgba(255, 255, 255, 0.82);
+  --bg-card: rgba(255, 255, 255, 0.55);
+  --bg-glass: rgba(255, 255, 255, 0.65);
+  --bg-input: #ffffff;
+
+  --accent-primary: #0284c7;
+  --accent-secondary: #9333ea;
+
+  --success: #16a34a;
+  --error: #dc2626;
+  --warning: #d97706;
+  --info: #0284c7;
+
+  --text-main: #0f1318;
+  --text-dim: #35383d;
+
+  --border-soft: rgba(0, 0, 0, 0.06);
+  --border-light: rgba(0, 0, 0, 0.1);
+
+  --glass-blur: blur(20px) saturate(1.5);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* Transición suave al cambiar tema */
+body,
+.sidebar,
+.glass-card,
+.service-card,
+.modal-content,
+.form-control,
+.form-select,
+.toast,
+.offcanvas {
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* =========================================================
+   1c. BOOTSTRAP OVERRIDES PARA LIGHT MODE
+========================================================= */
+
+/* BODY — bg-dark de Bootstrap usa !important, necesitamos mayor especificidad */
+body[data-theme="light"],
+body[data-theme="light"].bg-dark {
+  background-color: var(--bg-deep) !important;
+  color: var(--text-main) !important;
+  background-image:
+    radial-gradient(circle at 0% 0%, rgba(2, 132, 199, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(147, 51, 234, 0.06) 0%, transparent 50%);
+}
+
+/* TEXTOS */
+[data-theme="light"] .text-light,
+[data-theme="light"] .text-white {
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .separator-line {
+  border-top: 1px solid var(--text-dim) !important;
+}
+
+[data-theme="light"] .text-secondary {
+  color: var(--text-dim) !important;
+}
+
+[data-theme="light"] h2.fw-bold,
+[data-theme="light"] h3.fw-bold,
+[data-theme="light"] h5.fw-bold {
+  color: var(--text-main) !important;
+}
+
+/* BACKGROUNDS */
+[data-theme="light"] .bg-dark {
+  background-color: var(--bg-card) !important;
+}
+
+[data-theme="light"] .text-bg-dark {
+  background-color: var(--bg-glass) !important;
+  color: var(--text-main) !important;
+}
+
+/* BORDERS */
+[data-theme="light"] .border-secondary {
+  border-color: var(--border-light) !important;
+}
+
+[data-theme="light"] .border-warning {
+  border-color: var(--warning) !important;
+}
+
+/* BOTONES — convertir outline a botones con fondo sólido en light mode */
+[data-theme="light"] .btn-outline-light {
+  color: var(--text-main) !important;
+  background-color: #fcfcfc !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme="light"] .btn-outline-light:hover {
+  background-color: #d4d4d4 !important;
+  color: var(--text-dim) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+/* btn-outline-info, warning, etc. — hacerlos soft-solid */
+[data-theme="light"] .btn-outline-info {
+  background-color: rgba(2, 132, 199, 0.1) !important;
+  color: var(--info) !important;
+  border-color: transparent !important;
+}
+
+[data-theme="light"] .btn-outline-info:hover {
+  background-color: rgba(2, 132, 199, 0.2) !important;
+}
+
+[data-theme="light"] .btn-outline-warning {
+  background-color: rgba(217, 119, 6, 0.1) !important;
+  color: var(--warning) !important;
+  border-color: transparent !important;
+}
+
+[data-theme="light"] .btn-outline-warning:hover {
+  background-color: rgba(217, 119, 6, 0.2) !important;
+}
+
+
+
+/* INPUTS */
+[data-theme="light"] .btn-close-white {
+  filter: none;
+}
+
+[data-theme="light"] input::placeholder {
+  color: rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.6;
+}
+
+/* SIDEBAR — adaptar items al fondo claro */
+[data-theme="light"] .sidebar-item {
+  color: var(--text-dim);
+}
+
+[data-theme="light"] .sidebar-item:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--accent-primary);
+}
+
+[data-theme="light"] .sidebar-item.active {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+/* DROPDOWN MENU LIGHT MODE (Tuerquita) */
+[data-theme="light"] .dropdown-menu-dark {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0) !important;
+  color: var(--text-main) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] .dropdown-menu-dark .dropdown-item {
+  color: var(--text-dim) !important;
+}
+
+[data-theme="light"] .dropdown-menu-dark .dropdown-item:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .dropdown-menu-dark .dropdown-item.text-danger {
+  color: var(--error) !important;
+}
+
+[data-theme="light"] .dropdown-menu-dark .dropdown-item.text-danger:hover {
+  background-color: rgba(220, 38, 38, 0.1) !important;
+}
+
+[data-theme="light"] .dropdown-menu-dark .dropdown-divider {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* DETAIL PANEL — menú servicios (Logs, Variables, Redeploy) */
+[data-theme="light"] .service-menu-item {
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .service-menu-item:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: var(--accent-primary) !important;
+}
+
+[data-theme="light"] .service-menu-item.active {
+  background: rgba(0, 0, 0, 0.08) !important;
+  color: var(--text-main) !important;
+}
+
+/* DETAIL PANEL — textos del header y panel lateral */
+[data-theme="light"] .detail-side-panel,
+[data-theme="light"] #detail-side-panel {
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .dashboard-access {
+  background: #ffffff !important;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem !important;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .dashboard-access h3,
+[data-theme="light"] .dashboard-access p {
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .dashboard-icon i {
+  color: var(--accent-primary) !important;
+}
+
+/* DETAIL PANEL - BADGES DEL HEADER (Light mode) */
+[data-theme="light"] #header-badges .badge {
+  background-color: var(--bg-card) !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  font-weight: 600;
+}
+
+[data-theme="light"] #header-badges .text-info {
+  color: var(--info) !important;
+}
+
+[data-theme="light"] #header-badges .text-success {
+  color: #0f766e !important;
+  /* Verde más oscuro/legible */
+}
+
+[data-theme="light"] #header-badges .text-warning {
+  color: #b45309 !important;
+  /* Naranja más oscuro/legible */
+}
+
+[data-theme="light"] #header-badges .text-danger {
+  color: #b91c1c !important;
+  /* Rojo más oscuro/legible */
+}
+
+/* VARIABLES VIEW — cards y valores */
+[data-theme="light"] .var-card {
+  background: var(--bg-card) !important;
+  border-color: var(--border-light) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .var-value {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .var-key {
+  color: var(--accent-primary) !important;
+  background-color: rgba(2, 132, 199, 0.1) !important;
+}
+
+/* TEMPLATE CARDS — descripciones y badges de categoría */
+[data-theme="light"] .template-card {
+  background: var(--bg-card) !important;
+  border-color: var(--border-light) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .template-desc {
+  color: var(--text-main) !important;
+  /* Más contraste */
+  opacity: 0.8;
+}
+
+[data-theme="light"] .template-card .badge.bg-secondary {
+  background-color: rgba(0, 0, 0, 0.15) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .template-header h6 {
+  color: var(--text-main) !important;
+}
+
+/* BADGES DE PLANES (Clients View) y ESTADO */
+[data-theme="light"] .badge.border.border-secondary {
+  border-color: rgba(0, 0, 0, 0.25) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .badge.bg-secondary {
+  background-color: rgba(0, 0, 0, 0.15) !important;
+  color: var(--text-main) !important;
+}
+
+/* SERVICE CARD — textos dentro de la card del servicio */
+[data-theme="light"] .service-card h6,
+[data-theme="light"] .service-card .fw-bold {
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .service-card .text-dim,
+[data-theme="light"] .service-card .small {
+  color: var(--text-dim) !important;
+}
+
+/* =========================================================
+   1d. UTILITY CLASSES (reemplazan inline styles)
+========================================================= */
+
+.clickable {
+  cursor: pointer;
+}
+
+.text-truncate-75 {
+  max-width: 75%;
+}
+
+.search-input-group {
+  width: 250px;
+}
+
+.badge-sm {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.badge-sm-action {
+  cursor: pointer;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.min-w-60 {
+  min-width: 60px;
+}
+
+.ticket-textarea {
+  min-height: 220px;
+  resize: vertical;
+}
+
+.dashboard-desc {
+  max-width: 320px;
+}
+
+.dashboard-actions {
+  max-width: 280px;
+}
+
+.payment-table-scroll {
+  max-height: 300px;
+}
+
+.th-dark {
+  color: var(--text-dim) !important;
+}
+
+.spinner-xs {
+  width: 12px;
+  height: 12px;
+}
+
+.audit-table-scroll {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.text-main {
+  color: var(--text-main);
+}
+
+/* =========================================================
+   1e. LIGHT MODE — COMPONENT OVERRIDES ADICIONALES
+========================================================= */
+
+[data-theme="light"] .offcanvas {
+  background-color: #ffffff !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .input-group-text {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-light) !important;
+  color: var(--text-dim) !important;
+}
+
+[data-theme="light"] .table {
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .table tbody td {
+  border-bottom-color: var(--border-soft) !important;
+}
+
+[data-theme="light"] .glass-card .table thead th {
+  color: var(--text-dim) !important;
+}
+
+[data-theme="light"] .glass-card .table tbody td,
+[data-theme="light"] .glass-card .table tbody tr {
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .toast {
+  background-color: var(--bg-glass) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .splash-title {
+  color: var(--text-main) !important;
+}
+
+/* STYLE-06: Side panel placeholder for light mode */
+[data-theme="light"] .side-panel-placeholder {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: var(--border-light) !important;
+}
+
+/* Toast themed bg (replaces hardcoded bg-dark) */
+.toast-themed {
+  background-color: var(--bg-glass) !important;
+  color: var(--text-main) !important;
 }
 
 
@@ -77,10 +583,11 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   background-image:
-    radial-gradient(circle at 0% 0%, rgba(0, 210, 255, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 100% 100%, rgba(121, 40, 202, 0.03) 0%, transparent 50%);
+    radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(192, 132, 252, 0.04) 0%, transparent 50%);
 }
 
+/* Light mode body bg ahora se maneja en sección 1c con body[data-theme="light"].bg-dark */
 
 /* =========================================================
    3. NAVBAR
@@ -96,7 +603,10 @@ body {
   top: 0;
   left: 0;
   background: var(--bg-sidebar);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-right: 1px solid var(--border-soft);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -177,12 +687,17 @@ body {
 
 .glass-card {
   background: var(--bg-card);
-  backdrop-filter: blur(15px);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
 }
 
 .glass-header {
-  background: rgba(15, 17, 26, 0.5);
-  backdrop-filter: blur(8px);
+  background: var(--bg-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid var(--border-soft);
 }
 
@@ -193,15 +708,18 @@ body {
 
 .service-card {
   background: var(--bg-card);
-  backdrop-filter: blur(10px);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
+  box-shadow: var(--glass-shadow);
   transition: var(--transition-smooth);
 }
 
 .service-card:hover {
   border-color: var(--accent-primary);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
 }
 
 
@@ -298,22 +816,35 @@ body {
   word-break: break-word;
 }
 
+.dropdown-menu-dark {
+  border-color: transparent;
+  background-color: var(--bg-sidebar);
+}
+
 /* =========================================================
    9. FORM & MODALS
 ========================================================= */
 
 .form-control,
-.form-select,
-.modal-content {
-  background-color: #161925 !important;
+.form-select {
+  background-color: var(--bg-input) !important;
   border: 1px solid var(--border-light) !important;
+  color: var(--text-main) !important;
+}
+
+.modal-content {
+  background: var(--bg-glass) !important;
+  backdrop-filter: blur(30px) saturate(2) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(2) !important;
+  border: 1px solid var(--border-light) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   color: var(--text-main);
 }
 
 .form-control:focus,
 .form-select:focus {
   border-color: var(--accent-secondary) !important;
-  box-shadow: 0 0 0 0.25rem rgba(240, 147, 251, 0.1) !important;
+  box-shadow: 0 0 0 0.25rem rgba(192, 132, 252, 0.15) !important;
 }
 
 
@@ -357,23 +888,8 @@ body {
   box-shadow: 0 0 10px rgba(255, 193, 7, 0.8);
 }
 
-.btn-update-mini {
-  animation: pulseUpdate 1.5s infinite;
-}
-
-@keyframes pulseUpdate {
-  0% {
-    box-shadow: 0 0 0 rgba(255, 193, 7, 0.4);
-  }
-
-  50% {
-    box-shadow: 0 0 12px rgba(255, 193, 7, 0.9);
-  }
-
-  100% {
-    box-shadow: 0 0 0 rgba(255, 193, 7, 0.4);
-  }
-}
+/* FIX: Se eliminó .btn-update-mini duplicado (ya definido arriba, línea 342).
+   El @keyframes pulseUpdate también estaba duplicado (ver sección 19). */
 
 
 /* =========================================================
@@ -403,6 +919,15 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* STYLE-07: Scrollbar for light mode */
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 
@@ -506,17 +1031,8 @@ body {
   border: 1px solid rgba(255, 193, 7, 0.2);
 }
 
-/* Badge ticket (clients view) */
-
-.badge-ticket {
-  background: rgba(255, 193, 7, 0.1);
-  color: #ffc107;
-  padding: 0.3rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  border: 1px solid rgba(255, 193, 7, 0.2);
-}
+/* FIX: Se eliminó .badge-ticket — no se usa en ningún JS/HTML.
+   Los tickets usan status-badge o badges de Bootstrap. */
 
 /* Details expandibles */
 
@@ -541,28 +1057,8 @@ body {
 
 /* Panel acciones lateral */
 
-.action-section {
-  border-left: 1px solid var(--border-light);
-  padding-left: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
-
-/* Estados visuales fila */
-
-.row-active {
-  box-shadow: inset 4px 0 0 var(--accent-secondary);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.clickable-row:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
-}
-
-.clickable-row:active {
-  background: rgba(255, 255, 255, 0.08) !important;
-}
+/* FIX: Se eliminaron .action-section, .row-active, .clickable-row —
+   no se referencian en ningún JS/HTML (código residual). */
 
 /* Animación específica clients */
 
@@ -617,7 +1113,7 @@ body {
 
 /* CARD */
 .var-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 10px;
   padding: 12px;
@@ -662,8 +1158,8 @@ body {
 .var-value {
   font-family: monospace;
   font-size: 12px;
-  color: #ccc;
-  background: rgba(0, 0, 0, 0.25);
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.4);
   padding: 6px 8px;
   border-radius: 6px;
   white-space: pre-wrap;
@@ -907,86 +1403,12 @@ body {
 }
 
 /* =========================================================
-   19. LOGS STYLES  
+   19. UPDATE BANNER (no se usa — el update ahora usa modal)
 ========================================================= */
 
-.update-banner {
-  width: 100%;
-  background: linear-gradient(90deg, #ffb300, #ff9800);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.25);
-  display: flex;
-  justify-content: center;
-  transform: translateY(-100%);
-  opacity: 0;
-  transition: all .35s ease;
-
-}
-
-.update-banner.show {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-.update-banner-content {
-  width: 100%;
-  max-width: 1200px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 18px;
-}
-
-.update-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.update-icon {
-  font-size: 16px;
-  color: var(--bg-deep);
-  animation: pulseUpdate 2s infinite;
-}
-
-.update-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--bg-deep);
-}
-
-.update-btn {
-  background: rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(0, 0, 0, 0.25);
-  padding: 4px 10px;
-  font-size: 13px;
-  border-radius: 5px;
-  cursor: pointer;
-  color: var(--bg-deep);
-  transition: all .2s ease;
-}
-
-.update-btn:hover {
-  background: var(--bg-deep);
-  border: 1px solid var(--bg-deep);
-  transform: translateY(-1px);
-  color: #ffb300;
-}
-
-/* animación icono */
-
-@keyframes pulseUpdate {
-  0% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.15);
-  }
-
-  100% {
-    transform: scale(1);
-  }
-}
+/* FIX: Se eliminaron estilos de .update-banner, .update-banner-content,
+   .update-left, .update-icon, .update-text, .update-btn —
+   el sistema de updates ahora usa el modal #updateModal, no un banner. */
 
 .sidebar-badge {
   position: absolute;
@@ -1028,7 +1450,7 @@ body {
 }
 
 /* =========================================================
-   20. LOGS STYLES  
+   20. TEMPLATE CARDS
 ========================================================= */
 
 .template-card {

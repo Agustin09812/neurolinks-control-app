@@ -7,13 +7,7 @@ let currentClientsPage = 1;
 const CLIENTS_PER_PAGE = 5;
 
 async function renderClientsView() {
-    selectedProjectId = null;
-    // Hide other views
-    document.getElementById("dashboard-global").style.display = "none";
-    document.getElementById("assistant-detail").style.display = "none";
-    document.getElementById("tickets-view").style.display = "none";
-    document.getElementById("billing-view").style.display = "none";
-    document.getElementById("audit-view").style.display = "none";
+    // FIX: selectedProjectId se limpia en navigate(), no acá
 
     // Clear secondary views if any
     const secondary = document.getElementById("integrated-log-container");
@@ -39,7 +33,7 @@ async function renderClientsView() {
                             <i class="bi bi-file-earmark-excel me-2"></i> Exportar
                         </button>
                         <button class="btn btn-outline-light btn-sm" onclick="resetClientsFilters()">
-                            <i class="bi bi-person-plus me-2"></i> Actualizar
+                            <i class="bi bi-arrow-clockwise me-2"></i> Actualizar
                         </button>
                     </div>
                 </div>
@@ -108,19 +102,19 @@ async function renderClientsView() {
                                 <div class="row g-3">
                                     <div class="col-md-12">
                                         <label class="form-label text-dim small fw-bold required">NOMBRE COMPLETO</label>
-                                        <input type="text" class="form-control text-light" id="clientName" required>
+                                        <input type="text" class="form-control text-main" id="clientName" required>
                                     </div>
                                     <div class="col-md-12">
                                         <label class="form-label text-dim small fw-bold">EMPRESA</label>
-                                        <input type="text" class="form-control text-light" id="clientCompany">
+                                        <input type="text" class="form-control text-main" id="clientCompany">
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label text-dim small fw-bold">EMAIL</label>
-                                        <input type="email" class="form-control text-light" id="clientEmail">
+                                        <input type="email" class="form-control text-main" id="clientEmail">
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label text-dim small fw-bold">TELÉFONO</label>
-                                        <input type="text" class="form-control text-light" id="clientPhone">
+                                        <input type="text" class="form-control text-main" id="clientPhone">
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label text-dim small fw-bold">PLAN CONTRATADO</label>
@@ -133,7 +127,7 @@ async function renderClientsView() {
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label text-dim small fw-bold">PRÓX. VENCIMIENTO</label>
-                                        <input type="date" class="form-control text-light" id="clientVencimiento">
+                                        <input type="date" class="form-control text-main" id="clientVencimiento">
                                     </div>
                                 </div>
                             </div>
@@ -190,14 +184,14 @@ async function renderClientsView() {
                                 <!-- Tabla de Historial -->
                                 <div class="col-md-8 border-start border-secondary ps-4">
                                     <h6 class="text-dim small fw-bold mb-3">HISTORIAL RECIENTE</h6>
-                                    <div class="table-responsive" style="max-height: 300px;">
+                                    <div class="table-responsive payment-table-scroll">
                                         <table class="table table-hover table-sm">
                                             <thead>
                                                 <tr>
-                                                    <th style="color: var(--bg-deep) !important">Fecha</th>
-                                                    <th style="color: var(--bg-deep) !important">Concepto</th>
-                                                    <th style="color: var(--bg-deep) !important">Monto</th>
-                                                    <th style="color: var(--bg-deep) !important" class="text-end"></th>
+                                                    <th class="th-dark">Fecha</th>
+                                                    <th class="th-dark">Concepto</th>
+                                                    <th class="th-dark">Monto</th>
+                                                    <th class="th-dark text-end"></th>
                                                 </tr>
                                             </thead>
                                             <tbody id="payments-table-body">
@@ -251,11 +245,15 @@ function handleClientsFilterPlan(val) {
 }
 
 function resetClientsFilters() {
-    document.getElementById("clientsSearch").value = "";
-    document.getElementById("clientsFilterPlan").value = "";
+    // FIX: Los inputs no tenían IDs "clientsSearch"/"clientsFilterPlan".
+    // Usar querySelector sobre el contenido dinámico en su lugar.
+    const searchInput = document.querySelector('#clients-view input[type="text"]');
+    const planSelect = document.querySelector('#clients-view select');
+    if (searchInput) searchInput.value = "";
+    if (planSelect) planSelect.value = "";
     clientsSearchQuery = "";
     clientsPlanFilter = "";
-    currentClientsPage = 1; // reset
+    currentClientsPage = 1;
     renderClientsList();
 }
 
@@ -346,7 +344,7 @@ async function renderClientsList() {
             })()}
             </td>
             <td id="pending-tickets-${c.id}">
-                <div class="spinner-border spinner-border-sm text-dim" style="width: 12px; height: 12px;"></div>
+                <div class="spinner-border spinner-border-sm text-dim spinner-xs"></div>
             </td>
         `;
         tbody.appendChild(tr);
@@ -456,8 +454,8 @@ async function loadClientProjectsInView(clientId) {
 
     try {
         const projectIds = await window.api.getClientProjects(clientId);
-        const allProjects = await window.api.getAssistants();
-        const myProjects = allProjects.filter(p => projectIds.includes(p.id));
+        // FIX: Usar variable global `assistants` en vez de otra llamada API
+        const myProjects = assistants.filter(p => projectIds.includes(p.id));
 
         container.innerHTML = "";
         if (myProjects.length === 0) {
@@ -593,15 +591,18 @@ function exportClientsToCSV() {
         return;
     }
 
+    // FIX: Escapar comas y comillas para evitar corrupción del CSV
+    const escapeCSV = (val) => `"${String(val).replace(/"/g, '""')}"`;
+
     const headers = ["ID", "Nombre", "Empresa", "Email", "Teléfono", "Plan", "Vencimiento"];
     const rows = allClients.map(c => [
-        c.id,
-        c.nombre,
-        c.empresa || '-',
-        c.email || '-',
-        c.telefono || '-',
-        c.plan || 'Standard',
-        c.vencimiento_plan || '-'
+        escapeCSV(c.id),
+        escapeCSV(c.nombre),
+        escapeCSV(c.empresa || '-'),
+        escapeCSV(c.email || '-'),
+        escapeCSV(c.telefono || '-'),
+        escapeCSV(c.plan || 'Standard'),
+        escapeCSV(c.vencimiento || '-')
     ]);
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF"

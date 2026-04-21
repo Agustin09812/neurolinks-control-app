@@ -1,20 +1,44 @@
 let assistants = [];
 let selectedProjectId = null;
-let lastAssistantsHash = "" // Hash system for optimized refreshing
+let lastAssistantsHash = ""; // Hash system for optimized refreshing
 let isRefreshing = false; // Avoid glitch while refreshing
 let notifications = []; // Notifications system in app
 const notificationMemory = new Map(); // Notifications memory
 let renderToken = 0;
 
+// Variables globales compartidas entre render.js y logs-view.js
+// window.currentDeploymentStatus — estado del deploy actual
+// window.currentProjectId       — project ID en Railway
+// window.currentServiceId       — service ID en Railway
 window.clientsData = []; // Hash para clients
 window.ticketsData = []; // Hash para tickets
 window.variablesCache = {}; // Hash para variables
+
+// ========================================
+// THEME TOGGLE (Light/Dark Mode)
+// ========================================
+
+function toggleTheme() {
+  const body = document.body;
+  const current = body.dataset.theme || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  body.dataset.theme = next;
+  localStorage.setItem('theme', next);
+
+  // Actualizar ícono del sidebar
+  const icon = document.getElementById('theme-icon');
+  if (icon) {
+    icon.className = next === 'light' ? 'bi bi-sun-fill' : 'bi bi-moon-stars';
+  }
+}
 
 // ========================================
 // ROUTER CENTRAL DE NAVEGACIÓN
 // ========================================
 
 async function navigate(view) {
+
+  window.stopLogsStreaming?.();
 
   localStorage.setItem("activeView", view);
 
@@ -28,7 +52,11 @@ async function navigate(view) {
     audit: "audit-view",
   };
 
-  const views = Object.values(viewMap).concat(["assistant-detail"]);
+  const views = Object.values(viewMap).concat([
+    "assistant-detail",
+    "logs-view",
+    "variables-view"
+  ]);
 
   const activeViewEl = document.getElementById(viewMap[view]);
 
@@ -109,7 +137,8 @@ async function navigate(view) {
     case "billing":
 
       try {
-        const data = await window.api.getPayments?.();
+        // FIX: getPayments no existe en preload → usar getAllPayments
+        const data = await window.api.getAllPayments?.();
         window.billingData = data || [];
       } catch (e) { }
 
@@ -122,10 +151,8 @@ async function navigate(view) {
       renderAuditView?.();
       break;
 
-    case "notifications":
-      document.getElementById(viewMap.notifications).style.display = "block";
-      renderNotificationsView?.();
-      break;
+    // FIX: Se eliminó case "notifications" — usaba viewMap.notifications
+    // que no existe, causando TypeError. Las notificaciones usan offcanvas.
 
   }
 
@@ -156,7 +183,7 @@ function showToast(message, type = "success") {
   const icon = type === "success" ? "bi-check-circle-fill" : (type === "warning" ? "bi-exclamation-triangle-fill" : "bi-exclamation-circle-fill");
 
   // Mapeo de colores bootstrap
-  const bgClass = type === 'danger' ? 'bg-danger' : (type === 'warning' ? 'bg-warning text-dark' : 'bg-dark');
+  const bgClass = type === 'danger' ? 'bg-danger' : (type === 'warning' ? 'bg-warning text-dark' : 'toast-themed');
 
   const toastHtml = `
     <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
@@ -327,7 +354,7 @@ function renderNotificationsPanel() {
               ${n.message}
             </div>
           </div>
-          <div class="small text-dim text-end" style="min-width:60px;">
+          <div class="small text-dim text-end min-w-60">
             ${new Date(n.date).toLocaleTimeString()}
           </div>
         </div>
@@ -442,9 +469,9 @@ function renderAssistantsGrid() {
           </p>
         </div>
         <div class="d-flex gap-2">
-          <div class="input-group input-group-sm" style="width: 250px;">
+          <div class="input-group input-group-sm search-input-group">
             <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
-            <input type="text" class="form-control text-light" id="searchAssistants">
+            <input type="text" class="form-control text-main" id="searchAssistants">
           </div>
           <button class="btn btn-outline-light btn-sm" id="btnRefreshAssistants">
             <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
@@ -489,12 +516,11 @@ function renderAssistantsGrid() {
     const hasUpdate = project.services.some(s => s.isUpdatable);
 
     col.innerHTML = `
-      <div class="glass-card p-4 h-100 assistant-card hover-lift"
+      <div class="glass-card p-4 h-100 assistant-card hover-lift clickable"
       data-id="${project.id}" 
-      data-name="${project.name.toLowerCase()}"
-      style="cursor:pointer;">
+      data-name="${project.name.toLowerCase()}">
         <div class="d-flex justify-content-between align-items-start mb-3">
-          <h5 class="fw-bold mb-0 text-truncate" style="max-width: 75%;">
+          <h5 class="fw-bold mb-0 text-truncate text-truncate-75">
             ${project.name}
           </h5>
           <span class="badge bg-${statusColor} bg-opacity-10 text-${statusColor} 
@@ -664,7 +690,12 @@ async function renderDetail(project, isRefresh = false) {
 
     patchServices(project);
 
-    if (project.services?.length > 0) {
+    // FIX: No forzar openDashboard en refreshes.
+    // Solo abrir si no hay vista lateral activa (logs, variables, etc.)
+    const sidePanel = document.getElementById("detail-side-panel");
+    const hasSideContent = sidePanel && sidePanel.innerHTML.trim() !== "";
+
+    if (!hasSideContent && project.services?.length > 0) {
 
       const s = project.services[0];
 
@@ -834,8 +865,7 @@ function renderDetailStructure(project) {
     handleDeleteProject(project.id);
   });
 
-  const getMainService = () => project.services?.[0];
-
+  // BUG-03 FIX: Removed unused `getMainService` declaration
 }
 
 async function updateDetailHeader(project) {
@@ -892,8 +922,7 @@ async function updateDetailHeader(project) {
     if (!linkedClient || !linkedClient.clientes) {
 
       linkButton = `
-        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn"
-              style="cursor:pointer;font-size:11px;padding:4px 8px;">
+        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn badge-sm-action">
           <i class="bi bi-link-45deg me-1"></i>
           Vincular cliente
         </span>
@@ -944,16 +973,14 @@ async function updateDetailHeader(project) {
 
     if (wsStatus?.connected) {
       whatsappBadge = `
-        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"
-              style="font-size:11px;padding:4px 8px;">
+        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 badge-sm">
           <i class="bi bi-whatsapp me-1"></i>
           Conectado
         </span>
       `;
     } else {
       whatsappBadge = `
-        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25"
-              style="font-size:11px;padding:4px 8px;">
+        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 badge-sm">
           <i class="bi bi-whatsapp me-1"></i>
           Desconectado
         </span>
@@ -1014,16 +1041,25 @@ function renderServices(project) {
     container.appendChild(card);
   });
 
+  // BUG-02 FIX: Single MutationObserver for side panel (instead of per-card)
+  const sidePanel = document.getElementById("detail-side-panel");
+  if (sidePanel) {
+    // Disconnect any previous observer
+    if (sidePanel._sidePanelObserver) {
+      sidePanel._sidePanelObserver.disconnect();
+    }
+    const observer = new MutationObserver(() => {
+      if (sidePanel.innerHTML.trim() === "") {
+        clearActiveServiceMenu();
+      }
+    });
+    observer.observe(sidePanel, { childList: true, subtree: false });
+    sidePanel._sidePanelObserver = observer;
+  }
+
   if (freshProject.services.length > 0) {
-
     const s = freshProject.services[0];
-
-    openDashboard(
-      s.projectId,
-      s.environmentId,
-      s.id
-    );
-
+    openDashboard(s.projectId, s.environmentId, s.id);
   }
 }
 
@@ -1069,10 +1105,10 @@ function createServiceCard(service, project) {
 
   <div class="service-menu-item btn-logs">
   <i class="bi bi-terminal me-2"></i> Logs</div>
-  <hr>
+  <hr class="separator-line">
   <div class="service-menu-item btn-vars">
   <i class="bi bi-sliders me-2"></i> Variables</div>
-  <hr>
+  <hr class="separator-line">
   <div class="service-menu-item btn-redeploy">
   <i class="bi bi-arrow-repeat me-2"></i> Redeploy</div>
  </div>
@@ -1092,13 +1128,8 @@ function createServiceCard(service, project) {
 
   }
 
-  function clearActiveServiceMenu() {
-
-    document
-      .querySelectorAll(".service-menu-item.active")
-      .forEach(el => el.classList.remove("active"));
-
-  }
+  // FIX: Se eliminó clearActiveServiceMenu duplicada.
+  // Ya existe como función global (línea 144). La local sobreescribía la global.
 
   // --------------------------------------------------
   // BOTONES DE SERVICIO
@@ -1137,35 +1168,9 @@ function createServiceCard(service, project) {
 
   });
 
-  // --------------------------------------------------
-  // OBSERVAR CUANDO SE CIERRA EL SIDE PANEL
-  // --------------------------------------------------
-
-  const sidePanel = document.getElementById("detail-side-panel");
-
-  if (sidePanel) {
-
-    const observer = new MutationObserver(() => {
-
-      if (sidePanel.innerHTML.trim() === "") {
-        clearActiveServiceMenu();
-      }
-
-    });
-
-    observer.observe(sidePanel, {
-      childList: true,
-      subtree: false
-    });
-
-  }
-
-  div.querySelector(".btn-delete")?.addEventListener("click", () => {
-    handleDelete(service.id);
-  });
-
   div.querySelector(".btn-update-mini")?.addEventListener("click", () => {
-    handleDeployUpdate(service.id, service.environmentId);
+    showToast("Abrí Railway para aplicar la actualización", "info");
+    window.api.openExternal(project.railwayUrl);
   });
 
   return div;
@@ -1173,7 +1178,9 @@ function createServiceCard(service, project) {
 
 function patchServices(project) {
 
-  if (isRefreshing) return;
+  // FIX: Se removió `if (isRefreshing) return;`
+  // patchServices se llama DENTRO de smartRefresh donde isRefreshing=true,
+  // causando que el patch del DOM NUNCA se aplique durante el auto-refresh.
 
   if (project.id !== selectedProjectId) return;
 
@@ -1260,71 +1267,7 @@ async function handleRedeploy(serviceId, environmentId) {
   }
 }
 
-async function handleDeployUpdate(serviceId, environmentId) {
 
-  if (!confirm("¿Deseas aplicar la nueva versión disponible para este servicio?")) return;
-
-  addNotification(
-    "deploy",
-    "Deploy iniciado",
-    `Se inició actualización del servicio`,
-    `deploy-${serviceId}`
-  );
-
-  try {
-
-    const res = await window.api.deployServiceUpdate(serviceId, environmentId);
-
-    if (res.data?.serviceInstanceDeployV2) {
-
-      showToast("Deploy iniciado correctamente", "success");
-
-      await loadAssistants(true);
-
-    } else {
-
-      addNotification(
-        "deploy-error",
-        "Error en deploy",
-        `No se pudo iniciar el deploy`,
-        `deploy-error-${serviceId}`
-      );
-
-      showToast("Error al iniciar actualización", "danger");
-
-    }
-
-  } catch (error) {
-
-    console.error("Error deploy update:", error);
-
-    addNotification(
-      "deploy-error",
-      "Error de conexión",
-      `Railway no respondió`,
-      `deploy-error-${serviceId}`
-    );
-
-    showToast("Error de conexión al Railway", "danger");
-
-  }
-
-}
-
-async function handleDownloadLogs(deploymentId, serviceName) {
-  try {
-    const result = await window.api.downloadLogs(deploymentId, serviceName);
-    if (!result.success) {
-      if (result.message !== "Cancelado por el usuario") {
-        alert("Error: " + result.message);
-      }
-    }
-  } catch (err) {
-    alert("Error al descargar logs: " + err.message);
-  }
-}
-
-// --------------------------------------------------
 // RENAME PROJECT
 // --------------------------------------------------
 
@@ -1492,45 +1435,8 @@ function openFullDashboard(url) {
 
 }
 
-// --------------------------------------------------
-// WEBCHAT
-// --------------------------------------------------
-
-async function openWebchat(projectId, environmentId, serviceId, serviceName) {
-
-  try {
-    const domains = await window.api.getServiceDomains(
-      projectId,
-      environmentId,
-      serviceId
-    );
-
-    let domain = null;
-
-    if (domains?.customDomains?.length > 0) {
-      domain = domains.customDomains[0].domain;
-    }
-    else if (domains?.serviceDomains?.length > 0) {
-      domain = domains.serviceDomains[0].domain;
-    }
-
-    if (!domain) {
-      showToast("Este servicio no tiene dominio público.", "warning");
-      return;
-    }
-
-    if (!domain.startsWith("http")) {
-      domain = "https://" + domain;
-    }
-
-    // Usar el nuevo componente integrado
-    renderWebchatView(domain, serviceName);
-
-  } catch (err) {
-    console.error("Error abriendo webchat:", err);
-    showToast("Error al cargar webchat", "danger");
-  }
-}
+// FIX: Se eliminó openWebchat() — el archivo webchat-view.js no existe.
+// renderWebchatView() era undefined, causando crash al ejecutar.
 
 
 // --------------------------------------------------
@@ -1539,20 +1445,29 @@ async function openWebchat(projectId, environmentId, serviceId, serviceName) {
 
 let autoRefreshTimeout = null;
 
-let refreshRate = 30000;
+let refreshRate = 15000;
 
 let userActive = true;
 let idleMode = false;
+let deepIdleMode = false;
 
 let lastInteraction = Date.now();
+let focusDebounceTimer = null;
 
 function registerActivity() {
 
   lastInteraction = Date.now();
 
-  if (idleMode) {
+  if (idleMode || deepIdleMode) {
     idleMode = false;
+    deepIdleMode = false;
     console.log("Usuario activo nuevamente");
+
+    // Al volver de idle, forzar un refresh inmediato
+    if (autoRefreshTimeout) {
+      clearTimeout(autoRefreshTimeout);
+      autoRefreshTimeout = setTimeout(smartRefresh, 500);
+    }
   }
 
 }
@@ -1561,24 +1476,10 @@ function registerActivity() {
   window.addEventListener(evt, registerActivity);
 });
 
-// function generateAssistantsHash() {
-
-//   if (!assistants) return ""
-
-//   return assistants.map(project =>
-
-//     project.services.map(service =>
-//       `${service.id}-${service.status}-${service.deploymentId || ""}`
-//     ).join("|")
-
-//   ).join("#")
-
-// }
-
-function generateAssistantsHash() { // funcion hash ampliada
+function generateAssistantsHash() {
 
   // -------------------------
-  // ASSISTANTS
+  // ASSISTANTS (siempre se recarga)
   // -------------------------
   const assistantsHash = assistants?.map(project =>
     project.services.map(service =>
@@ -1587,7 +1488,7 @@ function generateAssistantsHash() { // funcion hash ampliada
   ).join("#") || "";
 
   // -------------------------
-  // CLIENTES
+  // CLIENTES (solo si se recargaron)
   // -------------------------
   const clientsHash = window.clientsData?.length
     ? window.clientsData.map(c =>
@@ -1596,7 +1497,7 @@ function generateAssistantsHash() { // funcion hash ampliada
     : "";
 
   // -------------------------
-  // TICKETS
+  // TICKETS (solo si se recargaron)
   // -------------------------
   const ticketsHash = window.ticketsData?.length
     ? window.ticketsData.map(t =>
@@ -1604,16 +1505,11 @@ function generateAssistantsHash() { // funcion hash ampliada
     ).join("|")
     : "";
 
-  // -------------------------
-  // VARIABLES
-  // -------------------------
-  const variablesHash = window.variablesCache
-    ? Object.entries(window.variablesCache)
-      .map(([k, v]) => `${k}-${v}`)
-      .join("|")
-    : "";
+  // FIX: Se removió variablesCache del hash.
+  // variablesCache no se recarga en smartRefresh, incluirlo
+  // generaba falsos positivos de "cambio detectado".
 
-  return `${assistantsHash}||${clientsHash}||${ticketsHash}||${variablesHash}`;
+  return `${assistantsHash}||${clientsHash}||${ticketsHash}`;
 }
 
 async function smartRefresh() {
@@ -1625,18 +1521,33 @@ async function smartRefresh() {
     isRefreshing = true;
 
     const previousHash = lastAssistantsHash;
+    const activeView = localStorage.getItem("activeView");
 
-    await loadAssistants(false);
+    // FIX: usar preserveSelection=true para no romper el detail abierto
+    // Cargar en paralelo con datos secundarios según la vista activa
+    const needsClients = activeView === "clients" || activeView === "dashboard";
+    const needsTickets = activeView === "tickets" || activeView === "dashboard";
 
-    try {
-      const clients = await window.api.getClients();
-      window.clientsData = clients;
-    } catch { }
+    const apiCalls = [loadAssistants(true)];
 
-    try {
-      const tickets = await window.api.getTickets();
-      window.ticketsData = tickets;
-    } catch { }
+    if (needsClients) {
+      apiCalls.push(
+        window.api.getClients()
+          .then(c => { window.clientsData = c; })
+          .catch(() => { })
+      );
+    }
+
+    if (needsTickets) {
+      apiCalls.push(
+        window.api.getTickets()
+          .then(t => { window.ticketsData = t; })
+          .catch(() => { })
+      );
+    }
+
+    // Ejecutar todo en paralelo
+    await Promise.allSettled(apiCalls);
 
     const currentHash = generateAssistantsHash();
 
@@ -1646,18 +1557,27 @@ async function smartRefresh() {
 
       lastAssistantsHash = currentHash;
 
+      // Actualizar grid si está visible
+      const isGridVisible = document.getElementById("assistants-view")?.style.display === "block";
+      if (isGridVisible) {
+        patchAssistantsGrid();
+      }
+
+      // Actualizar detail si hay proyecto seleccionado
       if (selectedProjectId) {
 
         const project = assistants.find(p => p.id === selectedProjectId);
 
         if (project) {
           patchServices(project);
+          updateDetailHeader(project);
         }
 
       }
 
     }
 
+    // Notificaciones de error
     const hasBuilding = assistants.some(project =>
       project.services.some(service => service.status === "checking")
     );
@@ -1668,8 +1588,6 @@ async function smartRefresh() {
 
     assistants.forEach(project => {
       project.services.forEach(service => {
-
-
 
         if (service.status === "error") {
           addNotification(
@@ -1683,23 +1601,38 @@ async function smartRefresh() {
       });
     });
 
+    // -------------------------
+    // IDLE MODE TIERS
+    // -------------------------
     const now = Date.now();
     const inactiveTime = now - lastInteraction;
 
-    if (inactiveTime > 60000) {
+    if (inactiveTime > 300000) {
+      // 5+ minutos sin actividad → deep idle
+      deepIdleMode = true;
       idleMode = true;
+    } else if (inactiveTime > 60000) {
+      // 1+ minuto sin actividad → idle
+      idleMode = true;
+      deepIdleMode = false;
     }
 
-    if (idleMode) {
-      refreshRate = 10000;
+    // -------------------------
+    // REFRESH RATES
+    // Optimizado: real-time sin saturar API
+    // -------------------------
+    if (deepIdleMode) {
+      refreshRate = 60000;      // deep idle: 60s (mínimo consumo)
+    } else if (idleMode) {
+      refreshRate = 30000;      // idle: 30s
     } else if (hasBuilding) {
-      refreshRate = 2000;
+      refreshRate = 3000;       // building: 3s (casi real-time)
     } else if (hasError) {
-      refreshRate = 3000;
+      refreshRate = 5000;       // error: 5s
     } else if (selectedProjectId) {
-      refreshRate = 3000;
+      refreshRate = 5000;       // detail abierto: 5s
     } else {
-      refreshRate = 4000;
+      refreshRate = 8000;       // normal (grid/dashboard): 8s
     }
 
   } catch (err) {
@@ -1722,17 +1655,29 @@ function startAutoRefresh() {
   smartRefresh();
 }
 
-window.addEventListener("focus", async () => {
+// FIX: Debounce en focus para evitar múltiples cargas al alt-tab rápido
+window.addEventListener("focus", () => {
 
-  console.log("App volvió al foco");
+  if (focusDebounceTimer) clearTimeout(focusDebounceTimer);
 
-  idleMode = false;
+  focusDebounceTimer = setTimeout(async () => {
 
-  await loadAssistants(true);
+    console.log("App volvió al foco");
+
+    registerActivity();
+
+    // Solo forzar recarga si no hay un refresh en curso
+    if (!isRefreshing) {
+      if (autoRefreshTimeout) clearTimeout(autoRefreshTimeout);
+      await smartRefresh();
+    }
+
+  }, 800);
 
 });
 
-startAutoRefresh();
+// FIX: No arrancar smartRefresh acá. Se mueve a DOMContentLoaded
+// para evitar doble carga inicial (startAutoRefresh + loadAssistants).
 
 document.addEventListener("DOMContentLoaded", async () => {
 
@@ -1792,11 +1737,37 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Cargar datos iniciales
   await loadAssistants(false);
+  lastAssistantsHash = generateAssistantsHash();
 
   const savedView = localStorage.getItem("activeView") || "dashboard";
   navigate(savedView);
 
   document.body.classList.remove("app-preload");
+
+  // FIX: Arrancar smartRefresh DESPUÉS de la carga inicial
+  // Antes se ejecutaba a nivel top-level, causando doble loadAssistants
+  startAutoRefresh();
+
+  // OPT-04: Consolidated btn-updates listener (was in separate DOMContentLoaded)
+  const btnUpdates = document.getElementById("btn-updates");
+  if (btnUpdates) {
+    btnUpdates.addEventListener("click", openUpdateModal);
+  }
+
+  // --------------------------------------
+  // THEME: Cargar tema guardado
+  // --------------------------------------
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.body.dataset.theme = savedTheme;
+  const themeIcon = document.getElementById('theme-icon');
+  if (themeIcon) {
+    themeIcon.className = savedTheme === 'light' ? 'bi bi-sun-fill' : 'bi bi-moon-stars';
+  }
+
+  const btnToggleTheme = document.getElementById('btn-theme-toggle');
+  if (btnToggleTheme) {
+    btnToggleTheme.addEventListener('click', toggleTheme);
+  }
 
   // --------------------------------------
   // BOTÓN ABOUT
@@ -1840,19 +1811,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 // Se asegura carga previa de datos antes de renderizar la vista.
 async function renderDashboard() {
 
-  await loadAssistants(false);
+  // OPT-01: Only load if assistants cache is empty
+  if (assistants.length === 0) {
+    await loadAssistants(false);
+  }
 
+  // FIX: selectedProjectId se limpia acá porque renderDashboard
+  // se llama tanto desde navigate() como directamente
   selectedProjectId = null;
-  document.querySelectorAll(".assistant-item").forEach(el => el.classList.remove("active-assistant"));
 
-  document.getElementById("assistant-detail").style.display = "none";
-  document.getElementById("clients-view").style.display = "none";
-  document.getElementById("tickets-view").style.display = "none";
-  document.getElementById("billing-view").style.display = "none";
-  document.getElementById("audit-view").style.display = "none";
+  // OPT-02: Removed redundant view hiding — navigate() already handles this
 
   // Limpiar contenedores secundarios
-  ["integrated-log-container", "integrated-var-container", "integrated-chat-container"].forEach(id => {
+  ["integrated-log-container", "integrated-var-container"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.remove();
   });
@@ -1902,7 +1873,7 @@ async function renderDashboard() {
 
           <!-- CARD CLIENTES -->
           <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100 rounded" style="cursor:pointer" onclick="loadClientsData(); renderClientsView();">
+            <div class="glass-card p-4 text-center h-100 rounded clickable" onclick="navigate('clients')">
               <div class="display-5 fw-bold text-info">${activeClients.length}</div>
               <div class="text-uppercase small ls-1">Clientes Activos</div>
               <div class="mt-3">
@@ -1913,7 +1884,7 @@ async function renderDashboard() {
 
           <!-- CARD TICKETS -->
           <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100 rounded" style="cursor:pointer" onclick="renderTicketsView()">
+            <div class="glass-card p-4 text-center h-100 rounded clickable" onclick="navigate('tickets')">
               <div class="display-5 fw-bold text-warning">${pendingTickets.length}</div>
               <div class="text-uppercase small ls-1">Tickets Pendientes</div>
               <div class="mt-3">
@@ -1955,10 +1926,10 @@ async function renderDashboard() {
              <div class="glass-card p-4 rounded">
                <h5 class="mb-3">Acciones Rápidas</h5>
                <div class="d-grid gap-2">
-                  <button class="btn btn-outline-light text-start btn-sm" onclick="renderClientsView()">
+                  <button class="btn btn-outline-light text-start btn-sm" onclick="navigate('clients')">
                     <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
                   </button>
-                  <button class="btn btn-outline-light text-start btn-sm" onclick="renderTicketsView()">
+                  <button class="btn btn-outline-light text-start btn-sm" onclick="navigate('tickets')">
                     <i class="bi bi-plus-circle me-2"></i> Crear Ticket
                   </button>
                   <button class="btn btn-outline-light text-start btn-sm" id="dashboard-refresh">
@@ -2059,23 +2030,10 @@ function openUpdateModal() {
   const modal = new bootstrap.Modal(document.getElementById("updateModal"));
   modal.show();
 
-  // 🚫 NO tocar el badge acá
-
 }
 
-// --------------------------------------------------
-// BOTÓN SIDEBAR
-// --------------------------------------------------
+// OPT-04: Second DOMContentLoaded eliminated — merged into the main one above
 
-document.addEventListener("DOMContentLoaded", () => {
-
-  const btn = document.getElementById("btn-updates");
-
-  if (btn) {
-    btn.addEventListener("click", openUpdateModal);
-  }
-
-});
 
 // --------------------------------------------------
 // BOTÓN ACTUALIZAR

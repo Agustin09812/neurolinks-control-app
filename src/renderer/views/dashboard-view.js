@@ -15,10 +15,10 @@ async function renderDashboardView(serviceDomain) {
           <h3 class="fw-bold text-light mb-2">
             Panel del Asistente
           </h3>
-          <p class="text-secondary mb-4" style="max-width: 320px;">
+          <p class="text-secondary mb-4 dashboard-desc">
             Accedé al backoffice completo para gestionar conversaciones, variables y configuraciones en tiempo real.
           </p>
-          <div class="d-flex flex-column gap-2 w-100" style="max-width: 280px;">  
+          <div class="d-flex flex-column gap-2 w-100 dashboard-actions">  
             <button class="btn btn-success btn-lg w-100" id="btnOpenBackoffice">
               <i class="bi bi-box-arrow-up-right me-2"></i>
               Abrir Back Office
