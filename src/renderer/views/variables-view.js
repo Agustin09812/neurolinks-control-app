@@ -74,8 +74,14 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
         </div>
         `;
 
+    // Guardar contexto para SmartRefresh
+    window.currentVarsContext = { projectId, environmentId, serviceId };
+    window.lastVarsHash = null;
+
     // volver
     document.getElementById("btnBackVars").onclick = () => {
+        window.currentVarsContext = null;
+        window.lastVarsHash = null;
         clearActiveServiceMenu();
         panel.style.display = "none";
         document.getElementById("assistant-detail").style.display = "block";
@@ -151,8 +157,9 @@ async function loadVariables(projectId, environmentId, serviceId) {
             </div>
         `}).join("");
 
-        // Event delegation for edit/delete buttons (safe, no inline onclick)
-        grid.addEventListener("click", (e) => {
+        // Event delegation — remove previous handler to avoid stacking on reload
+        if (grid._clickHandler) grid.removeEventListener("click", grid._clickHandler);
+        grid._clickHandler = (e) => {
             const card = e.target.closest(".var-card");
             if (!card) return;
             const k = card.dataset.varKey;
@@ -161,12 +168,10 @@ async function loadVariables(projectId, environmentId, serviceId) {
             const eId = card.dataset.envId;
             const sId = card.dataset.serviceId;
 
-            if (e.target.closest(".btn-edit-var")) {
-                openEditModal(pId, eId, sId, k, v);
-            } else if (e.target.closest(".btn-delete-var")) {
-                handleDeleteVariable(pId, eId, sId, k);
-            }
-        });
+            if (e.target.closest(".btn-edit-var")) openEditModal(pId, eId, sId, k, v);
+            else if (e.target.closest(".btn-delete-var")) handleDeleteVariable(pId, eId, sId, k);
+        };
+        grid.addEventListener("click", grid._clickHandler);
 
     } catch (err) {
 

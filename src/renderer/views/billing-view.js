@@ -98,13 +98,7 @@ async function renderBillingView() {
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="billing-table-body">
-                            <tr>
-                                <td colspan="6" class="text-center py-5">
-                                    <div class="spinner-border text-light" role="status"></div>
-                                </td>
-                            </tr>
-                        </tbody>
+                        <tbody id="billing-table-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -161,35 +155,37 @@ async function renderBillingView() {
         </div>
     `;
 
+    applyBillingFilters();
     loadBillingData();
 }
 
 async function loadBillingData() {
-    const tbody = document.getElementById("billing-table-body");
     try {
         allPayments = await window.api.getAllPayments() || [];
         applyBillingFilters();
     } catch (err) {
         console.error("Error loading billing data:", err);
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-danger">Error al cargar datos de facturación</td></tr>';
+        showToast("Error al cargar datos de facturación", "danger");
     }
 }
 
 async function refreshBilling() {
-
-    const tbody = document.getElementById("billing-table-body");
-
-    if (tbody) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center py-5">
-                    <div class="spinner-border text-light" role="status"></div>
-                </td>
-            </tr>
-        `;
-    }
-
     await loadBillingData();
+}
+
+function getFilteredPayments() {
+    return allPayments.filter(p => {
+        if (billingFilters.client && !p.clientes?.nombre.toLowerCase().includes(billingFilters.client.toLowerCase())) return false;
+        if (billingFilters.method && p.metodo !== billingFilters.method) return false;
+        const pDate = new Date(p.fecha);
+        if (billingFilters.dateStart && pDate < new Date(billingFilters.dateStart)) return false;
+        if (billingFilters.dateEnd) {
+            const end = new Date(billingFilters.dateEnd);
+            end.setHours(23, 59, 59);
+            if (pDate > end) return false;
+        }
+        return true;
+    });
 }
 
 function handleBillingFilter(key, value) {
@@ -201,24 +197,7 @@ function applyBillingFilters() {
     const tbody = document.getElementById("billing-table-body");
     tbody.innerHTML = "";
 
-    let filtered = allPayments.filter(p => {
-        const clientMatch = !billingFilters.client || (p.clientes && p.clientes.nombre.toLowerCase().includes(billingFilters.client.toLowerCase()));
-        const methodMatch = !billingFilters.method || p.metodo === billingFilters.method;
-
-        let dateMatch = true;
-        const pDate = new Date(p.fecha);
-        if (billingFilters.dateStart) {
-            const start = new Date(billingFilters.dateStart);
-            dateMatch = dateMatch && (pDate >= start);
-        }
-        if (billingFilters.dateEnd) {
-            const end = new Date(billingFilters.dateEnd);
-            end.setHours(23, 59, 59);
-            dateMatch = dateMatch && (pDate <= end);
-        }
-
-        return clientMatch && methodMatch && dateMatch;
-    });
+    const filtered = getFilteredPayments();
 
     if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-secondary">No se encontraron pagos con estos filtros</td></tr>';
@@ -300,26 +279,7 @@ async function deleteGlobalPayment(id) {
 }
 
 function exportBillingToCSV() {
-    // FIX: Exportar datos filtrados, no todos. El usuario espera lo que ve en pantalla.
-    // BUG-06 FIX: Now includes date filters
-    let listToExport = allPayments.filter(p => {
-        const clientMatch = !billingFilters.client || (p.clientes && p.clientes.nombre.toLowerCase().includes(billingFilters.client.toLowerCase()));
-        const methodMatch = !billingFilters.method || p.metodo === billingFilters.method;
-
-        let dateMatch = true;
-        const pDate = new Date(p.fecha);
-        if (billingFilters.dateStart) {
-            const start = new Date(billingFilters.dateStart);
-            dateMatch = dateMatch && (pDate >= start);
-        }
-        if (billingFilters.dateEnd) {
-            const end = new Date(billingFilters.dateEnd);
-            end.setHours(23, 59, 59);
-            dateMatch = dateMatch && (pDate <= end);
-        }
-
-        return clientMatch && methodMatch && dateMatch;
-    });
+    const listToExport = getFilteredPayments();
 
     if (listToExport.length === 0) {
         showToast("No hay datos para exportar", "warning");

@@ -411,7 +411,12 @@ ipcMain.handle('delete-project', async (_, projectId) => {
 // --------------------------------------------------
 
 ipcMain.handle('fetch-deployment-logs', async (_, deploymentId) => {
-  return await railwayService.fetchDeploymentLogs(deploymentId);
+  try {
+    return await railwayService.fetchDeploymentLogs(deploymentId);
+  } catch (error) {
+    console.error("Error en fetch-deployment-logs:", error);
+    throw error;
+  }
 });
 
 // --------------------------------------------------
@@ -419,7 +424,12 @@ ipcMain.handle('fetch-deployment-logs', async (_, deploymentId) => {
 // --------------------------------------------------
 
 ipcMain.handle('get-service-variables', async (_, projectId, environmentId, serviceId) => {
-  return await railwayService.getServiceVariables(projectId, environmentId, serviceId);
+  try {
+    return await railwayService.getServiceVariables(projectId, environmentId, serviceId);
+  } catch (error) {
+    console.error("Error en get-service-variables:", error);
+    throw error;
+  }
 });
 
 // --------------------------------------------------
@@ -455,7 +465,12 @@ ipcMain.handle('delete-variable', async (_, projectId, environmentId, serviceId,
 // --------------------------------------------------
 
 ipcMain.handle('get-service-domains', async (_, projectId, environmentId, serviceId) => {
-  return await railwayService.getServiceDomains(projectId, environmentId, serviceId);
+  try {
+    return await railwayService.getServiceDomains(projectId, environmentId, serviceId);
+  } catch (error) {
+    console.error("Error en get-service-domains:", error);
+    throw error;
+  }
 });
 
 // --------------------------------------------------

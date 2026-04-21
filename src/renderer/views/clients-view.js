@@ -18,11 +18,8 @@ async function renderClientsView() {
     const view = document.getElementById("clients-view");
     view.style.display = "block";
     view.innerHTML = `
-    <div class="d-flex justify-content-center align-items-center h-100" id="clients-loading">
-                <div class="spinner-border text-light" role="status"></div>
-            </div>
         <div class="animate-fade">
-            <div id="clients-content" style="display:none;">
+            <div id="clients-content">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="fw-bold mb-0">GESTIÓN DE <span class="text-light">CLIENTES</span></h2>
                     <div class="d-flex gap-2">
@@ -208,27 +205,19 @@ async function renderClientsView() {
 
     document.getElementById("clientForm").onsubmit = handleClientSubmit;
     document.getElementById("paymentForm").onsubmit = handlePaymentSubmit;
+    allClients = window.clientsData || [];
+    renderClientsList();
     loadClientsData();
 }
 
 async function loadClientsData() {
-    const loadingDiv = document.getElementById("clients-loading");
-    const contentDiv = document.getElementById("clients-content");
-
-    if (!loadingDiv || !contentDiv) return;
-
     try {
         allClients = await window.api.getClients() || [];
-        window.clientsData = allClients || []; // Hash para clients
+        window.clientsData = allClients;
         renderClientsList();
     } catch (err) {
         console.error("Error loading clients:", err);
         showToast("Error al conectar con la base de datos de clientes", "danger");
-    } finally {
-        loadingDiv.classList.add("d-none");
-        loadingDiv.style.display = "none";
-        contentDiv.classList.remove("d-none");
-        contentDiv.style.display = "block";
     }
 }
 
@@ -257,23 +246,23 @@ function resetClientsFilters() {
     renderClientsList();
 }
 
+function getFilteredClients() {
+    const s = clientsSearchQuery;
+    return allClients.filter(c =>
+        (c.nombre.toLowerCase().includes(s) ||
+         (c.empresa?.toLowerCase().includes(s)) ||
+         (c.email?.toLowerCase().includes(s))) &&
+        (!clientsPlanFilter || c.plan === clientsPlanFilter)
+    );
+}
+
 async function renderClientsList() {
     const tbody = document.getElementById("clients-table-body");
     if (!tbody) return;
 
     tbody.innerHTML = "";
 
-    const filtered = allClients.filter(c => {
-        const matchesSearch =
-            c.nombre.toLowerCase().includes(clientsSearchQuery) ||
-            (c.empresa && c.empresa.toLowerCase().includes(clientsSearchQuery)) ||
-            (c.email && c.email.toLowerCase().includes(clientsSearchQuery));
-
-        const matchesPlan =
-            clientsPlanFilter === "" || c.plan === clientsPlanFilter;
-
-        return matchesSearch && matchesPlan;
-    });
+    const filtered = getFilteredClients();
 
     if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center text-dim py-5">No se encontraron clientes</td></tr>';
@@ -344,7 +333,7 @@ async function renderClientsList() {
             })()}
             </td>
             <td id="pending-tickets-${c.id}">
-                <div class="spinner-border spinner-border-sm text-dim spinner-xs"></div>
+                <span class="text-dim small">-</span>
             </td>
         `;
         tbody.appendChild(tr);
@@ -389,9 +378,9 @@ async function renderClientsList() {
     }
 
     // ----------------------
-    // TICKETS (async)
+    // TICKETS (async) — solo para la página actual
     // ----------------------
-    filtered.forEach(async (c) => {
+    pageData.forEach(async (c) => {
         try {
             const pendingTickets = await window.api.getClientPendingTickets(c.id);
             const td = document.getElementById(`pending-tickets-${c.id}`);
@@ -450,7 +439,7 @@ async function toggleClientDetails(clientId, clientName) {
 
 async function loadClientProjectsInView(clientId) {
     const container = document.getElementById(`projects-container-${clientId}`);
-    container.innerHTML = '<div class="spinner-border spinner-border-sm text-accent-clients"></div>';
+    container.innerHTML = '';
 
     try {
         const projectIds = await window.api.getClientProjects(clientId);
@@ -703,16 +692,7 @@ async function handleDeletePayment(id, clientId) {
 
 function changeClientsPage(direction) {
 
-    const filtered = allClients.filter(c => {
-        const matchesSearch = c.nombre.toLowerCase().includes(clientsSearchQuery) ||
-            (c.empresa && c.empresa.toLowerCase().includes(clientsSearchQuery)) ||
-            (c.email && c.email.toLowerCase().includes(clientsSearchQuery));
-
-        const matchesPlan = clientsPlanFilter === "" || c.plan === clientsPlanFilter;
-
-        return matchesSearch && matchesPlan;
-    });
-
+    const filtered = getFilteredClients();
     const totalPages = Math.ceil(filtered.length / CLIENTS_PER_PAGE);
 
     currentClientsPage += direction;

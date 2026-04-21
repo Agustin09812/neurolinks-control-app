@@ -91,9 +91,8 @@ async function navigate(view) {
       renderDashboard?.();
       break;
 
-    case "assistants":
+    case "assistants": {
 
-      // Reset detail panel
       const detail = document.getElementById("assistant-detail");
       if (detail) {
         detail.dataset.initialized = "";
@@ -101,47 +100,28 @@ async function navigate(view) {
         detail.style.display = "none";
       }
 
-      await loadAssistants(false);
-
       document.getElementById(viewMap.assistants).style.display = "block";
 
-      renderAssistantsGrid?.();
+      if (assistants.length > 0) {
+        renderAssistantsGrid?.();
+        loadAssistants(false);
+      } else {
+        await loadAssistants(false);
+      }
       break;
+    }
 
     case "clients":
-
-      try {
-        const data = await window.api.getClients();
-        window.clientsData = data;
-      } catch (e) {
-        console.error("Error loading clients:", e);
-      }
-
       document.getElementById(viewMap.clients).style.display = "block";
       renderClientsView?.();
       break;
 
     case "tickets":
-
-      try {
-        const data = await window.api.getTickets();
-        window.ticketsData = data;
-      } catch (e) {
-        console.error("Error loading tickets:", e);
-      }
-
       document.getElementById(viewMap.tickets).style.display = "block";
       renderTicketsView?.();
       break;
 
     case "billing":
-
-      try {
-        // FIX: getPayments no existe en preload → usar getAllPayments
-        const data = await window.api.getAllPayments?.();
-        window.billingData = data || [];
-      } catch (e) { }
-
       document.getElementById(viewMap.billing).style.display = "block";
       renderBillingView?.();
       break;
@@ -450,6 +430,10 @@ function getStatusIcon(status) {
   }
 }
 
+function getStatusColor(status) {
+  return { online: 'success', error: 'danger', checking: 'warning' }[status] || 'secondary';
+}
+
 // ========================================
 // ASISTANTS GRID VIEW
 // ========================================
@@ -505,11 +489,7 @@ function renderAssistantsGrid() {
 
   assistants.forEach(project => {
 
-    const statusColor =
-      project.status === "online" ? "success" :
-        project.status === "error" ? "danger" :
-          project.status === "checking" ? "warning" :
-            "secondary";
+    const statusColor = getStatusColor(project.status);
 
     const col = document.createElement("div");
     col.className = "col-xl-3 col-lg-4 col-md-6";
@@ -622,16 +602,9 @@ function patchAssistantsGrid() {
     const badge = card.querySelector(".badge");
     if (!badge) return;
 
-    const statusColor =
-      project.status === "online" ? "success" :
-        project.status === "error" ? "danger" :
-          project.status === "checking" ? "warning" :
-            "secondary";
+    const statusColor = getStatusColor(project.status);
 
-    badge.className = `
-      badge bg-${statusColor} bg-opacity-10 text-${statusColor}
-      border border-${statusColor} border-opacity-25
-    `;
+    badge.className = `badge bg-${statusColor} bg-opacity-10 text-${statusColor} border border-${statusColor} border-opacity-25`;
 
     badge.innerText = project.status.toUpperCase();
 
@@ -711,17 +684,6 @@ async function renderDetail(project, isRefresh = false) {
 }
 
 function renderDetailStructure(project) {
-
-  const servicesContainer = document.getElementById("services-container");
-
-  if (servicesContainer) {
-    servicesContainer.innerHTML = `
-    <div class="text-center py-4 text-secondary">
-      <div class="spinner-border spinner-border-sm"></div>
-      Cargando servicios...
-    </div>
-  `;
-  }
 
   document.getElementById("dashboard-global").style.display = "none";
   document.getElementById("clients-view").style.display = "none";
@@ -806,9 +768,7 @@ function renderDetailStructure(project) {
         </div>
 
         <!-- BADGES -->
-        <div id="header-badges" class="d-flex gap-2 flex-wrap">
-          <span class="badge bg-secondary">Cargando...</span>
-        </div>
+        <div id="header-badges" class="d-flex gap-2 flex-wrap"></div>
 
       </div>
 
@@ -896,15 +856,6 @@ async function updateDetailHeader(project) {
     <span><i class="bi bi-check-circle-fill text-success"></i> ${online}</span>
     <span><i class="bi bi-x-circle-fill text-danger"></i> ${error}</span>
     <span><i class="bi bi-arrow-repeat text-warning"></i> ${building}</span>
-  `;
-
-  // =========================
-  // RENDER BASE (IMPORTANTE)
-  // =========================
-  badgesContainer.innerHTML = `
-    <div class="badges-row">
-      <span class="badge bg-secondary">Cargando...</span>
-    </div>
   `;
 
   // =========================
@@ -1028,11 +979,6 @@ function renderServices(project) {
   const freshProject = assistants.find(a => a.id === project.id);
 
   if (!freshProject || !freshProject.services || freshProject.services.length === 0) {
-    container.innerHTML = `
-      <div class="text-center text-secondary py-4">
-        Cargando servicios...
-      </div>
-    `;
     return;
   }
 
@@ -1407,7 +1353,7 @@ async function openDashboard(projectId, environmentId, serviceId) {
     }
 
     if (!domain) {
-      alert("Este servicio no tiene dominio público.");
+      showToast("Este servicio no tiene dominio público.", "warning");
       return;
     }
 
@@ -1522,23 +1468,17 @@ async function smartRefresh() {
 
     const previousHash = lastAssistantsHash;
     const activeView = localStorage.getItem("activeView");
+    const isVarsVisible = document.getElementById("variables-view")?.style.display === "block";
 
-    // FIX: usar preserveSelection=true para no romper el detail abierto
-    // Cargar en paralelo con datos secundarios según la vista activa
-    const needsClients = activeView === "clients" || activeView === "dashboard";
-    const needsTickets = activeView === "tickets" || activeView === "dashboard";
-
+    // Siempre cargar assistants. Para dashboard, prefetch clients+tickets para el hash.
     const apiCalls = [loadAssistants(true)];
 
-    if (needsClients) {
+    if (activeView === "dashboard") {
       apiCalls.push(
         window.api.getClients()
           .then(c => { window.clientsData = c; })
           .catch(() => { })
       );
-    }
-
-    if (needsTickets) {
       apiCalls.push(
         window.api.getTickets()
           .then(t => { window.ticketsData = t; })
@@ -1575,6 +1515,28 @@ async function smartRefresh() {
 
       }
 
+    }
+
+    // SIEMPRE actualizar la vista activa con datos frescos (independiente del hash)
+    if (activeView === "dashboard") patchDashboard();
+    if (activeView === "clients") loadClientsData?.();
+    if (activeView === "tickets") loadTicketsData?.();
+    if (activeView === "billing") loadBillingData?.();
+    if (activeView === "audit") loadAuditLogs?.();
+
+    // Variables: sólo recargar si el panel está abierto y hubo cambios reales
+    if (isVarsVisible && window.currentVarsContext) {
+      const { projectId, environmentId, serviceId } = window.currentVarsContext;
+      window.api.getServiceVariables(projectId, environmentId, serviceId)
+        .then(vars => {
+          const newHash = JSON.stringify(vars || {});
+          if (newHash !== window.lastVarsHash) {
+            window.lastVarsHash = newHash;
+            window.variablesCache = vars || {};
+            loadVariables(projectId, environmentId, serviceId);
+          }
+        })
+        .catch(() => {});
     }
 
     // Notificaciones de error
@@ -1801,28 +1763,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 // =========================
 // DASHBOARD MAESTRO GLOBAL
 // =========================
-// FIX: asegurar consistencia de datos en dashboard
-// `assistants` es estado global y podía estar vacío o desactualizado,
-// generando métricas incorrectas (servicios, estados, etc).
-// Se fuerza `loadAssistants` antes de renderizar para garantizar datos actuales.
-// FIX: evitar render sin datos actualizados
-// Los botones llamaban solo a render (sin recargar datos),
-// mostrando información vieja en clientes/tickets.
-// Se asegura carga previa de datos antes de renderizar la vista.
 async function renderDashboard() {
 
-  // OPT-01: Only load if assistants cache is empty
-  if (assistants.length === 0) {
-    await loadAssistants(false);
-  }
+  if (assistants.length === 0) await loadAssistants(false);
 
-  // FIX: selectedProjectId se limpia acá porque renderDashboard
-  // se llama tanto desde navigate() como directamente
   selectedProjectId = null;
 
-  // OPT-02: Removed redundant view hiding — navigate() already handles this
-
-  // Limpiar contenedores secundarios
   ["integrated-log-container", "integrated-var-container"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.remove();
@@ -1830,126 +1776,171 @@ async function renderDashboard() {
 
   const dash = document.getElementById("dashboard-global");
   dash.style.display = "block";
+
+  // Si la estructura ya existe, solo parchear
+  if (document.getElementById("dash-projects-count")) {
+    patchDashboard();
+    Promise.all([window.api.getClients(), window.api.getTickets()])
+      .then(([c, t]) => { window.clientsData = c; window.ticketsData = t; patchDashboard(); })
+      .catch(() => {});
+    return;
+  }
+
+  // Primera vez: construir con data cacheada inmediatamente
+  buildDashboard(dash, window.clientsData || [], window.ticketsData || []);
+
+  // Refrescar en background
+  Promise.all([window.api.getClients(), window.api.getTickets()])
+    .then(([c, t]) => { window.clientsData = c; window.ticketsData = t; patchDashboard(); })
+    .catch(console.error);
+}
+
+function buildDashboard(dash, clients, tickets) {
+  const activeClients = clients.filter(c => c.plan !== 'Baja');
+  const pendingTickets = tickets.filter(t => t.estado !== 'Cerrado');
+  let onlineServices = 0, errorServices = 0;
+  assistants.forEach(a => a.services.forEach(s => {
+    if (s.status === 'online') onlineServices++;
+    if (s.status === 'error') errorServices++;
+  }));
+
   dash.innerHTML = `
-    <div class="d-flex justify-content-center align-items-center h-100">
-      <div class="spinner-border text-light" role="status"></div>
-    </div>
-  `;
+    <div class="animate-fade">
+      <h2 class="mb-4 fw-bold">DASHBOARD</h2>
 
-  try {
-    const clients = await window.api.getClients();
-    const activeClients = clients.filter(c => c.plan !== 'Baja');
-    const tickets = await window.api.getTickets();
-    const pendingTickets = tickets.filter(t => t.estado !== 'Cerrado');
-
-    let totalServices = 0;
-    let onlineServices = 0;
-    let errorServices = 0;
-
-    assistants.forEach(a => {
-      a.services.forEach(s => {
-        totalServices++;
-        if (s.status === 'online') onlineServices++;
-        if (s.status === 'error') errorServices++;
-      });
-    });
-
-    dash.innerHTML = `
-      <div class="animate-fade">
-        <h2 class="mb-4 fw-bold">DASHBOARD</h2>
-        
-        <div class="row g-4 mb-5">
-          <!-- CARD BOTS -->
-          <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100 rounded">
-              <div class="display-5 fw-bold text-success">${assistants.length}</div>
-              <div class="text-uppercase small ls-1">Proyectos Totales</div>
-              <div class="mt-3 small text-secondary">
-                <span class="text-success">${onlineServices} Online</span> / 
-                <span class="text-danger">${errorServices} Error</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- CARD CLIENTES -->
-          <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100 rounded clickable" onclick="navigate('clients')">
-              <div class="display-5 fw-bold text-info">${activeClients.length}</div>
-              <div class="text-uppercase small ls-1">Clientes Activos</div>
-              <div class="mt-3">
-                 <button class="btn btn-sm btn-outline-info">Gestionar Clientes</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- CARD TICKETS -->
-          <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100 rounded clickable" onclick="navigate('tickets')">
-              <div class="display-5 fw-bold text-warning">${pendingTickets.length}</div>
-              <div class="text-uppercase small ls-1">Tickets Pendientes</div>
-              <div class="mt-3">
-                 <button class="btn btn-sm btn-outline-warning">Ver Tickets</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- CARD SALUD -->
-          <div class="col-md-3">
-            <div class="glass-card p-4 text-center h-100 rounded">
-              <div class="display-5 fw-bold ${errorServices > 0 ? 'text-danger' : 'text-success'}">
-                 ${errorServices > 0 ? 'ALERTA' : 'OK'}
-              </div>
-              <div class="text-uppercase small ls-1">Estado de Salud</div>
-              <div class="mt-3 small text-secondary">
-                ${errorServices > 0 ? 'Se detectaron fallos técnicos' : 'Todos los sistemas operativos'}
-              </div>
+      <div class="row g-4 mb-5">
+        <div class="col-md-3">
+          <div class="glass-card p-4 text-center h-100 rounded">
+            <div id="dash-projects-count" class="display-5 fw-bold text-success">${assistants.length}</div>
+            <div class="text-uppercase small ls-1">Proyectos Totales</div>
+            <div class="mt-3 small text-secondary">
+              <span id="dash-online-count" class="text-success">${onlineServices} Online</span> /
+              <span id="dash-error-count" class="text-danger">${errorServices} Error</span>
             </div>
           </div>
         </div>
 
-        <div class="row g-4">
-          <div class="col-md-6">
-            <div class="glass-card p-4 rounded">
-               <h5 class="mb-3">Último Ticket</h5>
-               ${pendingTickets.length > 0 ? `
-                  <div class="p-3 border border-secondary rounded bg-dark-hover">
-                     <div class="d-flex justify-content-between">
-                        <span class="fw-bold">${pendingTickets[0].titulo}</span>
-                        <span class="badge bg-warning text-dark">${pendingTickets[0].prioridad}</span>
-                     </div>
-                     <div class="small text-secondary mt-1">${pendingTickets[0].clientes ? pendingTickets[0].clientes.nombre : 'Sin Cliente'}</div>
-                  </div>
-               ` : '<div class="text-secondary">No hay tickets pendientes</div>'}
-            </div>
+        <div class="col-md-3">
+          <div class="glass-card p-4 text-center h-100 rounded clickable" onclick="navigate('clients')">
+            <div id="dash-clients-count" class="display-5 fw-bold text-info">${activeClients.length}</div>
+            <div class="text-uppercase small ls-1">Clientes Activos</div>
+            <div class="mt-3"><button class="btn btn-sm btn-outline-info">Gestionar Clientes</button></div>
           </div>
-          <div class="col-md-6">
-             <div class="glass-card p-4 rounded">
-               <h5 class="mb-3">Acciones Rápidas</h5>
-               <div class="d-grid gap-2">
-                  <button class="btn btn-outline-light text-start btn-sm" onclick="navigate('clients')">
-                    <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
-                  </button>
-                  <button class="btn btn-outline-light text-start btn-sm" onclick="navigate('tickets')">
-                    <i class="bi bi-plus-circle me-2"></i> Crear Ticket
-                  </button>
-                  <button class="btn btn-outline-light text-start btn-sm" id="dashboard-refresh">
-                    <i class="bi bi-arrow-clockwise me-2"></i> Actualizar Infraestructura
-                  </button>
-               </div>
-             </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="glass-card p-4 text-center h-100 rounded clickable" onclick="navigate('tickets')">
+            <div id="dash-tickets-count" class="display-5 fw-bold text-warning">${pendingTickets.length}</div>
+            <div class="text-uppercase small ls-1">Tickets Pendientes</div>
+            <div class="mt-3"><button class="btn btn-sm btn-outline-warning">Ver Tickets</button></div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="glass-card p-4 text-center h-100 rounded">
+            <div id="dash-health-status" class="display-5 fw-bold ${errorServices > 0 ? 'text-danger' : 'text-success'}">
+              ${errorServices > 0 ? 'ALERTA' : 'OK'}
+            </div>
+            <div class="text-uppercase small ls-1">Estado de Salud</div>
+            <div id="dash-health-desc" class="mt-3 small text-secondary">
+              ${errorServices > 0 ? 'Se detectaron fallos técnicos' : 'Todos los sistemas operativos'}
+            </div>
           </div>
         </div>
       </div>
-    `;
 
-    document.getElementById('dashboard-refresh').onclick = () => {
-      loadAssistants(false);
-      renderDashboard();
-    };
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="glass-card p-4 rounded">
+            <h5 class="mb-3">Último Ticket</h5>
+            <div id="dash-last-ticket">
+              ${pendingTickets.length > 0 ? `
+                <div class="p-3 border border-secondary rounded bg-dark-hover">
+                  <div class="d-flex justify-content-between">
+                    <span class="fw-bold">${pendingTickets[0].titulo}</span>
+                    <span class="badge bg-warning text-dark">${pendingTickets[0].prioridad}</span>
+                  </div>
+                  <div class="small text-secondary mt-1">${pendingTickets[0].clientes ? pendingTickets[0].clientes.nombre : 'Sin Cliente'}</div>
+                </div>
+              ` : '<div class="text-secondary">No hay tickets pendientes</div>'}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="glass-card p-4 rounded">
+            <h5 class="mb-3">Acciones Rápidas</h5>
+            <div class="d-grid gap-2">
+              <button class="btn btn-outline-light text-start btn-sm" onclick="navigate('clients')">
+                <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
+              </button>
+              <button class="btn btn-outline-light text-start btn-sm" onclick="navigate('tickets')">
+                <i class="bi bi-plus-circle me-2"></i> Crear Ticket
+              </button>
+              <button class="btn btn-outline-light text-start btn-sm" id="dashboard-refresh">
+                <i class="bi bi-arrow-clockwise me-2"></i> Actualizar Infraestructura
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 
-  } catch (err) {
-    console.error("Error cargando dashboard:", err);
-    dash.innerHTML = `<div class="alert alert-danger">Error al cargar datos del dashboard</div>`;
+  document.getElementById('dashboard-refresh').onclick = () => {
+    loadAssistants(false);
+    Promise.all([window.api.getClients(), window.api.getTickets()])
+      .then(([c, t]) => { window.clientsData = c; window.ticketsData = t; patchDashboard(); })
+      .catch(console.error);
+  };
+}
+
+function patchDashboard() {
+  if (!document.getElementById("dash-projects-count")) return;
+
+  const clients = window.clientsData || [];
+  const tickets = window.ticketsData || [];
+  const activeClients = clients.filter(c => c.plan !== 'Baja');
+  const pendingTickets = tickets.filter(t => t.estado !== 'Cerrado');
+  let onlineServices = 0, errorServices = 0;
+  assistants.forEach(a => a.services.forEach(s => {
+    if (s.status === 'online') onlineServices++;
+    if (s.status === 'error') errorServices++;
+  }));
+
+  document.getElementById("dash-projects-count").textContent = assistants.length;
+
+  const onlineEl = document.getElementById("dash-online-count");
+  if (onlineEl) onlineEl.textContent = `${onlineServices} Online`;
+
+  const errorEl = document.getElementById("dash-error-count");
+  if (errorEl) errorEl.textContent = `${errorServices} Error`;
+
+  const clientsEl = document.getElementById("dash-clients-count");
+  if (clientsEl) clientsEl.textContent = activeClients.length;
+
+  const ticketsEl = document.getElementById("dash-tickets-count");
+  if (ticketsEl) ticketsEl.textContent = pendingTickets.length;
+
+  const healthEl = document.getElementById("dash-health-status");
+  if (healthEl) {
+    healthEl.textContent = errorServices > 0 ? 'ALERTA' : 'OK';
+    healthEl.className = `display-5 fw-bold ${errorServices > 0 ? 'text-danger' : 'text-success'}`;
+  }
+
+  const healthDesc = document.getElementById("dash-health-desc");
+  if (healthDesc) healthDesc.textContent = errorServices > 0 ? 'Se detectaron fallos técnicos' : 'Todos los sistemas operativos';
+
+  const lastTicket = document.getElementById("dash-last-ticket");
+  if (lastTicket) {
+    lastTicket.innerHTML = pendingTickets.length > 0 ? `
+      <div class="p-3 border border-secondary rounded bg-dark-hover">
+        <div class="d-flex justify-content-between">
+          <span class="fw-bold">${pendingTickets[0].titulo}</span>
+          <span class="badge bg-warning text-dark">${pendingTickets[0].prioridad}</span>
+        </div>
+        <div class="small text-secondary mt-1">${pendingTickets[0].clientes ? pendingTickets[0].clientes.nombre : 'Sin Cliente'}</div>
+      </div>
+    ` : '<div class="text-secondary">No hay tickets pendientes</div>';
   }
 }
 
@@ -1958,19 +1949,9 @@ async function renderDashboard() {
 // --------------------------------------------------
 
 window.api.onSelectProject((projectId) => {
-  console.log("Selecting project:", projectId);
   const project = assistants.find(p => p.id === projectId);
-  if (project) {
-    // Simular click en el item del sidebar
-    const item = document.querySelector(`.assistant-item[data-id="${projectId}"]`);
-    if (item) {
-      item.click();
-    } else {
-      renderDetail(project);
-    }
-  } else {
-    console.warn("Project not found in current list:", projectId);
-  }
+  if (project) renderDetail(project);
+  else console.warn("Project not found:", projectId);
 });
 
 // --------------------------------------------------

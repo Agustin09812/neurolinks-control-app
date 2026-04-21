@@ -28,11 +28,8 @@ async function renderTicketsView(filterClientId = "") {
     const view = document.getElementById("tickets-view");
     view.style.display = "block";
     view.innerHTML = `
-    <div class="d-flex justify-content-center align-items-center h-100" id="tickets-loading">
-                <div class="spinner-border text-light" role="status"></div>
-            </div>
         <div class="animate-fade">
-            <div id="tickets-content" style="display:none;">
+            <div id="tickets-content">
                  <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="fw-bold mb-0 text-main">SISTEMA DE TICKETS</h2>
                     <button class="btn btn-outline-light btn-sm" onclick="openNewTicketModal()">
@@ -219,8 +216,10 @@ async function renderTicketsView(filterClientId = "") {
     `;
 
     document.getElementById("ticketFormView").onsubmit = handleTicketSubmit;
-    populateTicketFilters(); // Sin await
-    loadTicketsData(); // Sin await
+    allTicketsView = window.ticketsData || [];
+    renderTicketsList();
+    populateTicketFilters();
+    loadTicketsData();
 }
 
 async function populateTicketFilters() {
@@ -245,40 +244,15 @@ async function populateTicketFilters() {
 }
 
 async function loadTicketsData() {
-    const loadingDiv = document.getElementById("tickets-loading");
-    const contentDiv = document.getElementById("tickets-content");
-
-    // Si no existen los divs, abortamos
-    if (!loadingDiv || !contentDiv) return;
-
     try {
 
         const previousCount = lastTicketsCount;
 
         allTicketsView = await window.api.getTickets() || [];
+        window.ticketsData = allTicketsView;
 
-        window.ticketsData = allTicketsView || []; // Hash para tickets
-
-        // Detectar nuevos tickets
-        // FIX: detección correcta de nuevos tickets + key única por notificación
-        // Antes se usaba `ticket.id`, pero `ticket` no existía en este scope,
-        // lo que generaba:
-        // 1) ReferenceError en algunos casos (rompiendo el flujo)
-        // 2) keys "ticket-undefined", haciendo que el sistema anti-duplicados
-        //    (notificationMemory) bloquee notificaciones reales
-        //
-        // Además, la lógica original solo comparaba cantidad de tickets,
-        // sin identificar cuáles eran nuevos.
-        //
-        // Este fix:
-        // ✔ Detecta exactamente qué tickets son nuevos
-        // ✔ Genera una notificación por cada ticket real
-        // ✔ Usa `t.id` como key única → evita duplicados incorrectos
-        // ✔ Mantiene consistencia en el sistema de notificaciones
         if (previousCount !== 0 && allTicketsView.length > previousCount) {
-
             const newTickets = allTicketsView.slice(0, allTicketsView.length - previousCount);
-
             newTickets.forEach(t => {
                 addNotification(
                     "ticket",
@@ -287,23 +261,15 @@ async function loadTicketsData() {
                     `ticket-${t.id}`
                 );
             });
-
             showToast("Nuevos tickets recibidos", "info");
         }
 
         lastTicketsCount = allTicketsView.length;
-
         renderTicketsList();
 
     } catch (err) {
         console.error("Error loading tickets:", err);
         showToast("Error al conectar con el servidor de tickets", "danger");
-    } finally {
-        // Aseguramos que el spinner SIEMPRE se oculte
-        loadingDiv.classList.add("d-none");
-        loadingDiv.style.display = "none";
-        contentDiv.classList.remove("d-none");
-        contentDiv.style.display = "block";
     }
 }
 
@@ -324,26 +290,26 @@ function resetTicketFilters() {
     renderTicketsList();
 }
 
+function getFilteredTickets() {
+    return allTicketsView.filter(t => {
+        if (ticketFilters.status && t.estado !== ticketFilters.status) return false;
+        if (ticketFilters.priority && t.prioridad !== ticketFilters.priority) return false;
+        if (ticketFilters.client && t.cliente_id !== ticketFilters.client) return false;
+        if (ticketFilters.dateStart || ticketFilters.dateEnd) {
+            const d = new Date(t.created_at).toISOString().split('T')[0];
+            if (ticketFilters.dateStart && d < ticketFilters.dateStart) return false;
+            if (ticketFilters.dateEnd && d > ticketFilters.dateEnd) return false;
+        }
+        return true;
+    });
+}
+
 function renderTicketsList() {
     const tbody = document.getElementById("tickets-table-body-view");
     if (!tbody) return;
     tbody.innerHTML = "";
 
-    const filtered = allTicketsView.filter(t => {
-        const matchStatus = !ticketFilters.status || t.estado === ticketFilters.status;
-        const matchPriority = !ticketFilters.priority || t.prioridad === ticketFilters.priority;
-        const matchClient = !ticketFilters.client || t.cliente_id === ticketFilters.client;
-
-        // Filtro de fecha
-        let matchDate = true;
-        if (ticketFilters.dateStart || ticketFilters.dateEnd) {
-            const ticketDate = new Date(t.created_at).toISOString().split('T')[0];
-            if (ticketFilters.dateStart && ticketDate < ticketFilters.dateStart) matchDate = false;
-            if (ticketFilters.dateEnd && ticketDate > ticketFilters.dateEnd) matchDate = false;
-        }
-
-        return matchStatus && matchPriority && matchClient && matchDate;
-    });
+    const filtered = getFilteredTickets();
 
     if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-dim py-5">No se encontraron tickets</td></tr>';
@@ -448,13 +414,7 @@ async function handleDeleteTicket(id) {
 }
 
 function exportTicketsToCSV() {
-    // FIX: Exportar datos filtrados, no todos (el usuario espera lo que ve)
-    const filtered = allTicketsView.filter(t => {
-        const matchStatus = !ticketFilters.status || t.estado === ticketFilters.status;
-        const matchPriority = !ticketFilters.priority || t.prioridad === ticketFilters.priority;
-        const matchClient = !ticketFilters.client || t.cliente_id === ticketFilters.client;
-        return matchStatus && matchPriority && matchClient;
-    });
+    const filtered = getFilteredTickets();
 
     if (filtered.length === 0) {
         showToast("No hay tickets para exportar", "warning");
@@ -490,20 +450,8 @@ function exportTicketsToCSV() {
     showToast("Reporte generado", "success");
 }
 
-function changePage(direction) { // paginacion
-    // BUG-05 FIX: Use filtered data for totalPages (not all tickets)
-    const filtered = allTicketsView.filter(t => {
-        const matchStatus = !ticketFilters.status || t.estado === ticketFilters.status;
-        const matchPriority = !ticketFilters.priority || t.prioridad === ticketFilters.priority;
-        const matchClient = !ticketFilters.client || t.cliente_id === ticketFilters.client;
-        let matchDate = true;
-        if (ticketFilters.dateStart || ticketFilters.dateEnd) {
-            const ticketDate = new Date(t.created_at).toISOString().split('T')[0];
-            if (ticketFilters.dateStart && ticketDate < ticketFilters.dateStart) matchDate = false;
-            if (ticketFilters.dateEnd && ticketDate > ticketFilters.dateEnd) matchDate = false;
-        }
-        return matchStatus && matchPriority && matchClient && matchDate;
-    });
+function changePage(direction) {
+    const filtered = getFilteredTickets();
     const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
 
     currentPage += direction;

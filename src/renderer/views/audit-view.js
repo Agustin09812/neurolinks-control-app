@@ -51,6 +51,8 @@ async function renderAuditView() {
         </div>
     `;
 
+    filteredAuditLogs = [...auditLogs];
+    renderAuditLogs();
     loadAuditLogs();
 }
 
@@ -66,22 +68,18 @@ async function loadAuditLogs() {
 
     try {
 
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center py-5">
-                    <div class="spinner-border text-light"></div>
-                </td>
-            </tr>
-        `;
-
         auditLogs = await window.api.getAuditLogs() || [];
 
-        // 🔥 ORDEN CORRECTO (IMPORTANTE)
         auditLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        filteredAuditLogs = [...auditLogs];
-
-        renderAuditLogs();
+        // Preservar el filtro de búsqueda activo si hay uno
+        const searchEl = document.getElementById("auditSearch");
+        if (searchEl?.value) {
+            filterAuditLogs();
+        } else {
+            filteredAuditLogs = [...auditLogs];
+            renderAuditLogs();
+        }
 
     } catch (err) {
 
@@ -172,15 +170,8 @@ function filterAuditLogs() {
 // --------------------------------------------------
 
 function getActionBadgeClass(action) {
-
     if (!action) return 'bg-secondary';
-
     const a = action.toLowerCase();
-
-    if (a.includes('delete')) return 'bg-danger';
-    if (a.includes('create')) return 'bg-success';
-    if (a.includes('update')) return 'bg-warning';
-    if (a.includes('deploy')) return 'bg-info';
-
-    return 'bg-secondary';
+    const map = [['delete','bg-danger'],['create','bg-success'],['update','bg-warning'],['deploy','bg-info']];
+    return map.find(([k]) => a.includes(k))?.[1] ?? 'bg-secondary';
 }

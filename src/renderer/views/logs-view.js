@@ -215,6 +215,8 @@ async function fetchLogs(deploymentId) {
 
         const fragment = document.createDocumentFragment();
 
+        const escapeHtml = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
         newLogs.forEach(l => {
 
             const raw = l.message || "";
@@ -241,7 +243,7 @@ async function fetchLogs(deploymentId) {
             div.innerHTML = `
                 <span class="log-time">[${time}]</span>
                 <span class="log-label">${label}</span>
-                <span class="log-msg">${raw}</span>
+                <span class="log-msg">${escapeHtml(raw)}</span>
             `;
 
             fragment.appendChild(div);
