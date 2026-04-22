@@ -461,3 +461,193 @@ function changePage(direction) {
 
     renderTicketsList();
 }
+
+// -----------------------------------------------
+// TABS DE CLIENTE: Tickets inline en client-detail
+// -----------------------------------------------
+
+async function renderClientTicketsTab(clientId, container) {
+    container.innerHTML = `
+        <div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="text-dim small fw-bold mb-0">TICKETS DEL CLIENTE</h6>
+                <button class="btn btn-outline-light btn-sm" id="btn-new-client-ticket">
+                    <i class="bi bi-plus-circle me-2"></i>Nuevo Ticket
+                </button>
+            </div>
+            <div class="glass-card overflow-hidden rounded">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Titulo</th>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Prioridad</th>
+                                <th>Fecha</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="client-tickets-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal ticket para este cliente -->
+        <div class="modal fade" id="clientTicketModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content glass-card shadow-lg">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="clientTicketModalTitle">Nuevo Ticket</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form id="clientTicketForm">
+                        <div class="modal-body p-4">
+                            <input type="hidden" id="clientTicketId">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label text-dim small fw-bold required">TITULO</label>
+                                    <input type="text" class="form-control text-main" id="clientTicketTitle" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-dim small fw-bold">TIPO</label>
+                                    <select class="form-select" id="clientTicketType">
+                                        <option value="Soporte">Soporte</option>
+                                        <option value="Mejora">Mejora</option>
+                                        <option value="Bugs">Bugs</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-dim small fw-bold">ESTADO</label>
+                                    <select class="form-select" id="clientTicketStatus">
+                                        <option value="Abierto">Abierto</option>
+                                        <option value="En Progreso">En Progreso</option>
+                                        <option value="Cerrado">Cerrado</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-dim small fw-bold">PRIORIDAD</label>
+                                    <select class="form-select" id="clientTicketPriority">
+                                        <option value="Baja">Baja</option>
+                                        <option value="Media">Media</option>
+                                        <option value="Alta">Alta</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-12 mt-2">
+                                    <label class="form-label text-dim small fw-bold">DESCRIPCION</label>
+                                    <textarea class="form-control text-main ticket-textarea"
+                                        id="clientTicketDesc" rows="6"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer p-3">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-success">Guardar Ticket</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("btn-new-client-ticket").onclick = () => {
+        document.getElementById("clientTicketForm").reset();
+        document.getElementById("clientTicketId").value = "";
+        document.getElementById("clientTicketModalTitle").innerText = "Nuevo Ticket";
+        new bootstrap.Modal(document.getElementById("clientTicketModal")).show();
+    };
+
+    document.getElementById("clientTicketForm").onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById("clientTicketId").value;
+        const data = {
+            titulo: document.getElementById("clientTicketTitle").value,
+            cliente_id: clientId,
+            tipo: document.getElementById("clientTicketType").value,
+            estado: document.getElementById("clientTicketStatus").value,
+            prioridad: document.getElementById("clientTicketPriority").value,
+            descripcion: document.getElementById("clientTicketDesc").value
+        };
+        try {
+            if (id) {
+                await window.api.updateTicket(id, data);
+                showToast("Ticket actualizado", "success");
+            } else {
+                await window.api.createTicket(data);
+                showToast("Ticket creado correctamente", "success");
+            }
+            bootstrap.Modal.getInstance(document.getElementById("clientTicketModal")).hide();
+            loadClientTickets(clientId);
+        } catch {
+            showToast("Error al guardar ticket", "danger");
+        }
+    };
+
+    loadClientTickets(clientId);
+}
+
+async function loadClientTickets(clientId) {
+    const tbody = document.getElementById("client-tickets-tbody");
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
+
+    try {
+        const allTickets = await window.api.getTickets() || [];
+        const tickets = allTickets.filter(t => t.cliente_id === clientId);
+
+        tbody.innerHTML = "";
+
+        if (tickets.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-dim py-5">No hay tickets para este cliente</td></tr>';
+            return;
+        }
+
+        tickets.forEach(t => {
+            const tr = document.createElement("tr");
+            tr.className = "ticket-row";
+            tr.innerHTML = `
+                <td>
+                    <div class="fw-bold small">#${t.id.substring(0, 8)}</div>
+                    <div class="small text-white">${t.titulo}</div>
+                </td>
+                <td><span class="small text-dim">${t.tipo}</span></td>
+                <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${t.estado}</span></td>
+                <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${t.prioridad || 'Baja'}</span></td>
+                <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
+                <td class="text-end">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button class="btn btn-sm btn-outline-light btn-edit-ct"><i class="bi bi-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-danger btn-delete-ct"><i class="bi bi-trash"></i></button>
+                    </div>
+                </td>
+            `;
+
+            tr.querySelector(".btn-edit-ct").onclick = () => {
+                document.getElementById("clientTicketId").value = t.id;
+                document.getElementById("clientTicketTitle").value = t.titulo;
+                document.getElementById("clientTicketType").value = t.tipo;
+                document.getElementById("clientTicketStatus").value = t.estado;
+                document.getElementById("clientTicketPriority").value = t.prioridad;
+                document.getElementById("clientTicketDesc").value = t.descripcion || "";
+                document.getElementById("clientTicketModalTitle").innerText = "Editar Ticket";
+                new bootstrap.Modal(document.getElementById("clientTicketModal")).show();
+            };
+
+            tr.querySelector(".btn-delete-ct").onclick = async () => {
+                if (!confirm("¿Seguro que queres eliminar este ticket?")) return;
+                try {
+                    await window.api.deleteTicket(t.id);
+                    showToast("Ticket eliminado", "warning");
+                    loadClientTickets(clientId);
+                } catch {
+                    showToast("Error al eliminar ticket", "danger");
+                }
+            };
+
+            tbody.appendChild(tr);
+        });
+    } catch {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-3">Error al cargar tickets</td></tr>';
+    }
+}

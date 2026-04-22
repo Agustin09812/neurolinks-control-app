@@ -47,15 +47,15 @@ async function navigate(view) {
     dashboard: "dashboard-global",
     assistants: "assistants-view",
     clients: "clients-view",
-    tickets: "tickets-view",
-    billing: "billing-view",
     audit: "audit-view",
   };
 
   const views = Object.values(viewMap).concat([
     "assistant-detail",
     "logs-view",
-    "variables-view"
+    "variables-view",
+    "tickets-view",
+    "billing-view",
   ]);
 
   const activeViewEl = document.getElementById(viewMap[view]);
@@ -114,16 +114,6 @@ async function navigate(view) {
     case "clients":
       document.getElementById(viewMap.clients).style.display = "block";
       renderClientsView?.();
-      break;
-
-    case "tickets":
-      document.getElementById(viewMap.tickets).style.display = "block";
-      renderTicketsView?.();
-      break;
-
-    case "billing":
-      document.getElementById(viewMap.billing).style.display = "block";
-      renderBillingView?.();
       break;
 
     case "audit":
@@ -1520,8 +1510,6 @@ async function smartRefresh() {
     // SIEMPRE actualizar la vista activa con datos frescos (independiente del hash)
     if (activeView === "dashboard") patchDashboard();
     if (activeView === "clients") loadClientsData?.();
-    if (activeView === "tickets") loadTicketsData?.();
-    if (activeView === "billing") loadBillingData?.();
     if (activeView === "audit") loadAuditLogs?.();
 
     // Variables: sólo recargar si el panel está abierto y hubo cambios reales
@@ -1701,7 +1689,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadAssistants(false);
   lastAssistantsHash = generateAssistantsHash();
 
-  const savedView = localStorage.getItem("activeView") || "dashboard";
+  let savedView = localStorage.getItem("activeView") || "dashboard";
+  if (savedView === "tickets" || savedView === "billing") savedView = "clients";
   navigate(savedView);
 
   document.body.classList.remove("app-preload");
@@ -1829,10 +1818,10 @@ function buildDashboard(dash, clients, tickets) {
         </div>
 
         <div class="col-md-3">
-          <div class="glass-card p-4 text-center h-100 rounded clickable" onclick="navigate('tickets')">
+          <div class="glass-card p-4 text-center h-100 rounded clickable" onclick="navigate('clients')">
             <div id="dash-tickets-count" class="display-5 fw-bold text-warning">${pendingTickets.length}</div>
             <div class="text-uppercase small ls-1">Tickets Pendientes</div>
-            <div class="mt-3"><button class="btn btn-sm btn-outline-warning">Ver Tickets</button></div>
+            <div class="mt-3"><button class="btn btn-sm btn-outline-warning">Ver en Clientes</button></div>
           </div>
         </div>
 
@@ -1871,10 +1860,7 @@ function buildDashboard(dash, clients, tickets) {
             <h5 class="mb-3">Acciones Rápidas</h5>
             <div class="d-grid gap-2">
               <button class="btn btn-outline-light text-start btn-sm" onclick="navigate('clients')">
-                <i class="bi bi-person-plus me-2"></i> Nuevo Cliente
-              </button>
-              <button class="btn btn-outline-light text-start btn-sm" onclick="navigate('tickets')">
-                <i class="bi bi-plus-circle me-2"></i> Crear Ticket
+                <i class="bi bi-person-plus me-2"></i> Gestionar Clientes
               </button>
               <button class="btn btn-outline-light text-start btn-sm" id="dashboard-refresh">
                 <i class="bi bi-arrow-clockwise me-2"></i> Actualizar Infraestructura

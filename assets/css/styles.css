@@ -534,6 +534,10 @@ body[data-theme="light"].bg-dark {
   color: var(--text-dim) !important;
 }
 
+[data-theme="dark"] .input-group-text {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
 [data-theme="light"] .table {
   color: var(--text-main) !important;
 }
@@ -1018,6 +1022,64 @@ body {
   justify-content: center;
   font-weight: bold;
   font-size: 1.2rem;
+}
+
+.client-avatar-lg {
+  width: 52px;
+  height: 52px;
+  background: rgba(240, 147, 251, 0.12);
+  color: var(--accent-secondary);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.25rem;
+  border: 1px solid rgba(240, 147, 251, 0.2);
+}
+
+/* Client detail tabs */
+
+[data-theme="dark"] #client-detail-tabs .nav-link:not(.active) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="dark"] #client-detail-tabs .nav-link:not(.active):hover {
+  color: #fff;
+}
+
+[data-theme="light"] #client-detail-tabs .nav-link:not(.active) {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+[data-theme="light"] #client-detail-tabs .nav-link:not(.active):hover {
+  color: #000;
+}
+
+/* Asistente tab icon */
+
+.assistant-tab-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.2rem;
+}
+
+/* Vincular asistente card */
+
+.link-assistant-card {
+  cursor: pointer;
+  border: 1.5px dashed var(--border-light);
+  color: var(--text-main);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.link-assistant-card:hover {
+  border-color: var(--accent-primary);
 }
 
 /* Badge pendiente */
