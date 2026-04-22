@@ -15,11 +15,11 @@ async function renderAuditView() {
     view.innerHTML = `
         <div class="animate-fade">
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
                 <div>
                     <h2 class="fw-bold mb-0">REGISTRO DE ACTIVIDAD</h2>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
                     <div class="input-group input-group-sm search-input-group">
                         <span class="input-group-text bg-dark border-secondary text-secondary">
                             <i class="bi bi-search"></i>

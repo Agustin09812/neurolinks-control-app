@@ -20,12 +20,12 @@ async function renderBillingView() {
     view.style.display = "block";
     view.innerHTML = `
         <div class="animate-fade">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
                 <div>
                     <h2 class="fw-bold mb-0 text-light text-main">CONTROL DE PAGOS</h2>
                     <p class="text-secondary small mb-0">Gestión financiera y facturación histórica</p>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
                     <button class="btn btn-outline-light btn-sm" onclick="openNewPaymentModal()">
                         <i class="bi bi-plus-lg me-2"></i>Nueva Factura
                     </button>

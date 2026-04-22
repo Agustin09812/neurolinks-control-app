@@ -68,7 +68,7 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
 
             <!-- GRID -->
             <div id="vars-grid" class="variables-grid">
-                <div class="text-secondary">Cargando variables...</div>
+                ${'<div class="var-card"><div class="skeleton mb-2" style="height:24px;width:55%"></div><div class="skeleton" style="height:48px;width:100%"></div></div>'.repeat(6)}
             </div>
 
         </div>
@@ -186,24 +186,25 @@ async function loadVariables(projectId, environmentId, serviceId) {
 
     if (searchInput) {
 
+        const currentVal = searchInput.value.toLowerCase();
+
         searchInput.oninput = (e) => {
-
-            const value = e.target.value.toLowerCase();
-
-            document.querySelectorAll(".var-card").forEach(card => {
-
-                const key = card.querySelector(".var-key").textContent.toLowerCase();
-                const val = card.querySelector(".var-value").textContent.toLowerCase();
-
-                if (key.includes(value) || val.includes(value)) {
-                    card.style.display = "";
-                } else {
-                    card.style.display = "none";
-                }
-
+            const q = e.target.value.toLowerCase();
+            grid.querySelectorAll(".var-card").forEach(card => {
+                const k = card.querySelector(".var-key").textContent.toLowerCase();
+                const v = card.querySelector(".var-value").textContent.toLowerCase();
+                card.style.display = (k.includes(q) || v.includes(q)) ? "" : "none";
             });
-
         };
+
+        // Reaplica el filtro si el usuario ya había escrito algo antes del reload
+        if (currentVal) {
+            grid.querySelectorAll(".var-card").forEach(card => {
+                const k = card.querySelector(".var-key").textContent.toLowerCase();
+                const v = card.querySelector(".var-value").textContent.toLowerCase();
+                card.style.display = (k.includes(currentVal) || v.includes(currentVal)) ? "" : "none";
+            });
+        }
 
     }
 
@@ -290,7 +291,7 @@ function openEditModal(pId, eId, sId, key, value) {
     document.getElementById("var-name").value = key;
     document.getElementById("var-value").value = value;
 
-    const modal = new bootstrap.Modal(document.getElementById("editModal"));
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById("editModal"));
     modal.show();
 }
 

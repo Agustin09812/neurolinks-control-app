@@ -820,6 +820,19 @@ body {
   word-break: break-word;
 }
 
+@media (max-width: 1100px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+  .side-panel-column {
+    position: static;
+  }
+  #detail-side-panel {
+    height: auto;
+    max-height: 45vh;
+  }
+}
+
 .dropdown-menu-dark {
   border-color: transparent;
   background-color: var(--bg-sidebar);
@@ -936,7 +949,39 @@ body {
 
 
 /* =========================================================
-  13. ANIMATIONS
+  13. SKELETON LOADING
+========================================================= */
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.11) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite linear;
+  border-radius: 6px;
+}
+
+[data-theme="light"] .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.06) 25%,
+    rgba(0, 0, 0, 0.14) 50%,
+    rgba(0, 0, 0, 0.06) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite linear;
+}
+
+/* =========================================================
+  14. ANIMATIONS
 ========================================================= */
 
 @keyframes fadeIn {
@@ -991,6 +1036,11 @@ body {
 /* =========================================================
    15. CLIENTS VIEW
 ========================================================= */
+
+/* Clip any overflow so long names/buttons never escape the card boundary */
+.client-card {
+  overflow: hidden;
+}
 
 /* Tabla comportamiento */
 
@@ -1169,7 +1219,7 @@ body {
   padding-top: 10px;
 
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 10px;
 }
 

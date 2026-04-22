@@ -40,6 +40,15 @@ async function navigate(view) {
 
   window.stopLogsStreaming?.();
 
+  // Remove any orphaned Bootstrap modal backdrops left by previous views.
+  // When a modal is open and the user navigates, the view div is hidden but
+  // Bootstrap's backdrop div (in <body>) and body classes are never cleaned up,
+  // which blocks all pointer events on the next view.
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+  document.body.classList.remove('modal-open');
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+
   localStorage.setItem("activeView", view);
 
   // Mapeo correcto de vistas → IDs reales
@@ -106,6 +115,32 @@ async function navigate(view) {
         renderAssistantsGrid?.();
         loadAssistants(false);
       } else {
+        const _skCard = `
+          <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="glass-card p-4 h-100">
+              <div class="d-flex align-items-start gap-3 mb-4">
+                <div class="skeleton flex-shrink-0" style="width:44px;height:44px;border-radius:12px"></div>
+                <div class="flex-grow-1">
+                  <div class="skeleton mb-2" style="height:15px;width:70%"></div>
+                  <div class="skeleton" style="height:22px;width:90px;border-radius:20px"></div>
+                </div>
+              </div>
+              <div class="d-flex gap-2 flex-wrap">
+                <div class="skeleton" style="height:20px;width:80px;border-radius:10px"></div>
+                <div class="skeleton" style="height:20px;width:60px;border-radius:10px"></div>
+              </div>
+            </div>
+          </div>`;
+        document.getElementById(viewMap.assistants).innerHTML = `
+          <div class="mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <div>
+                <h2 class="fw-bold text-light mb-0">MIS ASISTENTES</h2>
+                <p class="text-secondary small mb-0">Gestión técnica de proyectos desplegados en Railway</p>
+              </div>
+            </div>
+            <div class="row g-4">${_skCard.repeat(4)}</div>
+          </div>`;
         await loadAssistants(false);
       }
       break;
@@ -435,14 +470,14 @@ function renderAssistantsGrid() {
 
   container.innerHTML = `
     <div class="mt-4">
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
           <h2 class="fw-bold text-light mb-0">MIS ASISTENTES</h2>
           <p class="text-secondary small mb-0">
             Gestión técnica de proyectos desplegados en Railway
           </p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
           <div class="input-group input-group-sm search-input-group">
             <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
             <input type="text" class="form-control text-main" id="searchAssistants">
@@ -598,6 +633,22 @@ function patchAssistantsGrid() {
 
     badge.innerText = project.status.toUpperCase();
 
+    // Sync "Actualización disponible" badge
+    const hasUpdate = project.services.some(s => s.isUpdatable);
+    const updateBadge = card.querySelector(".badge.bg-warning.text-dark.small");
+    if (hasUpdate && !updateBadge) {
+      const servicesDiv = card.querySelector(".small.text-dim.gap-2");
+      if (servicesDiv) {
+        servicesDiv.insertAdjacentHTML('beforeend', `
+          <span class="badge bg-warning text-dark small px-2 py-1">
+            <i class="bi bi-arrow-repeat"></i> Actualización disponible
+          </span>
+        `);
+      }
+    } else if (!hasUpdate && updateBadge) {
+      updateBadge.remove();
+    }
+
   });
 
 }
@@ -688,7 +739,7 @@ function renderDetailStructure(project) {
 <div class="animate-fade">
 
   <!-- BOTÓN VOLVER -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
     <button class="btn btn-outline-light btn-sm" id="btnBackToGrid">
       <i class="bi bi-arrow-left me-2"></i> Volver a Asistentes
     </button>
@@ -1212,7 +1263,7 @@ function openRenameProject(projectId, currentName) {
   document.getElementById("renameProjectId").value = projectId;
   document.getElementById("renameProjectName").value = currentName;
 
-  const modal = new bootstrap.Modal(
+  const modal = bootstrap.Modal.getOrCreateInstance(
     document.getElementById("renameProjectModal")
   );
 
@@ -1280,7 +1331,7 @@ async function openLinkClient(projectId) {
   select.innerHTML = '<option value="">Cargando clientes...</option>';
 
   const modalElement = document.getElementById("linkClientModal");
-  const modal = new bootstrap.Modal(modalElement);
+  const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
   modal.show();
 
   try {
@@ -1390,6 +1441,12 @@ let deepIdleMode = false;
 let lastInteraction = Date.now();
 let focusDebounceTimer = null;
 
+function isUserInteracting() {
+  const el = document.activeElement;
+  if (el && el !== document.body && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)) return true;
+  return !!(document.querySelector('.dropdown-menu.show') || document.querySelector('.modal.show'));
+}
+
 function registerActivity() {
 
   lastInteraction = Date.now();
@@ -1479,9 +1536,12 @@ async function smartRefresh() {
     // Ejecutar todo en paralelo
     await Promise.allSettled(apiCalls);
 
+    // Comprobar interacción DESPUÉS del fetch para capturar inputs que se abrieron durante la espera
+    const interacting = isUserInteracting();
+
     const currentHash = generateAssistantsHash();
 
-    if (currentHash !== previousHash) {
+    if (currentHash !== previousHash && !interacting) {
 
       console.log("Cambios detectados en servicios");
 
@@ -1507,13 +1567,15 @@ async function smartRefresh() {
 
     }
 
-    // SIEMPRE actualizar la vista activa con datos frescos (independiente del hash)
-    if (activeView === "dashboard") patchDashboard();
-    if (activeView === "clients") loadClientsData?.();
-    if (activeView === "audit") loadAuditLogs?.();
+    // Actualizar la vista activa — solo si el usuario no está interactuando
+    if (!interacting) {
+      if (activeView === "dashboard") patchDashboard();
+      if (activeView === "clients") loadClientsData?.();
+      if (activeView === "audit") loadAuditLogs?.();
+    }
 
-    // Variables: sólo recargar si el panel está abierto y hubo cambios reales
-    if (isVarsVisible && window.currentVarsContext) {
+    // Variables: sólo recargar si el panel está abierto, hubo cambios reales, y no hay interacción activa
+    if (isVarsVisible && window.currentVarsContext && !interacting) {
       const { projectId, environmentId, serviceId } = window.currentVarsContext;
       window.api.getServiceVariables(projectId, environmentId, serviceId)
         .then(vars => {
@@ -1604,6 +1666,12 @@ function startAutoRefresh() {
   }
   smartRefresh();
 }
+
+function scheduleImmediateRefresh() {
+  if (autoRefreshTimeout) clearTimeout(autoRefreshTimeout);
+  autoRefreshTimeout = setTimeout(smartRefresh, 500);
+}
+window.scheduleImmediateRefresh = scheduleImmediateRefresh;
 
 // FIX: Debounce en focus para evitar múltiples cargas al alt-tab rápido
 window.addEventListener("focus", () => {
@@ -1994,7 +2062,7 @@ function openUpdateModal() {
     notes.textContent = releaseNotes;
   }
 
-  const modal = new bootstrap.Modal(document.getElementById("updateModal"));
+  const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById("updateModal"));
   modal.show();
 
 }

@@ -17,9 +17,9 @@ async function renderClientsView() {
 
             <!-- GRID PANEL -->
             <div id="clients-grid-panel">
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
                     <h2 class="fw-bold mb-0">CLIENTES</h2>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap">
                         <button class="btn btn-outline-light btn-sm" id="btn-new-client">
                             <i class="bi bi-person-plus me-2"></i>Nuevo Cliente
                         </button>
@@ -128,7 +128,25 @@ async function renderClientsView() {
     document.getElementById("btn-new-client").addEventListener("click", openNewClientModal);
 
     allClients = window.clientsData || [];
-    renderClientCards();
+    if (allClients.length > 0) {
+        renderClientCards();
+    } else {
+        const _sk = `
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="glass-card p-3 h-100">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="skeleton flex-shrink-0" style="width:52px;height:52px;border-radius:14px"></div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="skeleton mb-2" style="height:14px;width:70%"></div>
+                            <div class="skeleton mb-2" style="height:12px;width:50%"></div>
+                            <div class="skeleton" style="height:20px;width:55px;border-radius:10px"></div>
+                        </div>
+                        <div class="skeleton flex-shrink-0" style="width:30px;height:30px;border-radius:6px"></div>
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById("clients-cards-grid").innerHTML = _sk.repeat(8);
+    }
     loadClientsData();
 }
 
@@ -187,7 +205,7 @@ function renderClientCards() {
             <div class="glass-card p-3 h-100 hover-lift clickable client-card" data-id="${c.id}">
                 <div class="d-flex align-items-center gap-3">
                     <div class="client-avatar-lg flex-shrink-0">${initials}</div>
-                    <div class="flex-grow-1 min-w-0">
+                    <div class="flex-grow-1 min-w-0" style="overflow:hidden">
                         <div class="fw-bold text-truncate">${c.nombre}</div>
                         <div class="small text-dim text-truncate">${c.empresa || 'Particular'}</div>
                         <span class="badge mt-1 ${getPlanBadgeClass(c.plan)}">${c.plan || 'Standard'}</span>
@@ -552,19 +570,19 @@ async function renderClientAssistantTab(clientId, container) {
             const card = document.createElement("div");
             card.className = "col-md-6 col-lg-4";
             card.innerHTML = `
-                <div class="glass-card p-3 rounded h-100 d-flex flex-column gap-3">
-                    <div class="d-flex align-items-center gap-3">
+                <div class="glass-card p-3 rounded h-100 d-flex flex-column gap-3" style="overflow:hidden">
+                    <div class="d-flex align-items-center gap-3" style="min-width:0">
                         <div class="assistant-tab-icon bg-${statusColor} bg-opacity-10 border border-${statusColor} border-opacity-25">
                             <i class="bi bi-cpu text-${statusColor}"></i>
                         </div>
-                        <div class="flex-grow-1 min-w-0">
+                        <div class="flex-grow-1 min-w-0" style="overflow:hidden">
                             <div class="fw-bold text-truncate">${p.name}</div>
                             <span class="badge bg-${statusColor} bg-opacity-10 text-${statusColor} border border-${statusColor} border-opacity-25 small">
                                 ${p.status.toUpperCase()}
                             </span>
                         </div>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-auto">
                         <span class="small text-dim">
                             <i class="bi bi-layers me-1"></i>${servCount} servicio${servCount !== 1 ? 's' : ''}
                         </span>
@@ -572,8 +590,8 @@ async function renderClientAssistantTab(clientId, container) {
                             <button class="btn btn-outline-danger btn-sm btn-unlink-assistant" title="Desvincular">
                                 <i class="bi bi-dash-circle"></i>
                             </button>
-                            <button class="btn btn-outline-light btn-sm btn-open-assistant">
-                                <i class="bi bi-arrow-right me-1"></i>Ver detalle
+                            <button class="btn btn-outline-light btn-sm btn-open-assistant" title="Ver detalle">
+                                <i class="bi bi-arrow-right me-1"></i><span class="d-none d-xl-inline">Ver detalle</span>
                             </button>
                         </div>
                     </div>
@@ -592,6 +610,18 @@ async function renderClientAssistantTab(clientId, container) {
             };
             row.appendChild(card);
         });
+
+        const addCard = document.createElement("div");
+        addCard.className = "col-md-6 col-lg-4";
+        addCard.innerHTML = `
+            <div class="link-assistant-card d-flex flex-column align-items-center justify-content-center p-4 rounded h-100 btn-show-link-assistant">
+                <i class="bi bi-plus-circle fs-3 mb-2 text-dim"></i>
+                <div class="fw-semibold">Vincular asistente</div>
+                <div class="small text-dim mt-1">Asociar un asistente a este cliente</div>
+            </div>
+        `;
+        addCard.querySelector(".btn-show-link-assistant").onclick = () => openLinkAssistantModal(clientId, container);
+        row.appendChild(addCard);
     } catch {
         wrap.innerHTML = '<div class="text-danger small">Error cargando asistentes</div>';
     }
@@ -614,10 +644,10 @@ function openLinkAssistantModal(clientId, container) {
                 </div>
                 <div class="modal-body">
                     <div class="input-group input-group-sm mb-3 search-input-group" style="max-width:100%">
-                        <span class="input-group-text border-secondary">
+                        <span class="input-group-text bg-dark border-secondary text-dim">
                             <i class="bi bi-search"></i>
                         </span>
-                        <input type="text" id="link-assistant-search" class="form-control border-secondary" placeholder="Buscar asistente...">
+                        <input type="text" id="link-assistant-search" class="form-control text-main border-secondary" placeholder="Buscar asistente...">
                     </div>
                     <div id="link-assistant-list" class="d-flex flex-column gap-2" style="max-height:300px;overflow-y:auto;"></div>
                 </div>
@@ -713,7 +743,7 @@ function openNewClientModal() {
     document.getElementById("clientForm").reset();
     document.getElementById("clientId").value = "";
     document.getElementById("clientModalTitle").innerText = "Nuevo Cliente";
-    new bootstrap.Modal(document.getElementById("clientModal")).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("clientModal")).show();
 }
 
 async function openEditClient(id) {
@@ -729,7 +759,7 @@ async function openEditClient(id) {
     document.getElementById("clientVencimiento").value = client.vencimiento || "";
     document.getElementById("clientModalTitle").innerText = "Editar Cliente";
 
-    new bootstrap.Modal(document.getElementById("clientModal")).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("clientModal")).show();
 }
 
 async function handleClientSubmit(e) {
@@ -754,6 +784,7 @@ async function handleClientSubmit(e) {
         }
         bootstrap.Modal.getInstance(document.getElementById("clientModal")).hide();
         await loadClientsData();
+        window.scheduleImmediateRefresh?.();
         if (id && currentClientDetailId === id) {
             const updated = allClients.find(c => c.id === id);
             if (updated) openClientDetail(id);
@@ -774,6 +805,7 @@ async function handleDeleteClient(id) {
             document.getElementById("clients-grid-panel").style.display = "block";
         }
         loadClientsData();
+        window.scheduleImmediateRefresh?.();
     } catch {
         showToast("Error al eliminar cliente", "danger");
     }
