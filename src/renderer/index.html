@@ -136,68 +136,58 @@
 
   <!-- DEPLOY ASSISTANT MODAL -->
   <div class="modal fade" id="deployAssistantModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content glass-card">
 
-        <div class="modal-header border-secondary">
-          <div>
-            <h5 class="modal-title mb-0">Desplegar nuevo asistente</h5>
-            <small class="text-secondary">
-              Seleccioná el tipo de asistente que querés desplegar
-            </small>
+        <div class="modal-header" style="border-color:var(--border-soft);">
+          <div class="d-flex align-items-center gap-3">
+            <div class="deploy-modal-header-icon">
+              <i class="bi bi-rocket-takeoff-fill"></i>
+            </div>
+            <div>
+              <h5 class="modal-title fw-bold mb-0">Nuevo Asistente</h5>
+              <div style="font-size:0.72rem;color:var(--text-dim);">Selecciona un template de Railway para desplegar</div>
+            </div>
           </div>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
 
-        <div class="modal-body">
-
-          <div id="deploy-step-1">
-            <div class="row mb-3 px-3">
-                <div class="input-group input-group-sm">
-
-                  <span class="input-group-text bg-dark border-secondary text-secondary">
-                    <i class="bi bi-search"></i>
-                  </span>
-
-                  <input type="text" id="template-search-input" class="form-control bg-dark text-light border-secondary"
-                    placeholder="Buscar templates...">
-
-                  <button type="button" class="btn btn-success" id="btn-search-templates">
-                    Buscar
-                  </button>
-
-                </div>
-              </div>
-            <div class="row g-3" id="templates-container">
+        <!-- STEP 1 -->
+        <div id="deploy-step-1">
+          <div class="px-4 py-3" style="border-bottom:1px solid var(--border-soft);">
+            <div class="deploy-search-bar">
+              <i class="bi bi-search" style="color:var(--text-dim);font-size:0.85rem;"></i>
+              <input type="text" id="template-search-input" placeholder="Filtrar templates...">
             </div>
           </div>
+          <div class="modal-body">
+            <div class="row g-3" id="templates-container"></div>
+          </div>
+        </div>
 
-          <!-- STEP 2 CONFIRMACION -->
-          <div id="deploy-step-2" style="display:none;">
-
+        <!-- STEP 2: CONFIRMACION -->
+        <div id="deploy-step-2" style="display:none;">
+          <div class="modal-body">
             <div class="text-center py-4">
-
-              <h5 id="confirm-template-name"></h5>
-
-              <p class="text-secondary mt-3 px-4">
-                Esto creará un nuevo proyecto en Railway con la configuración predeterminada del template.
-                Podrás configurar las variables adicionales desde la sección de Variables después del despliegue.
-              </p>
-
-              <div class="d-flex justify-content-center gap-3 mt-4">
-                <button class="btn btn-secondary btn-sm" onclick="backToSelection()">
-                  Volver
+              <div class="deploy-confirm-icon mb-3">
+                <i class="bi bi-rocket-takeoff-fill"></i>
+              </div>
+              <h5 id="confirm-template-name" class="fw-bold mb-1"></h5>
+              <p id="confirm-template-desc" class="mb-3" style="font-size:0.82rem;color:var(--text-dim);max-width:360px;margin-left:auto;margin-right:auto;"></p>
+              <div style="font-size:0.76rem;color:var(--text-dim);background:var(--border-soft);border-radius:var(--radius-sm);padding:0.6rem 1rem;max-width:360px;margin:0 auto 1.5rem;text-align:left;">
+                <i class="bi bi-info-circle me-1"></i>
+                Se creara un proyecto en Railway con la configuracion predeterminada. Podras ajustar las variables desde la seccion Variables.
+              </div>
+              <div class="d-flex justify-content-center gap-2">
+                <button class="btn btn-sm btn-outline-secondary" onclick="backToSelection()">
+                  <i class="bi bi-arrow-left me-1"></i>Volver
                 </button>
-
-                <button class="btn btn-success btn-sm" onclick="confirmDeploy()">
-                  Confirmar despliegue
+                <button class="btn btn-sm btn-success" onclick="confirmDeploy()">
+                  <i class="bi bi-rocket-takeoff me-1"></i>Confirmar despliegue
                 </button>
               </div>
-
             </div>
-
           </div>
-
         </div>
 
       </div>

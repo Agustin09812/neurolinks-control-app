@@ -22,8 +22,8 @@ async function renderBillingView() {
         <div class="animate-fade">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
                 <div>
-                    <h2 class="fw-bold mb-0 text-light text-main">CONTROL DE PAGOS</h2>
-                    <p class="text-secondary small mb-0">Gestión financiera y facturación histórica</p>
+                    <h2 class="fw-bold mb-0">CONTROL DE PAGOS</h2>
+                    <p class="small mb-0 text-dim">Gestión financiera y facturación histórica</p>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
                     <button class="btn btn-outline-light btn-sm" onclick="openNewPaymentModal()">
@@ -146,7 +146,7 @@ async function renderBillingView() {
                             </div>
                         </div>
                         <div class="modal-footer border-secondary">
-                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                             <button type="submit" class="btn btn-success btn-sm">Guardar Pago</button>
                         </div>
                     </form>

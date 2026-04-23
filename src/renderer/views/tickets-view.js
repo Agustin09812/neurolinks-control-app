@@ -31,7 +31,7 @@ async function renderTicketsView(filterClientId = "") {
         <div class="animate-fade">
             <div id="tickets-content">
                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-                    <h2 class="fw-bold mb-0 text-main">SISTEMA DE TICKETS</h2>
+                    <h2 class="fw-bold mb-0">SISTEMA DE TICKETS</h2>
                     <button class="btn btn-outline-light btn-sm" onclick="openNewTicketModal()">
                         <i class="bi bi-plus-circle me-2"></i> Nuevo Ticket
                     </button>
@@ -206,8 +206,8 @@ async function renderTicketsView(filterClientId = "") {
                             </div>
 
                             <div class="modal-footer p-3">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="submit" class="btn btn-success">Guardar Ticket</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-sm btn-success">Guardar Ticket</button>
                             </div>
                         </form>
                     </div>
@@ -552,8 +552,8 @@ async function renderClientTicketsTab(clientId, container) {
                         </div>
                     </div>
                     <div class="modal-footer p-3">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-success">Guardar Ticket</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-sm btn-success">Guardar Ticket</button>
                     </div>
                 </form>
             </div>

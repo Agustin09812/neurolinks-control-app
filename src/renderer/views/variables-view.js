@@ -17,14 +17,14 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
             <div class="variables-header d-flex justify-content-between align-items-center mb-3">
 
                 <div>
-                    <h5 class="text-warning m-0">
-                        <i class="bi bi-sliders me-2"></i> Variables: ${serviceName}
-                    </h5>
-                    <small class="text-secondary">Configuración del servicio</small>
+                    <h2 class="fw-bold mb-0">
+                        <i class="bi bi-sliders me-2 icon-service"></i>${serviceName}
+                    </h2>
+                    <small class="text-dim">Configuración del servicio</small>
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-warning" id="btn-add-var">
+                    <button class="btn btn-sm btn-outline-light" id="btn-add-var">
                         <i class="bi bi-plus-lg"></i>
                     </button>
         
@@ -40,7 +40,7 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
                 <input 
                     type="text" 
                     id="vars-search" 
-                    class="form-control form-control-sm text-light"
+                    class="form-control form-control-sm"
                     placeholder="Buscar variable..."
                 >
             </div>
@@ -50,12 +50,12 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
                 <div class="row g-2">
                     <div class="col-md-5">
                         <input type="text" id="new-var-name"
-                            class="form-control form-control-sm text-light"
+                            class="form-control form-control-sm"
                             placeholder="Nombre">
                     </div>
                     <div class="col-md-5">
                         <input type="text" id="new-var-value"
-                            class="form-control form-control-sm text-light"
+                            class="form-control form-control-sm"
                             placeholder="Valor">
                     </div>
                     <div class="col-md-2 d-grid">

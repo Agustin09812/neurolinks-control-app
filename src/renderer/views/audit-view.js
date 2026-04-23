@@ -19,7 +19,7 @@ async function renderAuditView() {
                 <div>
                     <h2 class="fw-bold mb-0">REGISTRO DE ACTIVIDAD</h2>
                 </div>
-                <div class="d-flex gap-2 flex-wrap">
+                <div class="d-flex gap-2 align-items-center">
                     <div class="input-group input-group-sm search-input-group">
                         <span class="input-group-text bg-dark border-secondary text-secondary">
                             <i class="bi bi-search"></i>

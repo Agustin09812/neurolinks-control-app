@@ -155,7 +155,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   --info: #0284c7;
 
   --text-main: #0f1318;
-  --text-dim: #35383d;
+  --text-dim: #64748b;
 
   --border-soft: rgba(0, 0, 0, 0.06);
   --border-light: rgba(0, 0, 0, 0.1);
@@ -409,26 +409,15 @@ body[data-theme="light"].bg-dark {
   background-color: rgba(2, 132, 199, 0.1) !important;
 }
 
-/* TEMPLATE CARDS — descripciones y badges de categoría */
+/* TEMPLATE CARDS — light mode */
 [data-theme="light"] .template-card {
-  background: var(--bg-card) !important;
   border-color: var(--border-light) !important;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .template-desc {
-  color: var(--text-main) !important;
-  /* Más contraste */
-  opacity: 0.8;
-}
-
-[data-theme="light"] .template-card .badge.bg-secondary {
-  background-color: rgba(0, 0, 0, 0.15) !important;
-  color: var(--text-main) !important;
-}
-
-[data-theme="light"] .template-header h6 {
-  color: var(--text-main) !important;
+[data-theme="light"] .deploy-search-bar {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
 /* BADGES DE PLANES (Clients View) y ESTADO */
@@ -467,6 +456,7 @@ body[data-theme="light"].bg-dark {
 
 .search-input-group {
   width: 250px;
+  max-width: 280px;
 }
 
 .badge-sm {
@@ -491,6 +481,7 @@ body[data-theme="light"].bg-dark {
 
 .dashboard-desc {
   max-width: 320px;
+  font-size: 0.82rem;
 }
 
 .dashboard-actions {
@@ -587,8 +578,8 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   background-image:
-    radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.04) 0%, transparent 50%),
-    radial-gradient(circle at 100% 100%, rgba(192, 132, 252, 0.04) 0%, transparent 50%);
+    radial-gradient(circle at 0% 0%, rgba(0, 255, 150, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(0, 255, 150, 0.04) 0%, transparent 50%);
 }
 
 /* Light mode body bg ahora se maneja en sección 1c con body[data-theme="light"].bg-dark */
@@ -1057,6 +1048,21 @@ body {
 
 .ls-1 {
   letter-spacing: 1px;
+}
+
+/* Dashboard health dot */
+.dash-health-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+  animation: health-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes health-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(1.4); }
 }
 
 /* Avatar cliente */
@@ -1562,49 +1568,113 @@ body {
 }
 
 /* =========================================================
-   20. TEMPLATE CARDS
+   20. TEMPLATE CARDS & DEPLOY MODAL
 ========================================================= */
 
-.template-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 16px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.template-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(0, 255, 150, 0.4);
-  box-shadow: 0 10px 25px rgba(0, 255, 150, 0.08);
-}
-
-.template-header {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.template-icon {
-  width: 40px;
-  height: 40px;
+.deploy-modal-header-icon {
+  width: 38px;
+  height: 38px;
   border-radius: 10px;
-  background: rgba(0, 255, 150, 0.1);
+  background: rgba(52, 211, 153, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #00ff9c;
-  font-size: 18px;
+  font-size: 1.05rem;
+  color: var(--success);
+  flex-shrink: 0;
 }
 
-/* DESC */
+.deploy-search-bar {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.45rem 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.deploy-search-bar input {
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--text-main);
+  font-size: 0.88rem;
+  flex: 1;
+}
+
+.deploy-search-bar input::placeholder {
+  color: var(--text-dim) !important;
+}
+
+.template-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  transition: var(--transition-fast);
+  cursor: pointer;
+  height: 100%;
+}
+
+.template-card:hover {
+  border-color: rgba(52, 211, 153, 0.45);
+  background: rgba(52, 211, 153, 0.03);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(52, 211, 153, 0.08);
+}
+
+.template-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
 .template-desc {
-  font-size: 13px;
-  color: #aaa;
-  min-height: 40px;
-  margin-bottom: 12px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.template-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.template-badge {
+  font-size: 0.6rem;
+  background: var(--border-soft);
+  color: var(--text-dim);
+  padding: 2px 7px;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.deploy-confirm-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: rgba(52, 211, 153, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: var(--success);
+  margin: 0 auto;
+  box-shadow: 0 0 24px rgba(52, 211, 153, 0.12);
 }
 
 /* =========================================================
@@ -1613,17 +1683,302 @@ body {
 
 .dashboard-access {
   background: radial-gradient(circle at top, rgba(0, 255, 150, 0.05), transparent);
+  overflow-y: auto;
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
 }
 
 .dashboard-icon {
-  width: 70px;
-  height: 70px;
-  border-radius: 16px;
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
   background: rgba(0, 255, 150, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 22px;
   color: #00ff9c;
-  box-shadow: 0 0 20px rgba(0, 255, 150, 0.15);
+  box-shadow: 0 0 16px rgba(0, 255, 150, 0.15);
+}
+
+/* =========================================================
+   23. METRIC & DASHBOARD UTILITIES
+========================================================= */
+
+/* Text color utilities */
+.text-dim     { color: var(--text-dim); }
+.text-online  { color: var(--success); }
+.text-error-c { color: var(--error); }
+
+/* Layout utilities */
+.min-w-0       { min-width: 0; }
+.scrollable-list { max-height: 300px; overflow-y: auto; }
+
+/* KPI label — uppercase tiny category label */
+.kpi-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+
+/* KPI big number */
+.kpi-number { font-size: 2rem; line-height: 1.1; font-weight: 700; }
+.kpi-number-primary { color: var(--accent-primary); }
+.kpi-number-warning { color: var(--warning); }
+
+/* KPI faded icon (top-right of card) */
+.kpi-icon { font-size: 1.3rem; opacity: 0.35; margin-top: 2px; flex-shrink: 0; }
+.kpi-icon-primary { color: var(--accent-primary); }
+.kpi-icon-warning  { color: var(--warning); }
+
+/* Counter inside donut */
+.kpi-count { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
+
+/* Project name below donut */
+.kpi-project-name { font-size: 0.9rem; }
+
+/* Service status stats */
+.kpi-stat-online { font-size: 0.75rem; color: var(--success); margin-top: 2px; }
+.kpi-stat-error  { font-size: 0.75rem; color: var(--error); }
+
+/* Health status big text — color set inline (dynamic) */
+.kpi-health-status { font-size: 1.6rem; line-height: 1.2; font-weight: 700; }
+
+/* Donut chart layout */
+.donut-wrapper { position: relative; flex-shrink: 0; }
+.donut-center  { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+
+/* Progress bar track */
+.bar-track { flex: 1; height: 4px; background: var(--border-soft); border-radius: 99px; overflow: hidden; }
+
+/* Bar fill — width & background set inline (dynamic per row) */
+.bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+
+/* Bar labels & counts */
+.bar-label { font-size: 0.62rem; color: var(--text-dim); }
+.bar-label-plan { width: 54px; white-space: nowrap; }
+.bar-label-prio { width: 30px; }
+.bar-count { font-size: 0.62rem; width: 16px; text-align: right; color: var(--text-dim); }
+
+/* Service distribution */
+.svc-bar-track  { flex: 2; height: 6px; background: var(--border-soft); border-radius: 99px; overflow: hidden; }
+.svc-dist-label { flex: 1; font-size: 0.78rem; }
+.svc-dist-count { font-size: 0.72rem; width: 36px; text-align: right; color: var(--text-dim); }
+
+/* Indicator dot — background set inline (dynamic per status) */
+.indicator-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Ticket list */
+.ticket-list-name   { font-size: 0.85rem; }
+.ticket-list-client { font-size: 0.72rem; color: var(--text-dim); }
+.ticket-border      { border-color: var(--border-soft) !important; }
+
+/* Priority pill — background & color set inline (dynamic per priority) */
+.prio-pill { font-size: 0.65rem; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+
+/* Pending count pill */
+.pending-pill {
+  font-size: 0.7rem;
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--warning);
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+
+/* Uptime bar */
+.uptime-label { font-size: 0.65rem; color: var(--text-dim); margin-bottom: 4px; }
+.uptime-track { height: 5px; background: var(--border-soft); border-radius: 99px; overflow: hidden; }
+.uptime-fill  { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+.uptime-desc  { font-size: 0.7rem; color: var(--text-dim); margin-top: 4px; }
+
+/* Variables view service icon */
+.icon-service { color: var(--warning); font-size: 1.2rem; }
+
+/* =========================================================
+   22. GLOBAL NORMALIZATION
+========================================================= */
+
+/* Todos los h2.fw-bold usan var(--text-main) — sin necesidad de text-light o text-main */
+h2.fw-bold {
+  color: var(--text-main);
+}
+
+/* Botones de modal footer: tamaño y padding consistente con el estilo del dashboard */
+.modal-footer .btn {
+  font-size: 0.82rem;
+  padding: 0.32rem 0.85rem;
+}
+
+/* btn-outline-secondary en dark mode: coherente con glass cards */
+body:not([data-theme="light"]) .btn-outline-secondary {
+  color: var(--text-dim);
+  border-color: var(--border-light);
+  background: transparent;
+}
+body:not([data-theme="light"]) .btn-outline-secondary:hover,
+body:not([data-theme="light"]) .btn-outline-secondary:focus {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-light);
+}
+
+/* Input group addon en dark mode: usa CSS vars */
+body:not([data-theme="light"]) .input-group-text {
+  background: var(--bg-glass);
+  border-color: var(--border-light);
+  color: var(--text-dim);
+}
+
+/* form-control en dark mode: normaliza text-light legacy */
+body:not([data-theme="light"]) .form-control {
+  background-color: var(--bg-input);
+  border-color: var(--border-light);
+  color: var(--text-main);
+}
+body:not([data-theme="light"]) .form-control::placeholder {
+  color: var(--text-dim);
+}
+body:not([data-theme="light"]) .form-select {
+  background-color: var(--bg-input);
+  border-color: var(--border-light);
+  color: var(--text-main);
+}
+
+/* =========================================================
+   24. ANIMATION SYSTEM
+   Change --anim-dur here to adjust all animations globally
+========================================================= */
+
+:root {
+  --anim-dur:      350ms;
+  --anim-dur-fast: 160ms;
+  --anim-ease:     cubic-bezier(0.4, 0, 0.2, 1);
+  --anim-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --stagger-base:  55ms;
+}
+
+/* --- Keyframes --- */
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(22px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+@keyframes panel-enter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-from-right {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes view-exit {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(-20px); }
+}
+
+/* --- Entrance classes --- */
+
+.anim-card-enter {
+  animation: card-enter var(--anim-dur) var(--anim-ease) both;
+  animation-delay: calc(var(--si, 0) * var(--stagger-base));
+}
+
+.anim-panel-enter {
+  animation: panel-enter var(--anim-dur) var(--anim-ease) both;
+}
+
+.anim-slide-right {
+  animation: slide-from-right var(--anim-dur) var(--anim-ease) both;
+}
+
+.is-exiting {
+  animation: view-exit var(--anim-dur-fast) var(--anim-ease) forwards !important;
+  pointer-events: none;
+}
+
+/* --- Hover: spring lift with per-type glow --- */
+
+.hover-lift {
+  transition:
+    transform var(--anim-dur) var(--anim-spring),
+    box-shadow var(--anim-dur) var(--anim-ease),
+    border-color var(--anim-dur) var(--anim-ease) !important;
+  will-change: transform;
+}
+
+.hover-lift:hover {
+  transform: translateY(-7px) scale(1.013) !important;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.35) !important;
+}
+
+.assistant-card.hover-lift:hover {
+  border-color: var(--accent-primary) !important;
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(56, 189, 248, 0.3) !important;
+}
+
+.client-card.hover-lift:hover {
+  border-color: var(--accent-secondary) !important;
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(192, 132, 252, 0.3) !important;
+}
+
+/* --- Button press --- */
+
+.btn {
+  transition:
+    transform var(--anim-dur-fast) var(--anim-spring),
+    background-color var(--anim-dur) var(--anim-ease),
+    box-shadow var(--anim-dur) var(--anim-ease),
+    border-color var(--anim-dur) var(--anim-ease),
+    color var(--anim-dur) var(--anim-ease) !important;
+}
+
+.btn:active {
+  transform: scale(0.91) !important;
+}
+
+/* --- Service menu item: slide + stagger in --- */
+
+.service-menu-item {
+  transition:
+    background var(--anim-dur-fast) var(--anim-ease),
+    color var(--anim-dur-fast) var(--anim-ease),
+    transform var(--anim-dur-fast) var(--anim-spring) !important;
+}
+
+.service-menu-item:hover {
+  transform: translateX(4px) !important;
+}
+
+/* Items stagger in after the card (--si inherited from .service-card) */
+.service-menu .service-menu-item:nth-child(1) {
+  animation: panel-enter var(--anim-dur) var(--anim-ease) both;
+  animation-delay: calc(var(--si, 0) * var(--stagger-base) + 80ms);
+}
+.service-menu .service-menu-item:nth-child(3) {
+  animation: panel-enter var(--anim-dur) var(--anim-ease) both;
+  animation-delay: calc(var(--si, 0) * var(--stagger-base) + 145ms);
+}
+.service-menu .service-menu-item:nth-child(5) {
+  animation: panel-enter var(--anim-dur) var(--anim-ease) both;
+  animation-delay: calc(var(--si, 0) * var(--stagger-base) + 210ms);
+}
+
+/* Service card uses global timing */
+.service-card {
+  transition:
+    transform var(--anim-dur) var(--anim-spring),
+    border-color var(--anim-dur) var(--anim-ease),
+    box-shadow var(--anim-dur) var(--anim-ease) !important;
+}
+
+.service-card:hover {
+  transform: translateY(-3px) !important;
 }

@@ -3,75 +3,70 @@
 // --------------------------------------------------
 
 let selectedTemplateId = null;
-let currentTemplates = [];
+let allTemplates = [];
 
 // --------------------------------------------------
-// RENDER TEMPLATES
+// RENDER
 // --------------------------------------------------
 
 function renderTemplates(templates) {
-
   const container = document.getElementById("templates-container");
   if (!container) return;
 
   if (!templates || templates.length === 0) {
-    container.innerHTML = `<div class="col-12 text-center py-5 text-secondary">No se encontraron templates. Intentá con otra búsqueda.</div>`;
+    container.innerHTML = `<div class="col-12 text-center py-5 text-dim">No se encontraron templates.</div>`;
     return;
   }
 
-  currentTemplates = templates;
+  container.innerHTML = templates.map(template => `
+    <div class="col-md-6">
+      <div class="template-card" onclick="selectTemplate('${template.id}')">
+        <div class="d-flex gap-3">
+          <div class="template-icon">
+            <i class="bi bi-box"></i>
+          </div>
+          <div class="flex-grow-1 overflow-hidden">
+            <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+              <div class="template-name">${template.name}</div>
+              <span class="template-badge">${template.category || 'General'}</span>
+            </div>
+            <p class="template-desc mb-0">${template.description || 'Sin descripcion disponible.'}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
 
-  container.innerHTML = templates.map(template => {
-
-    return `
-              <div class="col-md-6">
-                <div class="template-card h-100 d-flex flex-column">
-
-                  <div class="template-header">
-                    <div class="template-icon">
-                      <i class="bi bi-box"></i>
-                    </div>
-                    <div>
-                      <h6 class="fw-bold mb-0">${template.name}</h6>
-                      <span class="badge bg-secondary mt-1">${template.category || "General"}</span>
-                    </div>
-                  </div>
-
-                  <p class="template-desc">
-                    ${template.description || "Sin descripción disponible."}
-                  </p>
-
-                  <div class="mt-auto">
-                    <button class="btn btn-success btn-sm w-100"
-                      onclick="selectTemplate('${template.id}')">
-                      Usar Template
-                    </button>
-                  </div>
-
-                </div>
-              </div>
-            `;
-
-  }).join("");
-
+function filterTemplates(query) {
+  const q = (query || '').trim().toLowerCase();
+  if (!q) {
+    renderTemplates(allTemplates);
+    return;
+  }
+  const filtered = allTemplates.filter(t =>
+    (t.name || '').toLowerCase().includes(q) ||
+    (t.description || '').toLowerCase().includes(q) ||
+    (t.category || '').toLowerCase().includes(q)
+  );
+  renderTemplates(filtered);
 }
 
 // --------------------------------------------------
-// API ACTIONS
+// API
 // --------------------------------------------------
 
-async function performSearch() {
-  const input = document.getElementById("template-search-input");
-  const query = input ? input.value : "";
-
+async function loadAllTemplates() {
   const container = document.getElementById("templates-container");
-  container.innerHTML = `<div class="col-12 text-center py-5"><div class="spinner-border text-success" role="status"></div><div class="mt-2">Buscando en Railway...</div></div>`;
+  if (!container) return;
+
+  container.innerHTML = `<div class="col-12 text-center py-5"><div class="spinner-border text-success" role="status"></div><div class="mt-2 text-dim">Cargando templates...</div></div>`;
 
   try {
-    const results = await window.api.searchTemplates(query);
-    renderTemplates(results);
+    allTemplates = await window.api.searchTemplates("") || [];
+    filterTemplates(document.getElementById("template-search-input")?.value || "");
   } catch (error) {
-    console.error("Error buscando templates:", error);
+    console.error("Error cargando templates:", error);
     container.innerHTML = `<div class="col-12 text-center py-5 text-danger">Error al conectar con Railway.</div>`;
   }
 }
@@ -81,7 +76,7 @@ async function performSearch() {
 // --------------------------------------------------
 
 function selectTemplate(templateId) {
-  const template = currentTemplates.find(t => t.id === templateId);
+  const template = allTemplates.find(t => t.id === templateId);
   if (!template) return;
 
   selectedTemplateId = templateId;
@@ -89,10 +84,8 @@ function selectTemplate(templateId) {
   document.getElementById("deploy-step-1").style.display = "none";
   document.getElementById("deploy-step-2").style.display = "block";
 
-  document.getElementById("confirm-template-name").innerHTML = `
-    <span class="text-success fs-4 fw-bold">${template.name}</span><br>
-    <small class="text-secondary">${template.description || ""}</small>
-  `;
+  document.getElementById("confirm-template-name").textContent = template.name;
+  document.getElementById("confirm-template-desc").textContent = template.description || "";
 }
 
 function backToSelection() {
@@ -112,26 +105,22 @@ async function confirmDeploy() {
     const result = await window.api.deployTemplate(selectedTemplateId);
 
     if (result.success) {
-      alert("¡Despliegue iniciado correctamente! El nuevo proyecto ha sido creado en Railway. Podrás verlo en la lista de asistentes en unos momentos.");
+      alert("Despliegue iniciado. El nuevo proyecto aparecera en la lista de asistentes en unos momentos.");
 
       const modal = bootstrap.Modal.getInstance(document.getElementById("deployAssistantModal"));
       modal.hide();
 
-      // Recargar lista de asistentes
-      if (typeof loadAssistants === 'function') {
-        loadAssistants(false);
-      }
+      if (typeof loadAssistants === 'function') loadAssistants(false);
     } else {
       alert("Error al desplegar: " + (result.error || "Respuesta desconocida"));
     }
   } catch (error) {
     console.error("Error en confirmDeploy:", error);
-    alert("Error crítico al intentar desplegar el template.");
+    alert("Error critico al intentar desplegar el template.");
   } finally {
     btnConfirm.textContent = originalText;
     btnConfirm.disabled = false;
 
-    // Resetear visualmente para la próxima vez
     selectedTemplateId = null;
     document.getElementById("deploy-step-1").style.display = "block";
     document.getElementById("deploy-step-2").style.display = "none";
@@ -149,24 +138,11 @@ document.addEventListener("DOMContentLoaded", () => {
   btn.onclick = () => {
     const modal = new bootstrap.Modal(document.getElementById("deployAssistantModal"));
     modal.show();
-
-    // Auto-búsqueda inicial si no hay resultados
-    if (currentTemplates.length === 0) {
-      performSearch();
-    }
+    if (allTemplates.length === 0) loadAllTemplates();
   };
-
-  // BUG-09 FIX: Removed unused btnSearch variable
-  document.addEventListener("click", (e) => {
-    if (e.target.closest("#btn-search-templates")) {
-      performSearch();
-    }
-  });
 
   const inputSearch = document.getElementById("template-search-input");
   if (inputSearch) {
-    inputSearch.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") performSearch();
-    });
+    inputSearch.addEventListener("input", (e) => filterTemplates(e.target.value));
   }
 });

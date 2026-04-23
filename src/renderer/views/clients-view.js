@@ -31,7 +31,7 @@ async function renderClientsView() {
 
                 <!-- Busqueda + filtro de plan -->
                 <div class="d-flex gap-2 mb-4 align-items-center flex-wrap">
-                    <div class="input-group input-group-sm search-input-group" style="max-width:280px">
+                    <div class="input-group input-group-sm search-input-group">
                         <span class="input-group-text bg-dark border-secondary text-dim">
                             <i class="bi bi-search"></i>
                         </span>
@@ -100,8 +100,8 @@ async function renderClientsView() {
                             </div>
                         </div>
                         <div class="modal-footer p-3">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-success">Guardar Cliente</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-sm btn-success">Guardar Cliente</button>
                         </div>
                     </form>
                 </div>
@@ -185,6 +185,12 @@ function renderClientCards() {
     if (!grid) return;
 
     const filtered = getFilteredClients();
+
+    // Capture IDs already rendered before clearing — skip entrance animation for them
+    const existingIds = new Set(
+        [...grid.querySelectorAll(".client-card[data-id]")].map(el => el.dataset.id)
+    );
+
     grid.innerHTML = "";
 
     if (filtered.length === 0) {
@@ -196,16 +202,18 @@ function renderClientCards() {
         return;
     }
 
-    filtered.forEach(c => {
+    filtered.forEach((c, index) => {
         const initials = c.nombre.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+        const isNew = !existingIds.has(c.id);
         const col = document.createElement("div");
         col.className = "col-xl-3 col-lg-4 col-md-6";
 
         col.innerHTML = `
-            <div class="glass-card p-3 h-100 hover-lift clickable client-card" data-id="${c.id}">
+            <div class="glass-card p-3 h-100 hover-lift clickable client-card${isNew ? " anim-card-enter" : ""}"
+            ${isNew ? `style="--si:${index}"` : ""} data-id="${c.id}">
                 <div class="d-flex align-items-center gap-3">
                     <div class="client-avatar-lg flex-shrink-0">${initials}</div>
-                    <div class="flex-grow-1 min-w-0" style="overflow:hidden">
+                    <div class="flex-grow-1 min-w-0 overflow-hidden">
                         <div class="fw-bold text-truncate">${c.nombre}</div>
                         <div class="small text-dim text-truncate">${c.empresa || 'Particular'}</div>
                         <span class="badge mt-1 ${getPlanBadgeClass(c.plan)}">${c.plan || 'Standard'}</span>
@@ -235,7 +243,7 @@ function renderClientCards() {
 // DETAIL PANEL
 // -----------------------------------------------
 
-async function openClientDetail(clientId) {
+async function openClientDetail(clientId, defaultTab = "perfil") {
     currentClientDetailId = clientId;
     const client = allClients.find(c => c.id === clientId);
     if (!client) return;
@@ -245,7 +253,14 @@ async function openClientDetail(clientId) {
     detailPanel.style.display = "block";
 
     renderClientDetailStructure(client);
-    loadClientDetailTab("perfil", client);
+
+    if (defaultTab !== "perfil") {
+        document.querySelectorAll("#client-detail-tabs .nav-link").forEach(b => {
+            b.classList.toggle("active", b.dataset.tab === defaultTab);
+        });
+    }
+
+    loadClientDetailTab(defaultTab, client);
 }
 
 function renderClientDetailStructure(client) {
@@ -253,7 +268,7 @@ function renderClientDetailStructure(client) {
     const detailPanel = document.getElementById("clients-detail-panel");
 
     detailPanel.innerHTML = `
-        <div class="animate-fade">
+        <div class="anim-slide-right">
             <!-- HEADER -->
             <div class="d-flex align-items-center gap-3 mb-4">
                 <button class="btn btn-outline-light btn-sm" id="btn-back-to-grid">
@@ -295,9 +310,16 @@ function renderClientDetailStructure(client) {
         </div>
     `;
 
-    document.getElementById("btn-back-to-grid").addEventListener("click", () => {
+    document.getElementById("btn-back-to-grid").addEventListener("click", async () => {
         currentClientDetailId = null;
-        document.getElementById("clients-detail-panel").style.display = "none";
+        const dp = document.getElementById("clients-detail-panel");
+        const inner = dp.firstElementChild;
+        if (inner) {
+            inner.classList.add("is-exiting");
+            await new Promise(r => setTimeout(r, 180));
+            inner.classList.remove("is-exiting");
+        }
+        dp.style.display = "none";
         document.getElementById("clients-grid-panel").style.display = "block";
     });
 
@@ -326,6 +348,7 @@ function loadClientDetailTab(tab, client) {
         case "tickets":     renderClientTicketsTab(client.id, container); break;
         case "asistente":   renderClientAssistantTab(client.id, container); break;
     }
+    container.firstElementChild?.classList.add("anim-panel-enter");
 }
 
 // -----------------------------------------------
@@ -570,19 +593,19 @@ async function renderClientAssistantTab(clientId, container) {
             const card = document.createElement("div");
             card.className = "col-md-6 col-lg-4";
             card.innerHTML = `
-                <div class="glass-card p-3 rounded h-100 d-flex flex-column gap-3" style="overflow:hidden">
-                    <div class="d-flex align-items-center gap-3" style="min-width:0">
+                <div class="glass-card p-3 rounded d-flex flex-column gap-3">
+                    <div class="d-flex align-items-center gap-3 min-w-0">
                         <div class="assistant-tab-icon bg-${statusColor} bg-opacity-10 border border-${statusColor} border-opacity-25">
                             <i class="bi bi-cpu text-${statusColor}"></i>
                         </div>
-                        <div class="flex-grow-1 min-w-0" style="overflow:hidden">
+                        <div class="flex-grow-1 min-w-0 overflow-hidden">
                             <div class="fw-bold text-truncate">${p.name}</div>
                             <span class="badge bg-${statusColor} bg-opacity-10 text-${statusColor} border border-${statusColor} border-opacity-25 small">
                                 ${p.status.toUpperCase()}
                             </span>
                         </div>
                     </div>
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-auto">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <span class="small text-dim">
                             <i class="bi bi-layers me-1"></i>${servCount} servicio${servCount !== 1 ? 's' : ''}
                         </span>
@@ -643,13 +666,13 @@ function openLinkAssistantModal(clientId, container) {
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="input-group input-group-sm mb-3 search-input-group" style="max-width:100%">
+                    <div class="input-group input-group-sm mb-3">
                         <span class="input-group-text bg-dark border-secondary text-dim">
                             <i class="bi bi-search"></i>
                         </span>
                         <input type="text" id="link-assistant-search" class="form-control text-main border-secondary" placeholder="Buscar asistente...">
                     </div>
-                    <div id="link-assistant-list" class="d-flex flex-column gap-2" style="max-height:300px;overflow-y:auto;"></div>
+                    <div id="link-assistant-list" class="d-flex flex-column gap-2 scrollable-list"></div>
                 </div>
             </div>
         </div>
@@ -726,11 +749,9 @@ function openClientAssistantDetail(project, clientId) {
         const btn = document.getElementById("btnBackToGrid");
         if (!btn) return;
         btn.innerHTML = '<i class="bi bi-arrow-left me-2"></i>Volver al cliente';
-        btn.onclick = (e) => {
-            e.stopImmediatePropagation();
+        btn.onclick = () => {
             navigate("clients");
-            // Reabrir el detalle del cliente sin recargar la grilla
-            requestAnimationFrame(() => openClientDetail(clientId));
+            requestAnimationFrame(() => openClientDetail(clientId, "asistente"));
         };
     });
 }
