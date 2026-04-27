@@ -225,6 +225,7 @@ async function handleAddVariable(pId, eId, sId) {
         return;
     }
 
+    window.showActionSpinner("Guardando variable...");
     try {
 
         await window.api.upsertVariable(pId, eId, sId, name, value);
@@ -234,11 +235,16 @@ async function handleAddVariable(pId, eId, sId) {
         document.getElementById("new-var-name").value = "";
         document.getElementById("new-var-value").value = "";
 
-        loadVariables(pId, eId, sId);
+        window.lastVarsHash = null;
+        await window.waitForNextChannelRun("variables");
 
     } catch (err) {
 
         showToast("Error: " + err.message, "danger");
+
+    } finally {
+
+        window.hideActionSpinner();
 
     }
 }
@@ -252,17 +258,23 @@ async function handleDeleteVariable(pId, eId, sId, name) {
 
     if (!confirm(`¿Eliminar ${name}?`)) return;
 
+    window.showActionSpinner("Eliminando variable...");
     try {
 
         await window.api.deleteVariable(pId, eId, sId, name);
 
         showToast("Variable eliminada", "info");
 
-        loadVariables(pId, eId, sId);
+        window.lastVarsHash = null;
+        await window.waitForNextChannelRun("variables");
 
     } catch (err) {
 
         showToast("Error: " + err.message, "danger");
+
+    } finally {
+
+        window.hideActionSpinner();
 
     }
 }
@@ -312,6 +324,7 @@ document.addEventListener("click", async (e) => {
         return;
     }
 
+    window.showActionSpinner("Actualizando variable...");
     try {
 
         if (editContext.originalKey !== newKey) {
@@ -335,14 +348,13 @@ document.addEventListener("click", async (e) => {
 
         bootstrap.Modal.getInstance(document.getElementById("editModal")).hide();
 
-        loadVariables(
-            editContext.projectId,
-            editContext.environmentId,
-            editContext.serviceId
-        );
+        window.lastVarsHash = null;
+        await window.waitForNextChannelRun("variables");
 
     } catch (err) {
         showToast("Error: " + err.message, "danger");
+    } finally {
+        window.hideActionSpinner();
     }
 
 });

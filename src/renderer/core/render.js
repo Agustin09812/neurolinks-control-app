@@ -143,6 +143,8 @@ async function navigate(view) {
 
   }
 
+  window.onViewChanged?.(view);
+
 }
 
 // --------------------------------------------------
@@ -999,13 +1001,14 @@ async function handleRedeploy(serviceId, environmentId) {
     `redeploy-${serviceId}`
   );
 
+  window.showActionSpinner("Reiniciando servicio...");
   try {
 
     await window.api.redeployService(serviceId, environmentId);
 
     showToast("Reinicio solicitado correctamente", "success");
 
-    await loadAssistants(true);
+    await window.waitForNextChannelRun("services");
 
   } catch (error) {
 
@@ -1019,6 +1022,10 @@ async function handleRedeploy(serviceId, environmentId) {
     );
 
     showToast("Error al solicitar reinicio", "danger");
+
+  } finally {
+
+    window.hideActionSpinner();
 
   }
 }
@@ -1046,15 +1053,26 @@ document.getElementById("btnSaveRename").onclick = async () => {
 
   if (!newName) return;
 
-  await window.api.updateProjectName(projectId, newName);
+  window.showActionSpinner("Renombrando proyecto...");
+  try {
 
-  const modal = bootstrap.Modal.getInstance(
-    document.getElementById("renameProjectModal")
-  );
+    await window.api.updateProjectName(projectId, newName);
 
-  modal.hide();
+    bootstrap.Modal.getInstance(document.getElementById("renameProjectModal"))?.hide();
 
-  await loadAssistants(true);
+    await window.waitForNextChannelRun("services");
+
+    showToast("Proyecto renombrado", "success");
+
+  } catch (err) {
+
+    showToast("Error al renombrar el proyecto", "danger");
+
+  } finally {
+
+    window.hideActionSpinner();
+
+  }
 };
 
 // --------------------------------------------------
@@ -1069,24 +1087,35 @@ async function handleDeleteProject(projectId) {
 
   if (!confirmDelete) return;
 
-  await window.api.deleteProject(projectId);
+  window.showActionSpinner("Eliminando proyecto...");
+  try {
 
-  selectedProjectId = null;
+    await window.api.deleteProject(projectId);
 
-  // reset detail panel
-  const detail = document.getElementById("assistant-detail");
-  if (detail) {
-    detail.dataset.initialized = "";
-    detail.dataset.projectId = "";
-    detail.style.display = "none";
+    selectedProjectId = null;
+
+    const detail = document.getElementById("assistant-detail");
+    if (detail) {
+      detail.dataset.initialized = "";
+      detail.dataset.projectId = "";
+      detail.style.display = "none";
+    }
+
+    navigate("assistants");
+
+    await window.waitForNextChannelRun("services");
+
+    showToast("Proyecto eliminado", "success");
+
+  } catch (err) {
+
+    showToast("Error al eliminar el proyecto", "danger");
+
+  } finally {
+
+    window.hideActionSpinner();
+
   }
-
-  // refrescar lista
-  await loadAssistants(false);
-
-  // ir a vista asistentes
-  navigate("assistants");
-
 }
 
 // --------------------------------------------------

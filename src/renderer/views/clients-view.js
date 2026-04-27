@@ -165,18 +165,18 @@ function getFilteredClients() {
     const s = clientsSearchQuery;
     return allClients.filter(c =>
         (c.nombre.toLowerCase().includes(s) ||
-         (c.empresa?.toLowerCase().includes(s)) ||
-         (c.email?.toLowerCase().includes(s))) &&
+            (c.empresa?.toLowerCase().includes(s)) ||
+            (c.email?.toLowerCase().includes(s))) &&
         (!clientsPlanFilter || c.plan === clientsPlanFilter)
     );
 }
 
 function getPlanBadgeClass(plan) {
     return {
-        'Premium':    'bg-danger text-white',
+        'Premium': 'bg-danger text-white',
         'Enterprise': 'bg-warning text-dark',
-        'Baja':       'bg-secondary text-white',
-        'Standard':   'bg-info text-dark',
+        'Baja': 'bg-secondary text-white',
+        'Standard': 'bg-info text-dark',
     }[plan] || 'bg-secondary text-white';
 }
 
@@ -343,10 +343,10 @@ function loadClientDetailTab(tab, client) {
     `;
 
     switch (tab) {
-        case "perfil":      renderPerfilTab(client, container); break;
+        case "perfil": renderPerfilTab(client, container); break;
         case "facturacion": renderFacturacionTab(client.id, container); break;
-        case "tickets":     renderClientTicketsTab(client.id, container); break;
-        case "asistente":   renderClientAssistantTab(client.id, container); break;
+        case "tickets": renderClientTicketsTab(client.id, container); break;
+        case "asistente": renderClientAssistantTab(client.id, container); break;
     }
     container.firstElementChild?.classList.add("anim-panel-enter");
 }
@@ -593,7 +593,7 @@ async function renderClientAssistantTab(clientId, container) {
             const card = document.createElement("div");
             card.className = "col-md-6 col-lg-4";
             card.innerHTML = `
-                <div class="glass-card p-3 rounded d-flex flex-column gap-3">
+                <div class="glass-card p-3 rounded d-flex flex-column gap-3 h-100">
                     <div class="d-flex align-items-center gap-3 min-w-0">
                         <div class="assistant-tab-icon bg-${statusColor} bg-opacity-10 border border-${statusColor} border-opacity-25">
                             <i class="bi bi-cpu text-${statusColor}"></i>
@@ -795,6 +795,7 @@ async function handleClientSubmit(e) {
         vencimiento: document.getElementById("clientVencimiento").value || null
     };
 
+    window.showActionSpinner(id ? "Actualizando cliente..." : "Creando cliente...");
     try {
         if (id) {
             await window.api.updateClient(id, clientData);
@@ -805,18 +806,20 @@ async function handleClientSubmit(e) {
         }
         bootstrap.Modal.getInstance(document.getElementById("clientModal")).hide();
         await loadClientsData();
-        window.scheduleImmediateRefresh?.();
         if (id && currentClientDetailId === id) {
             const updated = allClients.find(c => c.id === id);
             if (updated) openClientDetail(id);
         }
     } catch {
         showToast("Error al guardar cliente", "danger");
+    } finally {
+        window.hideActionSpinner();
     }
 }
 
 async function handleDeleteClient(id) {
     if (!confirm("¿Deseas eliminar este cliente? Se perderan sus vinculos tecnicos.")) return;
+    window.showActionSpinner("Eliminando cliente...");
     try {
         await window.api.deleteClient(id);
         showToast("Cliente eliminado", "warning");
@@ -825,10 +828,11 @@ async function handleDeleteClient(id) {
             document.getElementById("clients-detail-panel").style.display = "none";
             document.getElementById("clients-grid-panel").style.display = "block";
         }
-        loadClientsData();
-        window.scheduleImmediateRefresh?.();
+        await loadClientsData();
     } catch {
         showToast("Error al eliminar cliente", "danger");
+    } finally {
+        window.hideActionSpinner();
     }
 }
 

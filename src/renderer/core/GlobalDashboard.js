@@ -134,7 +134,7 @@ function buildDashboard(dash, clients, tickets) {
   const uptimePct = totalServices > 0 ? Math.round(onlineRatio * 100) : 0;
 
   dash.innerHTML = `
-    <div class="animate-fade">
+    <div>
       <div class="d-flex align-items-center justify-content-between mb-4">
         <h2 class="fw-bold mb-0">DASHBOARD</h2>
       </div>
@@ -142,7 +142,7 @@ function buildDashboard(dash, clients, tickets) {
       <div class="row g-3 mb-4">
 
         <div class="col-6 col-md-3">
-          <div class="glass-card p-3 h-100 rounded d-flex align-items-center gap-3">
+          <div class="glass-card p-3 h-100 rounded d-flex align-items-center gap-3 anim-card-enter" style="--si:0">
             <div class="donut-wrapper">
               <svg width="72" height="72" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border-soft)" stroke-width="12"/>
@@ -168,7 +168,7 @@ function buildDashboard(dash, clients, tickets) {
         </div>
 
         <div class="col-6 col-md-3">
-          <div class="glass-card p-3 h-100 rounded clickable" onclick="navigate('clients')">
+          <div class="glass-card p-3 h-100 rounded clickable anim-card-enter" style="--si:1" onclick="navigate('clients')">
             <div class="d-flex justify-content-between align-items-start mb-2">
               <div>
                 <div class="kpi-label">Clientes Activos</div>
@@ -181,7 +181,7 @@ function buildDashboard(dash, clients, tickets) {
         </div>
 
         <div class="col-6 col-md-3">
-          <div class="glass-card p-3 h-100 rounded clickable" onclick="navigate('clients')">
+          <div class="glass-card p-3 h-100 rounded clickable anim-card-enter" style="--si:2" onclick="navigate('clients')">
             <div class="d-flex justify-content-between align-items-start mb-2">
               <div>
                 <div class="kpi-label">Tickets Pendientes</div>
@@ -194,7 +194,7 @@ function buildDashboard(dash, clients, tickets) {
         </div>
 
         <div class="col-6 col-md-3">
-          <div class="glass-card p-3 h-100 rounded d-flex flex-column justify-content-between">
+          <div class="glass-card p-3 h-100 rounded d-flex flex-column justify-content-between anim-card-enter" style="--si:3">
             <div class="d-flex justify-content-between align-items-start">
               <div>
                 <div class="kpi-label">Estado de Salud</div>
@@ -219,7 +219,7 @@ function buildDashboard(dash, clients, tickets) {
       <div class="row g-3">
 
         <div class="col-md-7">
-          <div class="glass-card p-3 rounded">
+          <div class="glass-card p-3 rounded anim-card-enter" style="--si:4">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h6 class="mb-0 fw-bold">Tickets Recientes</h6>
               <span class="pending-pill">${pendingTickets.length} pendientes</span>
@@ -230,12 +230,12 @@ function buildDashboard(dash, clients, tickets) {
 
         <div class="col-md-5 d-flex flex-column gap-3">
 
-          <div class="glass-card p-3 rounded">
+          <div class="glass-card p-3 rounded anim-card-enter" style="--si:5">
             <h6 class="mb-3 fw-bold">Distribucion Servicios</h6>
             <div id="dash-services-dist">${buildServicesDist(onlineServices, errorServices, totalServices)}</div>
           </div>
 
-          <div class="glass-card p-3 rounded">
+          <div class="glass-card p-3 rounded anim-card-enter" style="--si:6">
             <h6 class="mb-3 fw-bold">Acciones Rapidas</h6>
             <div class="d-grid gap-2">
               <button class="btn btn-sm btn-outline-light text-start" onclick="navigate('clients')">
