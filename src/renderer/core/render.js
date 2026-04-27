@@ -1174,6 +1174,8 @@ if (btnLink) {
 
 async function openDashboard(projectId, environmentId, serviceId) {
 
+  const panel = document.getElementById("detail-side-panel");
+
   try {
 
     const domains = await window.api.getServiceDomains(
@@ -1192,7 +1194,12 @@ async function openDashboard(projectId, environmentId, serviceId) {
     }
 
     if (!domain) {
-      showToast("Este servicio no tiene dominio público.", "warning");
+      // Clear skeleton so hasSideContent stays false and refresh can retry/show this state
+      if (panel) panel.innerHTML = `
+        <div class="p-4 text-center text-secondary small">
+          <i class="bi bi-globe2 d-block mb-2 fs-4"></i>
+          Este servicio no tiene dominio publico
+        </div>`;
       return;
     }
 
@@ -1204,6 +1211,8 @@ async function openDashboard(projectId, environmentId, serviceId) {
 
   } catch (err) {
     console.error("Error abriendo dashboard:", err);
+    // Clear skeleton so hasSideContent returns false and SmartRefresh retries on next tick
+    if (panel) panel.innerHTML = "";
   }
 }
 
