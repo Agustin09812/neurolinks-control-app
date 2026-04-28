@@ -252,13 +252,26 @@ function buildDashboard(dash, clients, tickets) {
     </div>
   `;
 
-  const doRefresh = () => {
-    loadAssistants(false);
-    Promise.all([window.api.getClients(), window.api.getTickets()])
-      .then(([c, t]) => { window.clientsData = c; window.ticketsData = t; patchDashboard(); })
-      .catch(console.error);
+  const btn = document.getElementById('dashboard-refresh');
+  btn.onclick = async () => {
+    btn.disabled = true;
+    window.showActionSpinner("Sincronizando infraestructura...");
+    try {
+      const [, c, t] = await Promise.all([
+        loadAssistants(false),
+        window.api.getClients(),
+        window.api.getTickets()
+      ]);
+      window.clientsData = c;
+      window.ticketsData = t;
+      buildDashboard(document.getElementById("dashboard-global"), c, t);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      window.hideActionSpinner();
+      btn.disabled = false;
+    }
   };
-  document.getElementById('dashboard-refresh').onclick = doRefresh;
 }
 
 function patchDashboard() {

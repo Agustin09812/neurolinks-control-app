@@ -216,7 +216,10 @@ function renderClientCards() {
                     <div class="flex-grow-1 min-w-0 overflow-hidden">
                         <div class="fw-bold text-truncate">${c.nombre}</div>
                         <div class="small text-dim text-truncate">${c.empresa || 'Particular'}</div>
-                        <span class="badge mt-1 ${getPlanBadgeClass(c.plan)}">${c.plan || 'Standard'}</span>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            <span class="badge ${getPlanBadgeClass(c.plan)}">${c.plan || 'Standard'}</span>
+                            <span class="small text-dim" id="ast-count-${c.id}"><i class="bi bi-robot"></i></span>
+                        </div>
                     </div>
                     <button class="btn btn-sm btn-outline-light flex-shrink-0 btn-edit-client" title="Editar">
                         <i class="bi bi-pencil"></i>
@@ -236,6 +239,11 @@ function renderClientCards() {
         });
 
         grid.appendChild(col);
+
+        window.api.getClientProjects(c.id).then(ids => {
+            const el = document.getElementById(`ast-count-${c.id}`);
+            if (el) el.innerHTML = `<i class="bi bi-robot"></i> ${ids.length}`;
+        }).catch(() => {});
     });
 }
 
@@ -810,8 +818,8 @@ async function handleClientSubmit(e) {
             const updated = allClients.find(c => c.id === id);
             if (updated) openClientDetail(id);
         }
-    } catch {
-        showToast("Error al guardar cliente", "danger");
+    } catch (err) {
+        showToast(err?.message || "Error al guardar cliente", "danger");
     } finally {
         window.hideActionSpinner();
     }

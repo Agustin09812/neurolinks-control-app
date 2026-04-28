@@ -52,16 +52,6 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('delete-service', serviceId),
 
   // --------------------------------------------------
-  // LOGS (INTEGRADO)
-  // --------------------------------------------------
-
-  fetchDeploymentLogs: (deploymentId) =>
-    ipcRenderer.invoke('fetch-deployment-logs', deploymentId),
-
-  downloadLogs: (deploymentId, serviceName) =>
-    ipcRenderer.invoke('download-logs', deploymentId, serviceName),
-
-  // --------------------------------------------------
   // VARIABLES (INTEGRADO)
   // --------------------------------------------------
 

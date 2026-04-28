@@ -2,10 +2,6 @@ var assistants = [];
 var selectedProjectId = null;
 let renderToken = 0;
 
-// Variables globales compartidas entre render.js y logs-view.js
-// window.currentDeploymentStatus — estado del deploy actual
-// window.currentProjectId       — project ID en Railway
-// window.currentServiceId       — service ID en Railway
 window.clientsData = []; // Hash para clients
 window.ticketsData = []; // Hash para tickets
 window.variablesCache = {}; // Hash para variables
@@ -34,8 +30,7 @@ function toggleTheme() {
 
 async function navigate(view) {
 
-  window.stopLogsStreaming?.();
-  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
   document.body.classList.remove('modal-open');
   document.body.style.overflow = '';
   document.body.style.paddingRight = '';
@@ -51,7 +46,6 @@ async function navigate(view) {
 
   const views = Object.values(viewMap).concat([
     "assistant-detail",
-    "logs-view",
     "variables-view",
     "tickets-view",
     "billing-view",
@@ -493,12 +487,24 @@ async function renderDetail(project, isRefresh = false) {
 
     if (token !== renderToken) return;
 
-    patchServices(project);
+    const container = document.getElementById("services-container");
+    const servicesRendered = container && container.childElementCount > 0;
 
-    // FIX: No forzar openDashboard en refreshes.
-    // Solo abrir si no hay vista lateral activa (logs, variables, etc.)
+    if (servicesRendered) {
+      patchServices(project);
+    } else {
+      // Initial render was aborted mid-way (race with SmartRefresh token bump).
+      // Re-run the full services render so cards + dashboard both appear.
+      renderServices(project);
+      return;
+    }
+
+    // Only skip openDashboard if real content is loaded (logs, variables, dashboard).
+    // A panel showing only skeleton divs means openDashboard never ran - call it.
     const sidePanel = document.getElementById("detail-side-panel");
-    const hasSideContent = sidePanel && sidePanel.innerHTML.trim() !== "";
+    const hasSideContent = sidePanel &&
+      sidePanel.innerHTML.trim() !== "" &&
+      !sidePanel.querySelector(".skeleton");
 
     if (!hasSideContent && project.services?.length > 0) {
 
@@ -914,11 +920,9 @@ function createServiceCard(service, project, staggerIndex = 0) {
 
     setActiveServiceMenu(e.currentTarget);
 
-    window.currentDeploymentStatus = service.railwayStatus;
-    window.currentProjectId = service.projectId;
-    window.currentServiceId = service.id;
+    const url = `https://railway.com/project/${service.projectId}/logs?environmentId=${service.environmentId}&timeFrame=30d`;
 
-    renderLogsView(service.deploymentId, service.name);
+    window.api.openDashboardWindow(url);
 
   });
 

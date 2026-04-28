@@ -410,14 +410,6 @@ ipcMain.handle('delete-project', async (_, projectId) => {
 // FETCH DEPLOYMENT LOGS
 // --------------------------------------------------
 
-ipcMain.handle('fetch-deployment-logs', async (_, deploymentId) => {
-  try {
-    return await railwayService.fetchDeploymentLogs(deploymentId);
-  } catch (error) {
-    console.error("Error en fetch-deployment-logs:", error);
-    throw error;
-  }
-});
 
 // --------------------------------------------------
 // GET SERVICE VARIABLES
@@ -477,30 +469,6 @@ ipcMain.handle('get-service-domains', async (_, projectId, environmentId, servic
 // LOGS
 // --------------------------------------------------
 
-ipcMain.handle('download-logs', async (_, deploymentId, serviceName) => {
-  try {
-    const logs = await railwayService.fetchDeploymentLogs(deploymentId);
-    if (!logs || logs.length === 0) return { success: false, message: "No se encontraron logs." };
-
-    const content = logs.map(l => `[${l.timestamp}] [${l.severity}] ${l.message}`).join('\n');
-
-    const { filePath } = await dialog.showSaveDialog(mainWindow, {
-      title: 'Guardar Logs de Servicio',
-      defaultPath: `${serviceName}-${new Date().toISOString().split('T')[0]}.txt`,
-      filters: [{ name: 'Text Files', extensions: ['txt'] }]
-    });
-
-    if (filePath) {
-      fs.writeFileSync(filePath, content);
-      return { success: true, path: filePath };
-    }
-    return { success: false, message: "Cancelado por el usuario" };
-
-  } catch (err) {
-    console.error("Error descargando logs:", err);
-    return { success: false, message: err.message };
-  }
-});
 
 // --------------------------------------------------
 // APP VERSION
@@ -519,9 +487,14 @@ ipcMain.handle('get-clients', async () => {
 });
 
 ipcMain.handle('create-client', async (_, clientData) => {
-  const result = await supabaseService.createClient(clientData);
-  await supabaseService.logAction('Crear Cliente', `Se creó el cliente ${clientData.nombre}`, 'clientes', result.id);
-  return result;
+  try {
+    const result = await supabaseService.createClient(clientData);
+    await supabaseService.logAction('Crear Cliente', `Se creó el cliente ${clientData.nombre}`, 'clientes', result.id);
+    return result;
+  } catch (error) {
+    if (error.code === '23505') throw new Error('El email ya esta registrado en otro cliente.');
+    throw error;
+  }
 });
 
 ipcMain.handle('update-client', async (_, id, clientData) => {
