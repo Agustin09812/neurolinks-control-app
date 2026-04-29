@@ -26,11 +26,9 @@ autoUpdater.autoInstallOnAppQuit = false;
 const railwayService = require('../services/railwayService');
 const supabaseService = require('../services/supabaseService');
 
-let splash;
 let mainWindow;
-let splashStartTime;
-let updateInfo = null;
 let dashboardWindows = new Map();
+let lastNotifiedVersion = null;
 
 
 // ======================================================
@@ -41,40 +39,6 @@ function safeCreateMainWindow() {
 
   if (mainWindow && !mainWindow.isDestroyed()) return;
   createMainWindow();
-
-}
-
-
-// ======================================================
-// SPLASH
-// ======================================================
-
-function createSplash() {
-
-  splashStartTime = Date.now();
-
-  splash = new BrowserWindow({
-    width: 420,
-    height: 300,
-    frame: false,
-    icon: path.join(__dirname, "../../assets/icons/icon.ico"),
-    resizable: false,
-    center: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
-
-  splash.loadFile(path.join(__dirname, "../renderer/splash.html"));
-
-  splash.webContents.on('did-finish-load', () => {
-
-    const version = app.getVersion();
-    splash.webContents.send('set-version', version);
-
-  });
 
 }
 
@@ -108,40 +72,27 @@ function createMainWindow() {
 
   mainWindow.once("ready-to-show", () => {
 
-    const elapsed = Date.now() - splashStartTime;
-    const minTime = 3000;
-    const remaining = Math.max(minTime - elapsed, 0);
+    mainWindow.setOpacity(0);
+    mainWindow.show();
 
-    setTimeout(() => {
+    let opacity = 0;
 
-      if (splash) splash.destroy();
+    const fade = setInterval(() => {
+      opacity += 0.05;
+      mainWindow.setOpacity(opacity);
+      if (opacity >= 1) clearInterval(fade);
+    }, 20);
 
-      mainWindow.setOpacity(0);
-      mainWindow.show();
-
-      let opacity = 0;
-
-      const fade = setInterval(() => {
-        opacity += 0.05;
-        mainWindow.setOpacity(opacity);
-        if (opacity >= 1) clearInterval(fade);
-      }, 20);
-
-      startBackgroundMonitoring();
-
-    }, remaining);
+    startBackgroundMonitoring();
 
   });
 
 
   mainWindow.webContents.once("did-finish-load", () => {
 
-    if (updateInfo) {
-      mainWindow.webContents.send("update-available", {
-        version: updateInfo.version,
-        notes: updateInfo.notes
-
-      });
+    if (!isDev) {
+      autoUpdater.checkForUpdates();
+      setInterval(() => autoUpdater.checkForUpdates(), 30 * 60 * 1000);
     }
 
   });
@@ -156,18 +107,7 @@ function createMainWindow() {
 app.whenReady().then(() => {
 
   Menu.setApplicationMenu(null);
-  createSplash();
-
-  if (isDev) {
-
-    console.log("Modo desarrollo → no se chequean updates");
-    setTimeout(() => {
-      safeCreateMainWindow();
-    }, 2000);
-
-  } else {
-    autoUpdater.checkForUpdates();
-  }
+  createMainWindow();
 
 });
 
@@ -179,9 +119,12 @@ app.whenReady().then(() => {
 
 autoUpdater.on("update-available", (info) => {
 
+  if (lastNotifiedVersion === info.version) return;
+  lastNotifiedVersion = info.version;
+
   console.log("Nueva actualización detectada:", info.version);
 
-  updateInfo = {
+  const payload = {
     version: info.version,
     notes: [
       "Mejoras y optimizaciones",
@@ -190,25 +133,14 @@ autoUpdater.on("update-available", (info) => {
     ]
   };
 
-  if (splash) {
-
-    splash.webContents.send("update-available", {
-      version: updateInfo.version,
-      notes: updateInfo.notes
-    });
-
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("update-available", payload);
   }
 
-  setTimeout(() => {
-    safeCreateMainWindow();
-  }, 1500);
-
 });
 
 
-autoUpdater.on("update-not-available", () => {
-  safeCreateMainWindow();
-});
+autoUpdater.on("update-not-available", () => {});
 
 
 autoUpdater.on("download-progress", (progress) => {
@@ -242,7 +174,6 @@ autoUpdater.on("update-downloaded", () => {
 
 autoUpdater.on("error", (err) => {
   console.error("Updater error:", err);
-  safeCreateMainWindow();
 });
 
 

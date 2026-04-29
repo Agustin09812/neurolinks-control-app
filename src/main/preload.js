@@ -78,12 +78,6 @@ contextBridge.exposeInMainWorld('api', {
   getAppVersion: () =>
     ipcRenderer.invoke('get-app-version'),
 
-  onLoadVersion: (callback) => {
-    ipcRenderer.on('set-version', (_, version) => {
-      callback(version);
-    });
-  },
-
   // --------------------------------------------------
   // UPDATES
   // --------------------------------------------------

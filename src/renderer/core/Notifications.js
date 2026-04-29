@@ -56,6 +56,7 @@ function showNotificationToast(notification) {
     notification.type === "deploy"       ? "bi-arrow-repeat" :
     notification.type === "deploy-error" ? "bi-exclamation-triangle-fill" :
     notification.type === "error"        ? "bi-exclamation-triangle-fill" :
+    notification.type === "update"       ? "bi-arrow-up-circle-fill" :
     "bi-bell";
 
   showToast(`<i class="bi ${icon} me-2"></i>${_escHtml(notification.title)}`, "info");
@@ -119,6 +120,7 @@ const _typeConfig = {
   "error":        { icon: "bi-exclamation-triangle-fill", cls: "notif-icon-error"   },
   "deploy":       { icon: "bi-arrow-repeat",              cls: "notif-icon-info"    },
   "ticket":       { icon: "bi-ticket-perforated-fill",    cls: "notif-icon-warning" },
+  "update":       { icon: "bi-arrow-up-circle-fill",      cls: "notif-icon-info"    },
 };
 
 function renderNotificationsPanel() {

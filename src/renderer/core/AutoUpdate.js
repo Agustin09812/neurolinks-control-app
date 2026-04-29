@@ -14,6 +14,13 @@ window.api.onUpdateAvailable((data) => {
     badge.innerText = "1";
   }
 
+  addNotification(
+    "update",
+    `Nueva versión ${data.version} disponible`,
+    "Hacé clic en Actualizaciones en el menú lateral para instalarla.",
+    `update-${data.version}`
+  );
+
 });
 
 window.api.onUpdateDownloaded(() => {
