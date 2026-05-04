@@ -3,58 +3,14 @@
   "version": "1.2.5",
   "description": "CRM Gestión Neurolinks",
   "author": "Neurolinks",
-  "main": "src/main/main.js",
   "private": true,
   "scripts": {
-    "start": "node server.js",
-    "electron": "electron .",
-    "build:electron": "electron-builder --win nsis"
-  },
-  "devDependencies": {
-    "electron": "^40.6.0",
-    "electron-builder": "^26.8.1"
+    "start": "node server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
-    "bootstrap": "^5.3.8",
-    "bootstrap-icons": "^1.13.1",
     "dotenv": "^17.3.1",
-    "electron-updater": "^6.8.3",
     "express": "^4.22.1",
     "express-session": "^1.19.0"
-  },
-  "build": {
-    "appId": "com.neurolinks.control",
-    "productName": "Neurolinks-Control",
-    "artifactName": "${productName}-Setup-${version}.${ext}",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "**/*"
-    ],
-    "extraResources": [
-      {
-        "from": ".env",
-        "to": ".env"
-      }
-    ],
-    "executableName": "Neurolinks Control",
-    "win": {
-      "icon": "assets/icons/icon.ico",
-      "target": "nsis"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "Agustin09812",
-        "repo": "neurolinks-control-app",
-        "private": true
-      }
-    ]
   }
 }
