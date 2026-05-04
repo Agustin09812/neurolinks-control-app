@@ -58,8 +58,8 @@ app.get('/admin', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'src/renderer/index.html'));
 });
 
-app.use('/admin/core', requireAuth, express.static(path.join(__dirname, 'src/renderer/core')));
-app.use('/admin/views', requireAuth, express.static(path.join(__dirname, 'src/renderer/views')));
+app.use('/admin/core', express.static(path.join(__dirname, 'src/renderer/core')));
+app.use('/admin/views', express.static(path.join(__dirname, 'src/renderer/views')));
 
 app.get('/', (req, res) => res.redirect('/admin'));
 
