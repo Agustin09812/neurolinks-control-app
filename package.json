@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node server.js",
     "electron": "electron .",
-    "build": "electron-builder --win nsis"
+    "build:electron": "electron-builder --win nsis"
   },
   "devDependencies": {
     "electron": "^40.6.0",
