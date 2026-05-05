@@ -23,21 +23,21 @@ app.use(session({
 function requireAuth(req, res, next) {
   if (req.session.authenticated) return next();
   if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'No autorizado' });
-  res.redirect('/admin/login');
+  res.redirect('/login');
 }
 
 // --------------------------------------------------
 // PUBLICO: assets y login
 // --------------------------------------------------
 
-app.use('/admin/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
-app.get('/admin/login', (req, res) => {
-  if (req.session.authenticated) return res.redirect('/admin');
+app.get('/login', (req, res) => {
+  if (req.session.authenticated) return res.redirect('/');
   res.sendFile(path.join(__dirname, 'src/renderer/login.html'));
 });
 
-app.post('/admin/login', (req, res) => {
+app.post('/login', (req, res) => {
   if (req.body.password === process.env.ADMIN_PASSWORD) {
     req.session.authenticated = true;
     return res.json({ ok: true });
@@ -45,23 +45,21 @@ app.post('/admin/login', (req, res) => {
   res.status(401).json({ ok: false });
 });
 
-app.post('/admin/logout', (req, res) => {
+app.post('/logout', (req, res) => {
   req.session.destroy();
-  res.redirect('/admin/login');
+  res.redirect('/login');
 });
 
 // --------------------------------------------------
 // PROTEGIDO: app y sus archivos JS
 // --------------------------------------------------
 
-app.get('/admin', requireAuth, (req, res) => {
+app.get('/', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'src/renderer/index.html'));
 });
 
-app.use('/admin/core', express.static(path.join(__dirname, 'src/renderer/core')));
-app.use('/admin/views', express.static(path.join(__dirname, 'src/renderer/views')));
-
-app.get('/', (req, res) => res.redirect('/admin'));
+app.use('/core', express.static(path.join(__dirname, 'src/renderer/core')));
+app.use('/views', express.static(path.join(__dirname, 'src/renderer/views')));
 
 // --------------------------------------------------
 // API ROUTES

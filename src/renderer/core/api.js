@@ -8,7 +8,7 @@ async function _fetch(path, options = {}) {
     ...options
   });
   if (res.status === 401) {
-    window.location.href = '/admin/login';
+    window.location.href = '/login';
     return;
   }
   if (!res.ok) {
