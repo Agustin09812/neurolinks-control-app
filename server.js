@@ -349,6 +349,6 @@ async function tryAutoRedeploy(project, service) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Neurolinks Control corriendo en puerto ${PORT}`);
-  console.log(`Panel: http://localhost:${PORT}/admin`);
+  console.log(`Panel: http://localhost:${PORT}/`);
   startBackgroundMonitoring();
 });
