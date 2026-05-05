@@ -23,10 +23,6 @@ async function renderDashboardView(serviceDomain) {
               <i class="bi bi-box-arrow-up-right me-2"></i>
               Abrir Back Office
             </button>
-            <button class="btn btn-outline-light w-100" id="btnOpenBackofficeBrowser">
-              <i class="bi bi-browser-chrome me-2"></i>
-              Abrir en el navegador
-            </button>
           </div>
         </div>
       `;
@@ -34,9 +30,5 @@ async function renderDashboardView(serviceDomain) {
   document.getElementById("btnOpenBackoffice").onclick = () => {
     clearActiveServiceMenu();
     openFullDashboard(url);
-  };
-
-  document.getElementById("btnOpenBackofficeBrowser").onclick = () => {
-    window.api.openExternal(url);
   };
 }

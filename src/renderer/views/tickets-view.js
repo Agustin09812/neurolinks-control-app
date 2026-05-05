@@ -230,7 +230,7 @@ async function populateTicketFilters() {
 
         if (!filterSelect || !modalSelect) return;
 
-        const options = clients.map(c => `<option value="${c.id}">${c.nombre}</option>`).join("");
+        const options = clients.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join("");
 
         filterSelect.innerHTML = '<option value="">Todos los clientes</option>' + options;
         modalSelect.innerHTML = '<option value="">-- Seleccionar --</option>' + options;
@@ -325,12 +325,12 @@ function renderTicketsList() {
         tr.innerHTML = `
             <td>
                 <div class="fw-bold">#${t.id.substring(0, 8)}</div>
-                <div class="small text-white">${t.titulo}</div>
+                <div class="small text-white">${escapeHtml(t.titulo)}</div>
             </td>
-            <td>${t.clientes ? t.clientes.nombre : 'Sin cliente'}</td>
-            <td><span class="small text-dim">${t.tipo}</span></td>
-            <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${t.estado}</span></td>
-            <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${t.prioridad || 'Baja'}</span></td>
+            <td>${t.clientes ? escapeHtml(t.clientes.nombre) : 'Sin cliente'}</td>
+            <td><span class="small text-dim">${escapeHtml(t.tipo)}</span></td>
+            <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
+            <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
             <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
             <td class="text-end">
                 <div class="d-flex gap-2 justify-content-end">

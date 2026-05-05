@@ -1,7 +1,3 @@
-// Reemplaza el bridge de Electron (preload.js + ipcMain) con fetch() al servidor Express.
-// Mantiene exactamente la misma forma que window.api tenia en la version Electron
-// para que ningun otro archivo del renderer necesite cambios.
-
 async function _fetch(path, options = {}) {
   const res = await fetch(path, {
     headers: { 'Content-Type': 'application/json' },
@@ -25,7 +21,7 @@ function _post(path, body) {
 window.api = {
 
   // --------------------------------------------------
-  // EXTERNAL (reemplaza shell.openExternal y BrowserWindow)
+  // EXTERNAL
   // --------------------------------------------------
   openExternal: (url) => { window.open(url, '_blank', 'noopener'); return Promise.resolve(); },
   openDashboardWindow: (url) => { window.open(url, '_blank', 'noopener'); return Promise.resolve(); },
@@ -59,9 +55,6 @@ window.api = {
   redeployService: (serviceId, environmentId) =>
     _post(`/api/services/${serviceId}/redeploy`, { environmentId }),
 
-  deleteService: (serviceId) =>
-    _fetch(`/api/services/${serviceId}`, { method: 'DELETE' }),
-
   // --------------------------------------------------
   // VARIABLES
   // --------------------------------------------------
@@ -81,18 +74,9 @@ window.api = {
     _fetch(`/api/domains?projectId=${projectId}&environmentId=${environmentId}&serviceId=${serviceId}`),
 
   // --------------------------------------------------
-  // VERSION (sin auto-update en web)
+  // VERSION
   // --------------------------------------------------
   getAppVersion: () => Promise.resolve('1.2.4'),
-  onLoadVersion: () => {},
-
-  // --------------------------------------------------
-  // UPDATES (no-ops — la web no tiene auto-update de Electron)
-  // --------------------------------------------------
-  onUpdateAvailable: () => {},
-  onUpdateProgress: () => {},
-  onUpdateDownloaded: () => {},
-  startUpdate: () => {},
 
   // --------------------------------------------------
   // CLIENTS
@@ -155,11 +139,5 @@ window.api = {
 
   deletePayment: (id) =>
     _fetch(`/api/payments/${id}`, { method: 'DELETE' }),
-
-  // --------------------------------------------------
-  // NAVIGATION (IPC-only en Electron, no-ops en web)
-  // --------------------------------------------------
-  onSelectProject: () => {},
-  requestSelectProject: () => {},
 
 };

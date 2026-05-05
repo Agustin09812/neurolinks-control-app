@@ -2,6 +2,16 @@
 // SHARED UTILITIES
 // --------------------------------------------------
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return "Sin deploy";
   const d = new Date(dateStr);

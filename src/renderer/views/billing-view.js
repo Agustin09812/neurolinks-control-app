@@ -209,12 +209,12 @@ function applyBillingFilters() {
         tr.className = "border-secondary";
         tr.innerHTML = `
             <td class="ps-4 text-secondary">${new Date(p.fecha).toLocaleDateString()}</td>
-            <td><span class="fw-bold text-accent-clients">${p.clientes ? p.clientes.nombre : 'Sin Cliente'}</span></td>
-            <td class="small opacity-75">${p.concepto}</td>
-            <td><span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 font-monospace">$${p.monto}</span></td>
+            <td><span class="fw-bold text-accent-clients">${p.clientes ? escapeHtml(p.clientes.nombre) : 'Sin Cliente'}</span></td>
+            <td class="small opacity-75">${escapeHtml(p.concepto)}</td>
+            <td><span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 font-monospace">$${escapeHtml(String(p.monto))}</span></td>
             <td class="text-center">
                 <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2 py-1 rounded-pill x-small">
-                    ${p.metodo}
+                    ${escapeHtml(p.metodo)}
                 </span>
             </td>
             <td class="text-center">
@@ -239,7 +239,7 @@ async function openNewPaymentModal() {
     try {
         const clients = await window.api.getClients();
         select.innerHTML = '<option value="">Seleccionar cliente...</option>' +
-            clients.map(c => `<option value="${c.id}">${c.nombre}</option>`).join("");
+            clients.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join("");
     } catch (e) {
         console.error(e);
     }

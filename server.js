@@ -6,6 +6,31 @@ const path = require('path');
 const railwayService = require('./src/services/railwayService');
 const supabaseService = require('./src/services/supabaseService');
 
+// --------------------------------------------------
+// INPUT SANITIZATION HELPERS
+// --------------------------------------------------
+
+function sanitizeStr(val, maxLen = 500) {
+  if (val === null || val === undefined) return '';
+  return String(val).trim().slice(0, maxLen);
+}
+
+function isValidEmail(email) {
+  if (!email) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 200;
+}
+
+function isValidDate(dateStr) {
+  if (!dateStr) return true;
+  return /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(Date.parse(dateStr));
+}
+
+const VALID_PLANS = ['Standard', 'Premium', 'Enterprise', 'Baja'];
+const VALID_TICKET_TIPOS = ['Soporte', 'Mejora', 'Bugs'];
+const VALID_TICKET_ESTADOS = ['Abierto', 'En Progreso', 'En progreso', 'Cerrado'];
+const VALID_TICKET_PRIORIDADES = ['Baja', 'Media', 'Alta'];
+const VALID_PAYMENT_METODOS = ['Transferencia', 'Efectivo', 'Mercado Pago', 'Crypto', 'Cripto', 'Otro'];
+
 const app = express();
 
 app.use(express.json());
@@ -38,7 +63,9 @@ app.get('/login', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-  if (req.body.password === process.env.ADMIN_PASSWORD) {
+  const password = sanitizeStr(req.body.password, 200);
+  if (!password) return res.status(400).json({ ok: false, error: 'Contraseña requerida' });
+  if (password === process.env.ADMIN_PASSWORD) {
     req.session.authenticated = true;
     return res.json({ ok: true });
   }
@@ -76,7 +103,9 @@ router.get('/assistants', async (req, res) => {
 
 // Projects
 router.patch('/projects/:id/name', async (req, res) => {
-  try { res.json(await railwayService.updateProjectName(req.params.id, req.body.newName)); }
+  const newName = sanitizeStr(req.body.newName, 100);
+  if (!newName) return res.status(400).json({ error: 'El nombre es requerido' });
+  try { res.json(await railwayService.updateProjectName(req.params.id, newName)); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -105,7 +134,8 @@ router.get('/projects/:id/whatsapp', async (req, res) => {
 
 // Templates
 router.get('/templates', async (req, res) => {
-  try { res.json(await railwayService.searchTemplates(req.query.q || '')); }
+  const q = sanitizeStr(req.query.q, 100);
+  try { res.json(await railwayService.searchTemplates(q)); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -121,20 +151,14 @@ router.post('/templates/:id/deploy', async (req, res) => {
 
 // Services
 router.post('/services/:id/redeploy', async (req, res) => {
+  const environmentId = sanitizeStr(req.body.environmentId, 200);
   try {
-    const result = await railwayService.redeployService(req.params.id, req.body.environmentId);
+    const result = await railwayService.redeployService(req.params.id, environmentId);
     await supabaseService.logAction('Reiniciar Servicio', `Reinicio de servicio ID: ${req.params.id}`, 'servicios', req.params.id);
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.delete('/services/:id', async (req, res) => {
-  try {
-    const result = await railwayService.deleteService(req.params.id);
-    await supabaseService.logAction('Eliminar Servicio', `Eliminación de servicio ID: ${req.params.id}`, 'servicios', req.params.id);
-    res.json(result);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
 
 // Variables
 router.get('/variables', async (req, res) => {
@@ -144,7 +168,12 @@ router.get('/variables', async (req, res) => {
 });
 
 router.post('/variables', async (req, res) => {
-  const { projectId, environmentId, serviceId, name, value } = req.body;
+  const projectId = sanitizeStr(req.body.projectId, 200);
+  const environmentId = sanitizeStr(req.body.environmentId, 200);
+  const serviceId = sanitizeStr(req.body.serviceId, 200);
+  const name = sanitizeStr(req.body.name, 200);
+  const value = sanitizeStr(req.body.value, 32768);
+  if (!name) return res.status(400).json({ error: 'El nombre de la variable es requerido' });
   try {
     const result = await railwayService.upsertVariable(projectId, environmentId, serviceId, name, value);
     await supabaseService.logAction('Cambio Variable', `Se actualizó la variable ${name}`, 'variables', serviceId || projectId);
@@ -153,7 +182,11 @@ router.post('/variables', async (req, res) => {
 });
 
 router.post('/variables/delete', async (req, res) => {
-  const { projectId, environmentId, serviceId, name } = req.body;
+  const projectId = sanitizeStr(req.body.projectId, 200);
+  const environmentId = sanitizeStr(req.body.environmentId, 200);
+  const serviceId = sanitizeStr(req.body.serviceId, 200);
+  const name = sanitizeStr(req.body.name, 200);
+  if (!name) return res.status(400).json({ error: 'El nombre de la variable es requerido' });
   try { res.json(await railwayService.deleteVariable(projectId, environmentId, serviceId, name)); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -167,7 +200,9 @@ router.get('/domains', async (req, res) => {
 
 // Clients — /link debe ir antes de /:id para evitar conflicto de rutas
 router.post('/clients/link', async (req, res) => {
-  const { railwayProjectId, clientId } = req.body;
+  const railwayProjectId = sanitizeStr(req.body.railwayProjectId, 200);
+  const clientId = sanitizeStr(req.body.clientId, 200);
+  if (!railwayProjectId || !clientId) return res.status(400).json({ error: 'railwayProjectId y clientId son requeridos' });
   try {
     const result = await supabaseService.linkProjectToClient(railwayProjectId, clientId);
     await supabaseService.logAction('Vincular Proyecto', `Se vinculó el proyecto ${railwayProjectId} al cliente ID: ${clientId}`, 'clientes', clientId);
@@ -181,9 +216,20 @@ router.get('/clients', async (req, res) => {
 });
 
 router.post('/clients', async (req, res) => {
+  const nombre = sanitizeStr(req.body.nombre, 100);
+  const email = sanitizeStr(req.body.email, 200) || null;
+  const empresa = sanitizeStr(req.body.empresa, 100) || null;
+  const telefono = sanitizeStr(req.body.telefono, 20) || null;
+  const plan = VALID_PLANS.includes(req.body.plan) ? req.body.plan : 'Standard';
+  const vencimiento = isValidDate(req.body.vencimiento) ? (req.body.vencimiento || null) : null;
+
+  if (!nombre) return res.status(400).json({ error: 'El nombre es requerido' });
+  if (email && !isValidEmail(email)) return res.status(400).json({ error: 'Email inválido' });
+
+  const clientData = { nombre, email, empresa, telefono, plan, vencimiento };
   try {
-    const result = await supabaseService.createClient(req.body);
-    await supabaseService.logAction('Crear Cliente', `Se creó el cliente ${req.body.nombre}`, 'clientes', result.id);
+    const result = await supabaseService.createClient(clientData);
+    await supabaseService.logAction('Crear Cliente', `Se creó el cliente ${nombre}`, 'clientes', result.id);
     res.json(result);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'El email ya esta registrado en otro cliente.' });
@@ -192,9 +238,23 @@ router.post('/clients', async (req, res) => {
 });
 
 router.patch('/clients/:id', async (req, res) => {
+  const clientData = {};
+  if (req.body.nombre !== undefined) {
+    clientData.nombre = sanitizeStr(req.body.nombre, 100);
+    if (!clientData.nombre) return res.status(400).json({ error: 'El nombre no puede estar vacío' });
+  }
+  if (req.body.email !== undefined) {
+    clientData.email = sanitizeStr(req.body.email, 200) || null;
+    if (clientData.email && !isValidEmail(clientData.email)) return res.status(400).json({ error: 'Email inválido' });
+  }
+  if (req.body.empresa !== undefined) clientData.empresa = sanitizeStr(req.body.empresa, 100) || null;
+  if (req.body.telefono !== undefined) clientData.telefono = sanitizeStr(req.body.telefono, 20) || null;
+  if (req.body.plan !== undefined) clientData.plan = VALID_PLANS.includes(req.body.plan) ? req.body.plan : 'Standard';
+  if (req.body.vencimiento !== undefined) clientData.vencimiento = isValidDate(req.body.vencimiento) ? (req.body.vencimiento || null) : null;
+
   try {
-    const result = await supabaseService.updateClient(req.params.id, req.body);
-    await supabaseService.logAction('Actualizar Cliente', `Se actualizaron datos de ${req.body.nombre || 'cliente'}`, 'clientes', req.params.id);
+    const result = await supabaseService.updateClient(req.params.id, clientData);
+    await supabaseService.logAction('Actualizar Cliente', `Se actualizaron datos de ${clientData.nombre || 'cliente'}`, 'clientes', req.params.id);
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -224,22 +284,52 @@ router.get('/clients/:id/payments', async (req, res) => {
 
 // Tickets
 router.get('/tickets', async (req, res) => {
-  try { res.json(await supabaseService.getTickets(req.query)); }
+  const filters = {
+    estado: sanitizeStr(req.query.estado, 50) || undefined,
+    tipo: sanitizeStr(req.query.tipo, 50) || undefined,
+    cliente_id: sanitizeStr(req.query.cliente_id, 200) || undefined,
+  };
+  Object.keys(filters).forEach(k => filters[k] === undefined && delete filters[k]);
+  try { res.json(await supabaseService.getTickets(filters)); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/tickets', async (req, res) => {
+  const titulo = sanitizeStr(req.body.titulo, 200);
+  const cliente_id = sanitizeStr(req.body.cliente_id, 200);
+  if (!titulo) return res.status(400).json({ error: 'El título es requerido' });
+  if (!cliente_id) return res.status(400).json({ error: 'El cliente es requerido' });
+
+  const ticketData = {
+    titulo,
+    cliente_id,
+    descripcion: sanitizeStr(req.body.descripcion, 5000) || null,
+    tipo: VALID_TICKET_TIPOS.includes(req.body.tipo) ? req.body.tipo : 'Soporte',
+    estado: VALID_TICKET_ESTADOS.includes(req.body.estado) ? req.body.estado : 'Abierto',
+    prioridad: VALID_TICKET_PRIORIDADES.includes(req.body.prioridad) ? req.body.prioridad : 'Media',
+  };
   try {
-    const result = await supabaseService.createTicket(req.body);
-    await supabaseService.logAction('Crear Ticket', `Nuevo ticket: ${req.body.titulo}`, 'tickets', result.id);
+    const result = await supabaseService.createTicket(ticketData);
+    await supabaseService.logAction('Crear Ticket', `Nuevo ticket: ${titulo}`, 'tickets', result.id);
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.patch('/tickets/:id', async (req, res) => {
+  const ticketData = {};
+  if (req.body.titulo !== undefined) {
+    ticketData.titulo = sanitizeStr(req.body.titulo, 200);
+    if (!ticketData.titulo) return res.status(400).json({ error: 'El título no puede estar vacío' });
+  }
+  if (req.body.descripcion !== undefined) ticketData.descripcion = sanitizeStr(req.body.descripcion, 5000) || null;
+  if (req.body.cliente_id !== undefined) ticketData.cliente_id = sanitizeStr(req.body.cliente_id, 200);
+  if (req.body.tipo !== undefined) ticketData.tipo = VALID_TICKET_TIPOS.includes(req.body.tipo) ? req.body.tipo : 'Soporte';
+  if (req.body.estado !== undefined) ticketData.estado = VALID_TICKET_ESTADOS.includes(req.body.estado) ? req.body.estado : 'Abierto';
+  if (req.body.prioridad !== undefined) ticketData.prioridad = VALID_TICKET_PRIORIDADES.includes(req.body.prioridad) ? req.body.prioridad : 'Media';
+
   try {
-    const result = await supabaseService.updateTicket(req.params.id, req.body);
-    const statusMsg = req.body.estado ? ` (Estado: ${req.body.estado})` : "";
+    const result = await supabaseService.updateTicket(req.params.id, ticketData);
+    const statusMsg = ticketData.estado ? ` (Estado: ${ticketData.estado})` : "";
     await supabaseService.logAction('Actualizar Ticket', `Ticket #${req.params.id} actualizado${statusMsg}`, 'tickets', req.params.id);
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -263,9 +353,21 @@ router.get('/payments', async (req, res) => {
 });
 
 router.post('/payments', async (req, res) => {
+  const cliente_id = sanitizeStr(req.body.cliente_id, 200);
+  const concepto = sanitizeStr(req.body.concepto, 200);
+  const metodo = VALID_PAYMENT_METODOS.includes(req.body.metodo) ? req.body.metodo : 'Transferencia';
+  const fecha = req.body.fecha;
+  const monto = parseFloat(req.body.monto);
+
+  if (!cliente_id) return res.status(400).json({ error: 'El cliente es requerido' });
+  if (!concepto) return res.status(400).json({ error: 'El concepto es requerido' });
+  if (!isValidDate(fecha) || !fecha) return res.status(400).json({ error: 'Fecha inválida' });
+  if (isNaN(monto) || monto <= 0) return res.status(400).json({ error: 'Monto inválido' });
+
+  const paymentData = { cliente_id, concepto, metodo, fecha, monto };
   try {
-    const result = await supabaseService.createPayment(req.body);
-    await supabaseService.logAction('Registrar Pago', `Pago de $${req.body.monto} - ${req.body.concepto}`, 'pagos', result.id);
+    const result = await supabaseService.createPayment(paymentData);
+    await supabaseService.logAction('Registrar Pago', `Pago de $${monto} - ${concepto}`, 'pagos', result.id);
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

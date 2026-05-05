@@ -55,12 +55,7 @@
         <i class="bi bi-moon-stars" id="theme-icon"></i>
       </div>
 
-      <div class="sidebar-item" id="btn-updates" title="Actualizaciones">
-        <i class="bi bi-arrow-down-circle"></i>
-        <span id="updates-badge" class="sidebar-badge" style="display:none;">1</span>
-      </div>
-
-      <div class="sidebar-item" id="btn-about" title="Acerca de">
+<div class="sidebar-item" id="btn-about" title="Acerca de">
         <i class="bi bi-info-circle"></i>
       </div>
 
@@ -224,36 +219,8 @@
     </div>
   </div>
 
-  <!-- UPDATE MODAL -->
-  <div class="modal fade" id="updateModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content glass-card border-warning">
-        <div class="modal-header border-warning">
-          <h5 class="modal-title">
-            Nueva versión disponible
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <h6 id="update-modal-version" class="text-warning mb-3"></h6>
-          <div id="update-modal-notes" class="small text-secondary mb-3"></div>
-          <div id="update-progress" class="progress d-none">
-            <div id="update-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated"
-              style="width:0%">
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer border-warning">
-          <button id="btnModalUpdate" class="btn btn-outline-warning btn-sm">
-            Actualizar ahora
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 
-
-  <!-- ABOUT MODAL -->
+<!-- ABOUT MODAL -->
   <div class="modal fade" id="aboutModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content glass-card text-light">
@@ -290,7 +257,7 @@
   <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999"></div>
 
   <!-- OFFCANVAS NOTIFICATIONS -->
-  <div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="notificationsCanvas" style="width: 380px;">
+  <div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="notificationsCanvas">
     <div class="offcanvas-header notif-canvas-header">
       <div class="d-flex align-items-center gap-2 flex-grow-1">
         <div class="notif-header-icon">
@@ -358,8 +325,7 @@
   <script src="/core/SmartRefresh.js" defer></script>
   <script src="/core/Notifications.js" defer></script>
   <script src="/core/GlobalDashboard.js" defer></script>
-  <script src="/core/AutoUpdate.js" defer></script>
-  <script src="/views/clients-view.js" defer></script>
+<script src="/views/clients-view.js" defer></script>
   <script src="/views/tickets-view.js" defer></script>
   <script src="/views/billing-view.js" defer></script>
   <script src="/views/audit-view.js" defer></script>

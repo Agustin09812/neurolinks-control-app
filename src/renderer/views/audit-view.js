@@ -27,7 +27,7 @@ async function renderAuditView() {
                         <input type="text" class="form-control text-main" id="auditSearch" onkeyup="filterAuditLogs()">
                     </div>
                     <button class="btn btn-outline-light btn-sm" onclick="loadAuditLogs()">
-                        <i class="bi bi-arrow-clockwise me-2"></i>Actualizar
+                        <i class="bi bi-arrow-clockwise btn-refresh-icon"></i><span class="btn-refresh-label"> Actualizar</span>
                     </button>
                 </div>
             </div>

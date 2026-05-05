@@ -260,7 +260,7 @@ function renderAssistantsGrid() {
             <input type="text" class="form-control" id="searchAssistants">
           </div>
           <button class="btn btn-outline-light btn-sm" id="btnRefreshAssistants">
-            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+            <i class="bi bi-arrow-clockwise btn-refresh-icon"></i><span class="btn-refresh-label"> Actualizar</span>
           </button>
         </div>
       </div>
@@ -294,7 +294,7 @@ function renderAssistantsGrid() {
     const statusColor = getStatusColor(project.status);
 
     const col = document.createElement("div");
-    col.className = "col-xl-3 col-lg-4 col-md-6";
+    col.className = "col-12 col-sm-6 col-md-6 col-lg-4 col-xl-3";
     const hasUpdate = project.services.some(s => s.isUpdatable);
 
     col.innerHTML = `
@@ -1296,11 +1296,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.body.classList.remove("app-preload");
   startAutoRefresh();
 
-  // btn-updates listener consolidados!!
-  const btnUpdates = document.getElementById("btn-updates");
-  if (btnUpdates) {
-    btnUpdates.addEventListener("click", openUpdateModal);
-  }
 
   // --------------------------------------
   // THEME: Cargar tema guardado
@@ -1347,11 +1342,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 
-// --------------------------------------------------
-// EXTERNAL SELECTION (MESSAGING FROM OTHER WINDOWS)
-// --------------------------------------------------
-window.api.onSelectProject((projectId) => {
-  const project = assistants.find(p => p.id === projectId);
-  if (project) renderDetail(project);
-  else console.warn("Project not found:", projectId);
-});

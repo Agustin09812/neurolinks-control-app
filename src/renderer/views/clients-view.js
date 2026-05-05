@@ -206,7 +206,7 @@ function renderClientCards() {
         const initials = c.nombre.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
         const isNew = !existingIds.has(c.id);
         const col = document.createElement("div");
-        col.className = "col-xl-3 col-lg-4 col-md-6";
+        col.className = "col-12 col-sm-6 col-md-6 col-lg-4 col-xl-3";
 
         col.innerHTML = `
             <div class="glass-card p-3 h-100 hover-lift clickable client-card${isNew ? " anim-card-enter" : ""}"
@@ -214,10 +214,10 @@ function renderClientCards() {
                 <div class="d-flex align-items-center gap-3">
                     <div class="client-avatar-lg flex-shrink-0">${initials}</div>
                     <div class="flex-grow-1 min-w-0 overflow-hidden">
-                        <div class="fw-bold text-truncate">${c.nombre}</div>
-                        <div class="small text-dim text-truncate">${c.empresa || 'Particular'}</div>
+                        <div class="fw-bold text-truncate">${escapeHtml(c.nombre)}</div>
+                        <div class="small text-dim text-truncate">${escapeHtml(c.empresa || 'Particular')}</div>
                         <div class="d-flex align-items-center gap-2 mt-1">
-                            <span class="badge ${getPlanBadgeClass(c.plan)}">${c.plan || 'Standard'}</span>
+                            <span class="badge ${getPlanBadgeClass(c.plan)}">${escapeHtml(c.plan || 'Standard')}</span>
                             <span class="small text-dim" id="ast-count-${c.id}"><i class="bi bi-robot"></i></span>
                         </div>
                     </div>
@@ -263,7 +263,7 @@ async function openClientDetail(clientId, defaultTab = "perfil") {
     renderClientDetailStructure(client);
 
     if (defaultTab !== "perfil") {
-        document.querySelectorAll("#client-detail-tabs .nav-link").forEach(b => {
+        document.querySelectorAll("#client-detail-tabs .client-tab-btn").forEach(b => {
             b.classList.toggle("active", b.dataset.tab === defaultTab);
         });
     }
@@ -284,34 +284,26 @@ function renderClientDetailStructure(client) {
                 </button>
                 <div class="client-avatar-lg flex-shrink-0">${initials}</div>
                 <div>
-                    <h4 class="fw-bold mb-1">${client.nombre}</h4>
-                    <span class="badge ${getPlanBadgeClass(client.plan)}">${client.plan || 'Standard'}</span>
+                    <h4 class="fw-bold mb-1">${escapeHtml(client.nombre)}</h4>
+                    <span class="badge ${getPlanBadgeClass(client.plan)}">${escapeHtml(client.plan || 'Standard')}</span>
                 </div>
             </div>
 
             <!-- TABS -->
-            <ul class="nav nav-tabs mb-4" id="client-detail-tabs">
-                <li class="nav-item">
-                    <button class="nav-link active" data-tab="perfil">
-                        <i class="bi bi-person me-2"></i>Perfil
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" data-tab="facturacion">
-                        <i class="bi bi-credit-card me-2"></i>Facturacion
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" data-tab="tickets">
-                        <i class="bi bi-ticket-perforated me-2"></i>Tickets
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" data-tab="asistente">
-                        <i class="bi bi-robot me-2"></i>Asistente
-                    </button>
-                </li>
-            </ul>
+            <div class="client-tab-scroll mb-4" id="client-detail-tabs">
+                <button class="client-tab-btn active" data-tab="perfil">
+                    <i class="bi bi-person me-1"></i>Perfil
+                </button>
+                <button class="client-tab-btn" data-tab="facturacion">
+                    <i class="bi bi-credit-card me-1"></i>Facturación
+                </button>
+                <button class="client-tab-btn" data-tab="tickets">
+                    <i class="bi bi-ticket-perforated me-1"></i>Tickets
+                </button>
+                <button class="client-tab-btn" data-tab="asistente">
+                    <i class="bi bi-robot me-1"></i>Asistente
+                </button>
+            </div>
 
             <!-- TAB CONTENT -->
             <div id="client-tab-content"></div>
@@ -334,7 +326,7 @@ function renderClientDetailStructure(client) {
     document.getElementById("client-detail-tabs").addEventListener("click", (e) => {
         const btn = e.target.closest("[data-tab]");
         if (!btn) return;
-        document.querySelectorAll("#client-detail-tabs .nav-link").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll("#client-detail-tabs .client-tab-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         const client = allClients.find(c => c.id === currentClientDetailId);
         loadClientDetailTab(btn.dataset.tab, client);
@@ -381,23 +373,23 @@ function renderPerfilTab(client, container) {
                     <div class="d-flex flex-column gap-3">
                         <div>
                             <div class="small text-dim fw-bold mb-1">NOMBRE</div>
-                            <div>${client.nombre}</div>
+                            <div>${escapeHtml(client.nombre)}</div>
                         </div>
                         <div>
                             <div class="small text-dim fw-bold mb-1">EMPRESA</div>
-                            <div>${client.empresa || '-'}</div>
+                            <div>${escapeHtml(client.empresa || '-')}</div>
                         </div>
                         <div>
                             <div class="small text-dim fw-bold mb-1">EMAIL</div>
-                            <div>${client.email || '-'}</div>
+                            <div>${escapeHtml(client.email || '-')}</div>
                         </div>
                         <div>
                             <div class="small text-dim fw-bold mb-1">TELEFONO</div>
-                            <div>${client.telefono || '-'}</div>
+                            <div>${escapeHtml(client.telefono || '-')}</div>
                         </div>
                         <div>
                             <div class="small text-dim fw-bold mb-1">PLAN</div>
-                            <span class="badge ${getPlanBadgeClass(client.plan)}">${client.plan || 'Standard'}</span>
+                            <span class="badge ${getPlanBadgeClass(client.plan)}">${escapeHtml(client.plan || 'Standard')}</span>
                         </div>
                         <div>
                             <div class="small text-dim fw-bold mb-1">VENCIMIENTO</div>
@@ -532,9 +524,9 @@ async function loadDetailPayments(clientId) {
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td>${new Date(p.fecha).toLocaleDateString()}</td>
-                <td class="small">${p.concepto}</td>
-                <td class="fw-bold">$${p.monto}</td>
-                <td class="small text-dim">${p.metodo}</td>
+                <td class="small">${escapeHtml(p.concepto)}</td>
+                <td class="fw-bold">$${escapeHtml(String(p.monto))}</td>
+                <td class="small text-dim">${escapeHtml(p.metodo)}</td>
                 <td class="text-end">
                     <button class="btn btn-link text-danger p-0">
                         <i class="bi bi-trash"></i>
@@ -607,9 +599,9 @@ async function renderClientAssistantTab(clientId, container) {
                             <i class="bi bi-cpu text-${statusColor}"></i>
                         </div>
                         <div class="flex-grow-1 min-w-0 overflow-hidden">
-                            <div class="fw-bold text-truncate">${p.name}</div>
+                            <div class="fw-bold text-truncate">${escapeHtml(p.name)}</div>
                             <span class="badge bg-${statusColor} bg-opacity-10 text-${statusColor} border border-${statusColor} border-opacity-25 small">
-                                ${p.status.toUpperCase()}
+                                ${escapeHtml(p.status.toUpperCase())}
                             </span>
                         </div>
                     </div>
@@ -723,9 +715,9 @@ async function renderLinkAssistantList(clientId, container, bsModal, search = ""
             item.innerHTML = `
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-cpu text-${statusColor}"></i>
-                    <span class="fw-semibold small">${p.name}</span>
+                    <span class="fw-semibold small">${escapeHtml(p.name)}</span>
                     <span class="badge bg-${statusColor} bg-opacity-10 text-${statusColor} border border-${statusColor} border-opacity-25">
-                        ${p.status.toUpperCase()}
+                        ${escapeHtml(p.status.toUpperCase())}
                     </span>
                 </div>
                 <button class="btn btn-outline-success btn-sm btn-link-assistant">
