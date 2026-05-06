@@ -33,6 +33,7 @@ const VALID_PAYMENT_METODOS = ['Transferencia', 'Efectivo', 'Mercado Pago', 'Cry
 
 const app = express();
 
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(session({
   secret: process.env.SESSION_SECRET || 'neurolinks-dev-secret',
