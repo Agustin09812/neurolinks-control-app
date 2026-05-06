@@ -190,6 +190,18 @@ const railwayService = {
     return await railwayQuery(query, { id: projectId, input: { name: newName } });
   },
 
+  async updateServiceName(serviceId, newName) {
+    const query = `
+      mutation serviceUpdate($id: String!, $input: ServiceUpdateInput!) {
+        serviceUpdate(id: $id, input: $input) {
+          id
+          name
+        }
+      }
+    `;
+    return await railwayQuery(query, { id: serviceId, input: { name: newName } });
+  },
+
   async deleteProject(projectId) {
     const query = `
       mutation projectDelete($id: String!) {

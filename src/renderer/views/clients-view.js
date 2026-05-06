@@ -17,19 +17,11 @@ async function renderClientsView() {
 
             <!-- GRID PANEL -->
             <div id="clients-grid-panel">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-                    <h2 class="fw-bold mb-0">CLIENTES</h2>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-outline-light btn-sm" id="btn-new-client">
-                            <i class="bi bi-person-plus me-2"></i>Nuevo Cliente
-                        </button>
-                        <button class="btn btn-outline-light btn-sm" onclick="exportClientsToCSV()">
-                            <i class="bi bi-file-earmark-excel me-2"></i>Exportar
-                        </button>
-                    </div>
+                <div class="mb-4">
+                    <h2 class="fw-bold mb-0 clients-header-title">CLIENTES</h2>
                 </div>
 
-                <!-- Busqueda + filtro de plan -->
+                <!-- Busqueda + filtro de plan + acciones -->
                 <div class="d-flex gap-2 mb-4 align-items-center flex-wrap">
                     <div class="input-group input-group-sm search-input-group">
                         <span class="input-group-text bg-dark border-secondary text-dim">
@@ -38,13 +30,19 @@ async function renderClientsView() {
                         <input type="text" class="form-control text-main" id="clients-search-input"
                             placeholder="Buscar cliente...">
                     </div>
-                    <div class="d-flex gap-1 flex-wrap" id="plan-filter-pills">
-                        <button class="btn btn-sm btn-outline-secondary active" data-plan="">Todos</button>
-                        <button class="btn btn-sm btn-outline-info" data-plan="Standard">Standard</button>
-                        <button class="btn btn-sm btn-outline-danger" data-plan="Premium">Premium</button>
-                        <button class="btn btn-sm btn-outline-warning" data-plan="Enterprise">Enterprise</button>
-                        <button class="btn btn-sm btn-outline-secondary" data-plan="Baja">Baja</button>
-                    </div>
+                    <select class="form-select form-select-sm" id="plan-filter-select" style="width:auto;">
+                        <option value="">Todos los planes</option>
+                        <option value="Standard">Standard</option>
+                        <option value="Premium">Premium</option>
+                        <option value="Enterprise">Enterprise</option>
+                        <option value="Baja">Baja</option>
+                    </select>
+                    <button class="btn btn-outline-light btn-sm" id="btn-new-client" title="Nuevo Cliente">
+                        <i class="bi bi-person-plus btn-clients-icon"></i><span class="btn-clients-label"> Nuevo Cliente</span>
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" onclick="exportClientsToCSV()" title="Exportar CSV">
+                        <i class="bi bi-file-earmark-excel btn-clients-icon"></i><span class="btn-clients-label"> Exportar</span>
+                    </button>
                 </div>
 
                 <!-- Grid de cards -->
@@ -75,6 +73,10 @@ async function renderClientsView() {
                                 <div class="col-md-12">
                                     <label class="form-label text-dim small fw-bold">EMPRESA</label>
                                     <input type="text" class="form-control text-main" id="clientCompany">
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label text-dim small fw-bold required">ABONO MENSUAL ($)</label>
+                                    <input type="number" step="0.01" min="0" class="form-control text-main" id="clientAbono" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label text-dim small fw-bold">EMAIL</label>
@@ -116,12 +118,8 @@ async function renderClientsView() {
         renderClientCards();
     });
 
-    document.getElementById("plan-filter-pills").addEventListener("click", (e) => {
-        const btn = e.target.closest("[data-plan]");
-        if (!btn) return;
-        document.querySelectorAll("#plan-filter-pills [data-plan]").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        clientsPlanFilter = btn.dataset.plan;
+    document.getElementById("plan-filter-select").addEventListener("change", (e) => {
+        clientsPlanFilter = e.target.value;
         renderClientCards();
     });
 
@@ -216,6 +214,7 @@ function renderClientCards() {
                     <div class="flex-grow-1 min-w-0 overflow-hidden">
                         <div class="fw-bold text-truncate">${escapeHtml(c.nombre)}</div>
                         <div class="small text-dim text-truncate">${escapeHtml(c.empresa || 'Particular')}</div>
+                        <div class="small text-dim text-truncate">$${escapeHtml(String(c.abono ?? 0))}/mes</div>
                         <div class="d-flex align-items-center gap-2 mt-1">
                             <span class="badge ${getPlanBadgeClass(c.plan)}">${escapeHtml(c.plan || 'Standard')}</span>
                             <span class="small text-dim" id="ast-count-${c.id}"><i class="bi bi-robot"></i></span>
@@ -251,7 +250,7 @@ function renderClientCards() {
 // DETAIL PANEL
 // -----------------------------------------------
 
-async function openClientDetail(clientId, defaultTab = "perfil") {
+async function openClientDetail(clientId) {
     currentClientDetailId = clientId;
     const client = allClients.find(c => c.id === clientId);
     if (!client) return;
@@ -261,14 +260,7 @@ async function openClientDetail(clientId, defaultTab = "perfil") {
     detailPanel.style.display = "block";
 
     renderClientDetailStructure(client);
-
-    if (defaultTab !== "perfil") {
-        document.querySelectorAll("#client-detail-tabs .client-tab-btn").forEach(b => {
-            b.classList.toggle("active", b.dataset.tab === defaultTab);
-        });
-    }
-
-    loadClientDetailTab(defaultTab, client);
+    loadClientFullDetail(client);
 }
 
 function renderClientDetailStructure(client) {
@@ -278,35 +270,14 @@ function renderClientDetailStructure(client) {
     detailPanel.innerHTML = `
         <div class="anim-slide-right">
             <!-- HEADER -->
-            <div class="d-flex align-items-center gap-3 mb-4">
-                <button class="btn btn-outline-light btn-sm" id="btn-back-to-grid">
+            <div class="mb-4">
+                <button class="btn btn-outline-light btn-sm" id="btn-back-to-grid" title="Volver">
                     <i class="bi bi-arrow-left me-2"></i>Volver
                 </button>
-                <div class="client-avatar-lg flex-shrink-0">${initials}</div>
-                <div>
-                    <h4 class="fw-bold mb-1">${escapeHtml(client.nombre)}</h4>
-                    <span class="badge ${getPlanBadgeClass(client.plan)}">${escapeHtml(client.plan || 'Standard')}</span>
-                </div>
             </div>
 
-            <!-- TABS -->
-            <div class="client-tab-scroll mb-4" id="client-detail-tabs">
-                <button class="client-tab-btn active" data-tab="perfil">
-                    <i class="bi bi-person me-1"></i>Perfil
-                </button>
-                <button class="client-tab-btn" data-tab="facturacion">
-                    <i class="bi bi-credit-card me-1"></i>Facturación
-                </button>
-                <button class="client-tab-btn" data-tab="tickets">
-                    <i class="bi bi-ticket-perforated me-1"></i>Tickets
-                </button>
-                <button class="client-tab-btn" data-tab="asistente">
-                    <i class="bi bi-robot me-1"></i>Asistente
-                </button>
-            </div>
-
-            <!-- TAB CONTENT -->
-            <div id="client-tab-content"></div>
+            <!-- DETAIL BODY -->
+            <div id="client-detail-body"></div>
         </div>
     `;
 
@@ -322,162 +293,179 @@ function renderClientDetailStructure(client) {
         dp.style.display = "none";
         document.getElementById("clients-grid-panel").style.display = "block";
     });
-
-    document.getElementById("client-detail-tabs").addEventListener("click", (e) => {
-        const btn = e.target.closest("[data-tab]");
-        if (!btn) return;
-        document.querySelectorAll("#client-detail-tabs .client-tab-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        const client = allClients.find(c => c.id === currentClientDetailId);
-        loadClientDetailTab(btn.dataset.tab, client);
-    });
-}
-
-function loadClientDetailTab(tab, client) {
-    const container = document.getElementById("client-tab-content");
-    if (!container) return;
-    container.innerHTML = `
-        <div class="text-center py-4">
-            <div class="spinner-border spinner-border-sm text-dim"></div>
-        </div>
-    `;
-
-    switch (tab) {
-        case "perfil": renderPerfilTab(client, container); break;
-        case "facturacion": renderFacturacionTab(client.id, container); break;
-        case "tickets": renderClientTicketsTab(client.id, container); break;
-        case "asistente": renderClientAssistantTab(client.id, container); break;
-    }
-    container.firstElementChild?.classList.add("anim-panel-enter");
 }
 
 // -----------------------------------------------
-// TAB: PERFIL
+// DETAIL BODY (single-page layout)
 // -----------------------------------------------
 
-function renderPerfilTab(client, container) {
+async function loadClientFullDetail(client) {
+    const body = document.getElementById("client-detail-body");
+    if (!body) return;
+
+    const initials = client.nombre.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
     const vencimiento = client.vencimiento ? new Date(client.vencimiento) : null;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const isExpired = vencimiento && vencimiento < today;
 
-    container.innerHTML = `
-        <div class="row g-4">
-            <div class="col-md-6">
-                <div class="glass-card p-4 rounded h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h5 class="fw-bold mb-0">Datos del Cliente</h5>
-                        <button class="btn btn-outline-light btn-sm btn-edit-perfil">
-                            <i class="bi bi-pencil me-2"></i>Editar
-                        </button>
+    body.innerHTML = `
+        <!-- DATOS DEL CLIENTE -->
+        <div class="glass-card px-4 py-3 rounded mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="client-avatar flex-shrink-0">${initials}</div>
+                    <div>
+                        <div class="fw-bold">${escapeHtml(client.nombre)}</div>
+                        <span class="badge ${getPlanBadgeClass(client.plan)}">${escapeHtml(client.plan || 'Standard')}</span>
                     </div>
-                    <div class="d-flex flex-column gap-3">
-                        <div>
-                            <div class="small text-dim fw-bold mb-1">NOMBRE</div>
-                            <div>${escapeHtml(client.nombre)}</div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-outline-light btn-sm" id="btn-ver-pagos">
+                        <i class="bi bi-credit-card me-1"></i>Pagos
+                    </button>
+                    <button class="btn btn-outline-light btn-sm btn-edit-perfil">
+                        <i class="bi bi-pencil me-1"></i>Editar
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm btn-delete-perfil">
+                        <i class="bi bi-trash me-1"></i>Eliminar
+                    </button>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-6 col-md-3">
+                    <div class="x-small text-dim fw-bold mb-1">EMPRESA</div>
+                    <div class="small">${escapeHtml(client.empresa || '-')}</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="x-small text-dim fw-bold mb-1">ABONO MENSUAL</div>
+                    <div class="small fw-bold">$${escapeHtml(String(client.abono ?? 0))}</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="x-small text-dim fw-bold mb-1">EMAIL</div>
+                    <div class="small text-truncate">${escapeHtml(client.email || '-')}</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="x-small text-dim fw-bold mb-1">TELEFONO</div>
+                    <div class="small">${escapeHtml(client.telefono || '-')}</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="x-small text-dim fw-bold mb-1">VENCIMIENTO</div>
+                    <div class="small ${isExpired ? 'text-danger fw-bold' : ''}">
+                        ${vencimiento ? vencimiento.toLocaleDateString() : '-'}
+                        ${isExpired ? '<span class="badge bg-danger ms-1">VENCIDO</span>' : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ASISTENTES VINCULADOS -->
+        <div class="mb-4">
+            <h6 class="text-dim small fw-bold mb-3">ASISTENTES VINCULADOS</h6>
+            <div id="detail-assistants-container">
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-dim"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TICKETS -->
+        <div id="client-tickets-container" class="mb-4"></div>
+    `;
+
+    body.querySelector(".btn-edit-perfil").onclick = () => openEditClient(client.id);
+    body.querySelector(".btn-delete-perfil").onclick = () => handleDeleteClient(client.id);
+    document.getElementById("btn-ver-pagos").onclick = () => openBillingModal(client.id);
+
+    loadClientAssistantSection(client.id);
+
+    const ticketsContainer = document.getElementById("client-tickets-container");
+    if (ticketsContainer) renderClientTicketsTab(client.id, ticketsContainer);
+}
+
+// -----------------------------------------------
+// BILLING MODAL
+// -----------------------------------------------
+
+function openBillingModal(clientId) {
+    const existing = document.getElementById("billingModal");
+    if (existing) existing.remove();
+
+    const modal = document.createElement("div");
+    modal.className = "modal fade";
+    modal.id = "billingModal";
+    modal.setAttribute("tabindex", "-1");
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content glass-card">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">Facturación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="glass-card p-4 rounded">
+                                <h6 class="text-dim small fw-bold mb-3">REGISTRAR PAGO</h6>
+                                <form id="detail-payment-form">
+                                    <input type="hidden" id="detail-pay-client-id" value="${clientId}">
+                                    <div class="mb-3">
+                                        <label class="form-label small text-dim">CONCEPTO</label>
+                                        <input type="text" class="form-control form-control-sm text-light" id="detail-pay-concept" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small text-dim">MONTO ($)</label>
+                                        <input type="number" step="0.01" class="form-control form-control-sm text-light" id="detail-pay-amount" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small text-dim">METODO</label>
+                                        <select class="form-select form-select-sm" id="detail-pay-method">
+                                            <option value="Transferencia">Transferencia</option>
+                                            <option value="Efectivo">Efectivo</option>
+                                            <option value="Mercado Pago">Mercado Pago</option>
+                                            <option value="Cripto">Cripto</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small text-dim">FECHA</label>
+                                        <input type="date" class="form-control form-control-sm text-light" id="detail-pay-date" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-outline-light btn-sm w-100">
+                                        <i class="bi bi-plus-circle me-2"></i>Agregar Pago
+                                    </button>
+                                </form>
+                            </div>
                         </div>
-                        <div>
-                            <div class="small text-dim fw-bold mb-1">EMPRESA</div>
-                            <div>${escapeHtml(client.empresa || '-')}</div>
-                        </div>
-                        <div>
-                            <div class="small text-dim fw-bold mb-1">EMAIL</div>
-                            <div>${escapeHtml(client.email || '-')}</div>
-                        </div>
-                        <div>
-                            <div class="small text-dim fw-bold mb-1">TELEFONO</div>
-                            <div>${escapeHtml(client.telefono || '-')}</div>
-                        </div>
-                        <div>
-                            <div class="small text-dim fw-bold mb-1">PLAN</div>
-                            <span class="badge ${getPlanBadgeClass(client.plan)}">${escapeHtml(client.plan || 'Standard')}</span>
-                        </div>
-                        <div>
-                            <div class="small text-dim fw-bold mb-1">VENCIMIENTO</div>
-                            <div class="${isExpired ? 'text-danger fw-bold' : ''}">
-                                ${vencimiento ? vencimiento.toLocaleDateString() : '-'}
-                                ${isExpired ? ' <span class="badge bg-danger ms-1">VENCIDO</span>' : ''}
+                        <div class="col-md-8">
+                            <div class="glass-card p-4 rounded">
+                                <h6 class="text-dim small fw-bold mb-3">HISTORIAL DE PAGOS</h6>
+                                <!-- Desktop: tabla -->
+                                <div class="table-responsive d-none d-md-block">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Fecha</th>
+                                                <th>Concepto</th>
+                                                <th>Monto</th>
+                                                <th>Metodo</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="detail-payments-tbody"></tbody>
+                                    </table>
+                                </div>
+                                <!-- Mobile: cards -->
+                                <div id="detail-payments-cards" class="d-md-none d-flex flex-column gap-2"></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="glass-card p-4 rounded h-100">
-                    <h5 class="fw-bold mb-4">Zona de Peligro</h5>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-danger btn-sm btn-delete-perfil">
-                            <i class="bi bi-trash me-2"></i>Eliminar Cliente
-                        </button>
-                    </div>
-                </div>
-            </div>
         </div>
     `;
+    document.body.appendChild(modal);
 
-    container.querySelector(".btn-edit-perfil").onclick = () => openEditClient(client.id);
-    container.querySelector(".btn-delete-perfil").onclick = () => handleDeleteClient(client.id);
-}
-
-// -----------------------------------------------
-// TAB: FACTURACION
-// -----------------------------------------------
-
-async function renderFacturacionTab(clientId, container) {
-    container.innerHTML = `
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="glass-card p-4 rounded">
-                    <h6 class="text-dim small fw-bold mb-3">REGISTRAR PAGO</h6>
-                    <form id="detail-payment-form">
-                        <input type="hidden" id="detail-pay-client-id" value="${clientId}">
-                        <div class="mb-3">
-                            <label class="form-label small text-dim">CONCEPTO</label>
-                            <input type="text" class="form-control form-control-sm text-light" id="detail-pay-concept" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small text-dim">MONTO ($)</label>
-                            <input type="number" step="0.01" class="form-control form-control-sm text-light" id="detail-pay-amount" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small text-dim">METODO</label>
-                            <select class="form-select form-select-sm" id="detail-pay-method">
-                                <option value="Transferencia">Transferencia</option>
-                                <option value="Efectivo">Efectivo</option>
-                                <option value="Mercado Pago">Mercado Pago</option>
-                                <option value="Cripto">Cripto</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small text-dim">FECHA</label>
-                            <input type="date" class="form-control form-control-sm text-light" id="detail-pay-date" required>
-                        </div>
-                        <button type="submit" class="btn btn-outline-light btn-sm w-100">
-                            <i class="bi bi-plus-circle me-2"></i>Agregar Pago
-                        </button>
-                    </form>
-                </div>
-            </div>
-            <div class="col-md-8">
-                <div class="glass-card p-4 rounded">
-                    <h6 class="text-dim small fw-bold mb-3">HISTORIAL DE PAGOS</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Concepto</th>
-                                    <th>Monto</th>
-                                    <th>Metodo</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody id="detail-payments-tbody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
 
     const dateInput = document.getElementById("detail-pay-date");
     if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
@@ -504,69 +492,92 @@ async function renderFacturacionTab(clientId, container) {
     };
 
     loadDetailPayments(clientId);
+    modal.addEventListener("hidden.bs.modal", () => modal.remove());
 }
 
 async function loadDetailPayments(clientId) {
     const tbody = document.getElementById("detail-payments-tbody");
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
+    const cardsView = document.getElementById("detail-payments-cards");
+
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
+    if (cardsView) cardsView.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></div>';
+
+    const deletePayment = async (id) => {
+        if (!confirm("¿Eliminar este registro de pago?")) return;
+        try {
+            await window.api.deletePayment(id);
+            showToast("Pago eliminado", "warning");
+            loadDetailPayments(clientId);
+        } catch {
+            showToast("Error al eliminar", "danger");
+        }
+    };
 
     try {
         const payments = await window.api.getClientPayments(clientId);
-        tbody.innerHTML = "";
+
+        if (tbody) tbody.innerHTML = "";
+        if (cardsView) cardsView.innerHTML = "";
 
         if (payments.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-dim py-3">No hay pagos registrados</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-dim py-3">No hay pagos registrados</td></tr>';
+            if (cardsView) cardsView.innerHTML = '<div class="text-dim text-center py-3">No hay pagos registrados</div>';
             return;
         }
 
         payments.forEach(p => {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${new Date(p.fecha).toLocaleDateString()}</td>
-                <td class="small">${escapeHtml(p.concepto)}</td>
-                <td class="fw-bold">$${escapeHtml(String(p.monto))}</td>
-                <td class="small text-dim">${escapeHtml(p.metodo)}</td>
-                <td class="text-end">
-                    <button class="btn btn-link text-danger p-0">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            `;
-            tr.querySelector("button").onclick = async () => {
-                if (!confirm("¿Eliminar este registro de pago?")) return;
-                try {
-                    await window.api.deletePayment(p.id);
-                    showToast("Pago eliminado", "warning");
-                    loadDetailPayments(clientId);
-                } catch {
-                    showToast("Error al eliminar", "danger");
-                }
-            };
-            tbody.appendChild(tr);
+            // Fila de tabla (desktop)
+            if (tbody) {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${new Date(p.fecha).toLocaleDateString()}</td>
+                    <td class="small">${escapeHtml(p.concepto)}</td>
+                    <td class="fw-bold">$${escapeHtml(String(p.monto))}</td>
+                    <td class="small text-dim">${escapeHtml(p.metodo)}</td>
+                    <td class="text-end">
+                        <button class="btn btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
+                    </td>
+                `;
+                tr.querySelector("button").onclick = () => deletePayment(p.id);
+                tbody.appendChild(tr);
+            }
+
+            // Card (mobile)
+            if (cardsView) {
+                const card = document.createElement("div");
+                card.className = "glass-card p-3 rounded";
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="fw-bold">$${escapeHtml(String(p.monto))}</span>
+                                <span class="small text-dim">${new Date(p.fecha).toLocaleDateString()}</span>
+                            </div>
+                            <div class="small mb-1">${escapeHtml(p.concepto)}</div>
+                            <div class="small text-dim">${escapeHtml(p.metodo)}</div>
+                        </div>
+                        <button class="btn btn-link text-danger p-0 flex-shrink-0 ms-2 btn-del-payment">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `;
+                card.querySelector(".btn-del-payment").onclick = () => deletePayment(p.id);
+                cardsView.appendChild(card);
+            }
         });
     } catch {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Error al cargar pagos</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Error al cargar pagos</td></tr>';
+        if (cardsView) cardsView.innerHTML = '<div class="text-danger text-center py-3">Error al cargar pagos</div>';
     }
 }
 
 // -----------------------------------------------
-// TAB: ASISTENTE
+// ASSISTANT SECTION
 // -----------------------------------------------
 
-async function renderClientAssistantTab(clientId, container) {
-    container.innerHTML = `
-        <div class="glass-card p-4 rounded">
-            <h6 class="text-dim small fw-bold mb-4">ASISTENTE VINCULADO</h6>
-            <div id="detail-assistants-container">
-                <div class="text-center py-3">
-                    <div class="spinner-border spinner-border-sm text-dim"></div>
-                </div>
-            </div>
-        </div>
-    `;
-
+async function loadClientAssistantSection(clientId) {
     const wrap = document.getElementById("detail-assistants-container");
+    if (!wrap) return;
 
     try {
         const projectIds = await window.api.getClientProjects(clientId);
@@ -580,7 +591,7 @@ async function renderClientAssistantTab(clientId, container) {
                     <div class="small text-dim mt-1">Asociar un asistente a este cliente</div>
                 </div>
             `;
-            document.getElementById("btn-show-link-assistant").onclick = () => openLinkAssistantModal(clientId, container);
+            document.getElementById("btn-show-link-assistant").onclick = () => openLinkAssistantModal(clientId);
             return;
         }
 
@@ -588,69 +599,124 @@ async function renderClientAssistantTab(clientId, container) {
         const row = document.getElementById("assistant-cards-row");
 
         linked.forEach(p => {
-            const statusColor = getStatusColor(p.status);
-            const servCount = p.services?.length ?? 0;
-            const card = document.createElement("div");
-            card.className = "col-md-6 col-lg-4";
-            card.innerHTML = `
-                <div class="glass-card p-3 rounded d-flex flex-column gap-3 h-100">
-                    <div class="d-flex align-items-center gap-3 min-w-0">
-                        <div class="assistant-tab-icon bg-${statusColor} bg-opacity-10 border border-${statusColor} border-opacity-25">
-                            <i class="bi bi-cpu text-${statusColor}"></i>
-                        </div>
-                        <div class="flex-grow-1 min-w-0 overflow-hidden">
-                            <div class="fw-bold text-truncate">${escapeHtml(p.name)}</div>
-                            <span class="badge bg-${statusColor} bg-opacity-10 text-${statusColor} border border-${statusColor} border-opacity-25 small">
-                                ${escapeHtml(p.status.toUpperCase())}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <span class="small text-dim">
-                            <i class="bi bi-layers me-1"></i>${servCount} servicio${servCount !== 1 ? 's' : ''}
-                        </span>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-outline-danger btn-sm btn-unlink-assistant" title="Desvincular">
-                                <i class="bi bi-dash-circle"></i>
-                            </button>
-                            <button class="btn btn-outline-light btn-sm btn-open-assistant" title="Ver detalle">
-                                <i class="bi bi-arrow-right me-1"></i><span class="d-none d-xl-inline">Ver detalle</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            card.querySelector(".btn-open-assistant").onclick = () => openClientAssistantDetail(p, clientId);
-            card.querySelector(".btn-unlink-assistant").onclick = async () => {
-                if (!confirm("¿Desvincular este asistente?")) return;
-                try {
-                    await window.api.unlinkProjectClient(p.id);
-                    showToast("Asistente desvinculado", "warning");
-                    renderClientAssistantTab(clientId, container);
-                } catch {
-                    showToast("Error al desvincular", "danger");
+            (p.services?.length ? p.services : [null]).forEach((svc) => {
+                const col = document.createElement("div");
+                col.className = "col-12 col-md-4";
+
+                if (!svc) {
+                    col.innerHTML = `
+                        <div class="service-card p-3 rounded h-100">
+                            <div class="fw-bold mb-1">${escapeHtml(p.name)}</div>
+                            <div class="small text-dim">Sin servicios</div>
+                        </div>`;
+                    row.appendChild(col);
+                    return;
                 }
-            };
-            row.appendChild(card);
+
+                const card = document.createElement("div");
+                card.className = "service-card p-3 rounded h-100";
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div class="fw-bold">${escapeHtml(svc.name)}</div>
+                        <span class="service-status-icon">${getStatusIcon(svc.status)}</span>
+                    </div>
+                    <div class="x-small text-dim mb-3">Último deploy: ${formatDate(svc.createdAt)}</div>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <button class="btn btn-svc-tile btn-sm w-100 d-flex flex-column align-items-center py-2 btn-ca-backoffice">
+                                <i class="bi bi-box-arrow-up-right mb-1"></i>
+                                <span style="font-size:0.65rem;">Backoffice</span>
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-svc-tile btn-sm w-100 d-flex flex-column align-items-center py-2 btn-ca-logs">
+                                <i class="bi bi-terminal mb-1"></i>
+                                <span style="font-size:0.65rem;">Logs</span>
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-svc-tile btn-sm w-100 d-flex flex-column align-items-center py-2 btn-ca-vars">
+                                <i class="bi bi-sliders mb-1"></i>
+                                <span style="font-size:0.65rem;">Variables</span>
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-svc-tile btn-sm w-100 d-flex flex-column align-items-center py-2 btn-ca-redeploy">
+                                <i class="bi bi-arrow-repeat mb-1"></i>
+                                <span style="font-size:0.65rem;">Redeploy</span>
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-svc-tile btn-danger-tile btn-sm w-100 d-flex flex-column align-items-center py-2 btn-ca-unlink">
+                                <i class="bi bi-dash-circle mb-1"></i>
+                                <span style="font-size:0.65rem;">Desvincular</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                card.querySelector(".btn-ca-backoffice").onclick = async () => {
+                    try {
+                        const domains = await window.api.getServiceDomains(svc.projectId, svc.environmentId, svc.id);
+                        let domain = domains?.customDomains?.[0]?.domain || domains?.serviceDomains?.[0]?.domain;
+                        if (!domain) { showToast("No se encontró URL para este servicio", "warning"); return; }
+                        if (!domain.startsWith("http")) domain = "https://" + domain;
+                        window.api.openDashboardWindow(domain);
+                    } catch { showToast("Error al obtener URL del servicio", "danger"); }
+                };
+
+                card.querySelector(".btn-ca-logs").onclick = () => {
+                    window.api.openDashboardWindow(`https://railway.com/project/${svc.projectId}/logs?environmentId=${svc.environmentId}&timeFrame=30d`);
+                };
+
+                card.querySelector(".btn-ca-vars").onclick = () => {
+                    document.getElementById("clients-view").style.display = "none";
+                    renderVariablesView(svc.projectId, svc.environmentId, svc.id, svc.name);
+                    const btnBack = document.getElementById("btnBackVars");
+                    if (btnBack) {
+                        btnBack.onclick = () => {
+                            window.currentVarsContext = null;
+                            window.lastVarsHash = null;
+                            clearActiveServiceMenu();
+                            document.getElementById("variables-view").style.display = "none";
+                            document.getElementById("assistant-detail").style.display = "none";
+                            document.getElementById("clients-view").style.display = "block";
+                        };
+                    }
+                };
+
+                card.querySelector(".btn-ca-redeploy").onclick = () => handleRedeploy(svc.id, svc.environmentId);
+
+                card.querySelector(".btn-ca-unlink").onclick = async () => {
+                    if (!confirm("¿Desvincular este asistente?")) return;
+                    try {
+                        await window.api.unlinkProjectClient(p.id);
+                        showToast("Asistente desvinculado", "warning");
+                        loadClientAssistantSection(clientId);
+                    } catch { showToast("Error al desvincular", "danger"); }
+                };
+
+                col.appendChild(card);
+                row.appendChild(col);
+            });
         });
 
-        const addCard = document.createElement("div");
-        addCard.className = "col-md-6 col-lg-4";
-        addCard.innerHTML = `
-            <div class="link-assistant-card d-flex flex-column align-items-center justify-content-center p-4 rounded h-100 btn-show-link-assistant">
-                <i class="bi bi-plus-circle fs-3 mb-2 text-dim"></i>
-                <div class="fw-semibold">Vincular asistente</div>
-                <div class="small text-dim mt-1">Asociar un asistente a este cliente</div>
+        const addCol = document.createElement("div");
+        addCol.className = "col-12 col-md-4";
+        addCol.innerHTML = `
+            <div class="link-assistant-card d-flex flex-column align-items-center justify-content-center p-3 rounded btn-show-link-assistant" style="height:100%;">
+                <i class="bi bi-plus-circle fs-4 mb-1 text-dim"></i>
+                <div class="fw-semibold small">Vincular asistente</div>
             </div>
         `;
-        addCard.querySelector(".btn-show-link-assistant").onclick = () => openLinkAssistantModal(clientId, container);
-        row.appendChild(addCard);
+        addCol.querySelector(".btn-show-link-assistant").onclick = () => openLinkAssistantModal(clientId);
+        row.appendChild(addCol);
     } catch {
         wrap.innerHTML = '<div class="text-danger small">Error cargando asistentes</div>';
     }
 }
 
-function openLinkAssistantModal(clientId, container) {
+function openLinkAssistantModal(clientId) {
     const existing = document.getElementById("linkAssistantModal");
     if (existing) existing.remove();
 
@@ -682,16 +748,16 @@ function openLinkAssistantModal(clientId, container) {
     const bsModal = new bootstrap.Modal(modal);
     bsModal.show();
 
-    renderLinkAssistantList(clientId, container, bsModal);
+    renderLinkAssistantList(clientId, bsModal);
 
     document.getElementById("link-assistant-search").addEventListener("input", (e) => {
-        renderLinkAssistantList(clientId, container, bsModal, e.target.value.toLowerCase());
+        renderLinkAssistantList(clientId, bsModal, e.target.value.toLowerCase());
     });
 
     modal.addEventListener("hidden.bs.modal", () => modal.remove());
 }
 
-async function renderLinkAssistantList(clientId, container, bsModal, search = "") {
+async function renderLinkAssistantList(clientId, bsModal, search = "") {
     const list = document.getElementById("link-assistant-list");
     if (!list) return;
 
@@ -729,7 +795,7 @@ async function renderLinkAssistantList(clientId, container, bsModal, search = ""
                     await window.api.linkProjectClient(p.id, clientId);
                     showToast("Asistente vinculado", "success");
                     bsModal.hide();
-                    renderClientAssistantTab(clientId, container);
+                    loadClientAssistantSection(clientId);
                 } catch {
                     showToast("Error al vincular", "danger");
                 }
@@ -744,14 +810,13 @@ async function renderLinkAssistantList(clientId, container, bsModal, search = ""
 function openClientAssistantDetail(project, clientId) {
     renderDetail(project);
 
-    // Sobreescribir el boton volver para que regrese al cliente
     requestAnimationFrame(() => {
         const btn = document.getElementById("btnBackToGrid");
         if (!btn) return;
         btn.innerHTML = '<i class="bi bi-arrow-left me-2"></i>Volver al cliente';
         btn.onclick = () => {
             navigate("clients");
-            requestAnimationFrame(() => openClientDetail(clientId, "asistente"));
+            requestAnimationFrame(() => openClientDetail(clientId));
         };
     });
 }
@@ -774,6 +839,7 @@ async function openEditClient(id) {
     document.getElementById("clientId").value = client.id;
     document.getElementById("clientName").value = client.nombre;
     document.getElementById("clientCompany").value = client.empresa || "";
+    document.getElementById("clientAbono").value = client.abono ?? "";
     document.getElementById("clientEmail").value = client.email || "";
     document.getElementById("clientPhone").value = client.telefono || "";
     document.getElementById("clientPlan").value = client.plan || "Standard";
@@ -789,6 +855,7 @@ async function handleClientSubmit(e) {
     const clientData = {
         nombre: document.getElementById("clientName").value,
         empresa: document.getElementById("clientCompany").value,
+        abono: parseFloat(document.getElementById("clientAbono").value) || 0,
         email: document.getElementById("clientEmail").value,
         telefono: document.getElementById("clientPhone").value,
         plan: document.getElementById("clientPlan").value,

@@ -215,7 +215,7 @@ async function loadAssistants(preserveSelection = true) {
 
     const updatedProject = assistants.find(p => p.id === currentSelected);
     if (updatedProject) {
-      renderDetail(updatedProject, true);
+      await renderDetail(updatedProject, true);
       return;
     }
   }
@@ -246,15 +246,14 @@ function renderAssistantsGrid() {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="mt-4">
       <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-        <div>
+        <div class="assistants-header-title">
           <h2 class="fw-bold mb-0">MIS ASISTENTES</h2>
           <p class="small mb-0 text-dim">
             Gestión técnica de proyectos desplegados en Railway
           </p>
         </div>
-        <div class="d-flex gap-2 align-items-center">
+        <div class="d-flex gap-2 align-items-center assistants-controls">
           <div class="input-group input-group-sm search-input-group">
             <span class="input-group-text"><i class="bi bi-search"></i></span>
             <input type="text" class="form-control" id="searchAssistants">
@@ -265,7 +264,7 @@ function renderAssistantsGrid() {
         </div>
       </div>
       <div id="assistants-grid" class="row g-4"></div>
-    </div>
+    
   `;
 
   const grid = document.getElementById("assistants-grid");
@@ -493,29 +492,8 @@ async function renderDetail(project, isRefresh = false) {
     if (servicesRendered) {
       patchServices(project);
     } else {
-      // Initial render was aborted mid-way (race with SmartRefresh token bump).
-      // Re-run the full services render so cards + dashboard both appear.
       renderServices(project);
       return;
-    }
-
-    // Only skip openDashboard if real content is loaded (logs, variables, dashboard).
-    // A panel showing only skeleton divs means openDashboard never ran - call it.
-    const sidePanel = document.getElementById("detail-side-panel");
-    const hasSideContent = sidePanel &&
-      sidePanel.innerHTML.trim() !== "" &&
-      !sidePanel.querySelector(".skeleton");
-
-    if (!hasSideContent && project.services?.length > 0) {
-
-      const s = project.services[0];
-
-      openDashboard(
-        s.projectId,
-        s.environmentId,
-        s.id
-      );
-
     }
 
   }
@@ -535,99 +513,43 @@ function renderDetailStructure(project) {
   detail.innerHTML = `
 <div class="anim-slide-right">
 
-  <!-- BOTÓN VOLVER -->
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-    <button class="btn btn-outline-light btn-sm" id="btnBackToGrid">
-      <i class="bi bi-arrow-left me-2"></i> Volver a Asistentes
-    </button>
-
-    <button class="btn btn-outline-light btn-sm" id="btnRefreshProject">
-      <i class="bi bi-arrow-clockwise"></i> Actualizar
-    </button>
-  </div>
-
-  <!-- GRID PRINCIPAL -->
-  <div class="detail-layout">
-
-    <!-- COLUMNA IZQUIERDA -->
-    <div class="services-column">
-
-      <!-- HEADER -->
-      <div class="mb-4">
-
-        <!-- TITULO + SETTINGS -->
-        <div class="d-flex justify-content-between align-items-center mb-2">
-
-          <p id="project-title" class="fw-bold mb-0">${project.name}</p>
-
-          <div class="dropdown">
-            <button 
-              class="btn btn-outline-light btn-sm"
-              data-bs-toggle="dropdown">
-
-              <i class="bi bi-gear"></i>
-
-            </button>
-
-            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
-
-              <li>
-                <button class="dropdown-item btn-rename">
-                  <i class="bi bi-pencil me-2"></i>
-                  Cambiar nombre
-                </button>
-              </li>
-
-              <li>
-                <button class="dropdown-item btn-railway">
-                  <i class="bi bi-box-arrow-up-right me-2"></i>
-                  Abrir Railway
-                </button>
-              </li>
-
-              <li><hr class="dropdown-divider"></li>
-
-              <li>
-                <button class="dropdown-item text-danger btn-delete-project">
-                  <i class="bi bi-trash me-2"></i>
-                  Eliminar proyecto
-                </button>
-              </li>
-
-            </ul>
-
-          </div>
-
-        </div>
-
-        <!-- CONTADORES -->
-        <div id="header-status-row"
-             class="d-flex gap-4 small align-items-center mb-2">
-        </div>
-
-        <!-- BADGES -->
-        <div id="header-badges" class="d-flex gap-2 flex-wrap"></div>
-
-      </div>
-
-      <!-- SERVICIOS -->
-      <div id="services-container" class="d-grid gap-3"></div>
-
-    </div>
-
-    <!-- COLUMNA DERECHA -->
-    <div class="side-panel-column">
-      <div id="detail-side-panel" class="side-panel-placeholder">
-        <div class="p-3 d-flex flex-column gap-3">
-          <div class="skeleton" style="height:18px;width:48%;border-radius:6px"></div>
-          <div class="skeleton" style="height:52px;border-radius:8px"></div>
-          <div class="skeleton" style="height:52px;border-radius:8px"></div>
-          <div class="skeleton" style="height:38px;border-radius:8px"></div>
+  <!-- TOPBAR -->
+  <div class="rw-topbar mb-4">
+    <!-- Fila 1: volver (izq) + refresh + ⋮ (der) -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <button class="btn btn-outline-light btn-circle" id="btnBackToGrid" title="Volver a Asistentes">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-outline-light btn-circle" id="btnRefreshProject" title="Actualizar">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <div class="dropdown">
+          <button class="btn btn-outline-light btn-circle" data-bs-toggle="dropdown" title="Opciones">
+            <i class="bi bi-three-dots-vertical"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+            <li><button class="dropdown-item btn-rename"><i class="bi bi-pencil me-2"></i>Cambiar nombre</button></li>
+            <li><button class="dropdown-item btn-railway"><i class="bi bi-box-arrow-up-right me-2"></i>Abrir Railway</button></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><button class="dropdown-item text-danger btn-delete-project"><i class="bi bi-trash me-2"></i>Eliminar proyecto</button></li>
+          </ul>
         </div>
       </div>
     </div>
-
+    <!-- Fila 2: título centrado y grande -->
+    <div class="text-center mb-2">
+      <h4 class="fw-bold mb-0" id="project-title">${project.name}</h4>
+    </div>
+    <!-- Fila 3: submenu — counters + badges centrados -->
+    <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap pt-2" style="border-top: 1px solid var(--border-soft);">
+      <div id="header-status-row" class="d-flex gap-3 small align-items-center"></div>
+      <div id="header-badges" class="d-flex gap-2 flex-wrap align-items-center"></div>
+    </div>
   </div>
+
+  <!-- SERVICIOS -->
+  <div id="services-container" class="d-grid gap-3"></div>
 
 </div>
 `;
@@ -635,9 +557,20 @@ function renderDetailStructure(project) {
   // Eventos header
   document.getElementById("btnRefreshProject")?.addEventListener("click", async () => {
 
-    showToast("Actualizando proyecto...", "info");
+    const btn = document.getElementById("btnRefreshProject");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
 
-    await loadAssistants(true);
+    try {
+      await loadAssistants(true);
+      btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+      await new Promise(r => setTimeout(r, 800));
+    } catch (e) {
+      console.error("Error al actualizar:", e);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
+    }
 
   });
 
@@ -823,27 +756,17 @@ function renderServices(project) {
   freshProject.services.forEach((service, index) => {
     const card = createServiceCard(service, freshProject, index);
     container.appendChild(card);
-  });
 
-  const sidePanel = document.getElementById("detail-side-panel");
-  if (sidePanel) {
-    // Cualquier observador previo: desconectado
-    if (sidePanel._sidePanelObserver) {
-      sidePanel._sidePanelObserver.disconnect();
+    const domainEl = card.querySelector(".svc-domain-val");
+    if (domainEl) {
+      window.api.getServiceDomains(service.projectId, service.environmentId, service.id)
+        .then(domains => {
+          const domain = domains?.customDomains?.[0]?.domain || domains?.serviceDomains?.[0]?.domain;
+          domainEl.textContent = domain || 'Sin dominio público';
+        })
+        .catch(() => { domainEl.textContent = '—'; });
     }
-    const observer = new MutationObserver(() => {
-      if (sidePanel.innerHTML.trim() === "") {
-        clearActiveServiceMenu();
-      }
-    });
-    observer.observe(sidePanel, { childList: true, subtree: false });
-    sidePanel._sidePanelObserver = observer;
-  }
-
-  if (freshProject.services.length > 0) {
-    const s = freshProject.services[0];
-    openDashboard(s.projectId, s.environmentId, s.id);
-  }
+  });
 }
 
 function createServiceCard(service, project, staggerIndex = 0) {
@@ -854,49 +777,60 @@ function createServiceCard(service, project, staggerIndex = 0) {
   div.dataset.serviceId = service.id;
 
   div.innerHTML = `
-  <!-- HEADER -->
-  <div class="d-flex justify-content-between align-items-center mb-2">
-
-    <div class="fw-bold service-name">
-      ${service.name}
+  <!-- CARD HEADER -->
+  <div class="rw-svc-header px-4 py-3">
+    <div class="d-flex align-items-start gap-3">
+      <!-- Icono a la izquierda -->
+      <div class="rw-svc-icon flex-shrink-0 mt-1">
+        <i class="bi bi-cpu-fill"></i>
+      </div>
+      <!-- Nombre + dominio -->
+      <div class="flex-grow-1 min-w-0">
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+          <span class="fw-bold service-name text-truncate">${service.name}</span>
+          <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            <span class="service-status-icon">${getStatusIcon(service.status)}</span>
+            ${service.isUpdatable ? `
+              <button class="btn btn-warning btn-sm btn-update-mini" title="Actualizar servicio">
+                <i class="bi bi-arrow-repeat"></i>
+              </button>` : ""}
+            <button class="btn btn-sm btn-rename-service p-0 text-dim" title="Renombrar" style="line-height:1;">
+              <i class="bi bi-pencil" style="font-size:0.75rem;"></i>
+            </button>
+          </div>
+        </div>
+        <div class="x-small text-dim rw-svc-domain">
+          <i class="bi bi-globe2 me-1"></i><span class="svc-domain-val">—</span>
+        </div>
+      </div>
     </div>
-
-    <div class="d-flex align-items-center gap-2">
-
-      <span class="service-status-icon">
-        ${getStatusIcon(service.status)}
-      </span>
-
-      ${service.isUpdatable ? `
-        <button 
-          class="btn btn-warning btn-sm btn-update-mini"
-          title="Actualizar servicio">
-          <i class="bi bi-arrow-repeat"></i>
-        </button>
-      ` : ""}
-
-    </div>
-
   </div>
 
-  <!-- FECHA -->
-  <div class="small text-secondary mb-3 service-date text-center">
-    Último deploy: ${formatDate(service.createdAt)}
+  <!-- DEPLOY INFO -->
+  <div class="rw-svc-meta px-4 py-2 d-flex align-items-center justify-content-between">
+    <div class="x-small text-dim service-date">
+      <i class="bi bi-clock me-1"></i> Último deploy: ${formatDate(service.createdAt)}
+    </div>
   </div>
 
-  <div class="service-menu-wrapper">
- <div class="service-menu">
-
-  <div class="service-menu-item btn-logs">
-  <i class="bi bi-terminal me-2"></i> Logs</div>
-  <hr class="separator-line">
-  <div class="service-menu-item btn-vars">
-  <i class="bi bi-sliders me-2"></i> Variables</div>
-  <hr class="separator-line">
-  <div class="service-menu-item btn-redeploy">
-  <i class="bi bi-arrow-repeat me-2"></i> Redeploy</div>
- </div>
-</div>
+  <!-- ACTION TABS -->
+  <div class="rw-svc-actions d-flex">
+    <div class="service-menu-item btn-backoffice flex-fill text-center py-2">
+      <i class="bi bi-box-arrow-up-right me-1"></i> Backoffice
+    </div>
+    <div class="rw-sep"></div>
+    <div class="service-menu-item btn-logs flex-fill text-center py-2">
+      <i class="bi bi-terminal me-1"></i> Logs
+    </div>
+    <div class="rw-sep"></div>
+    <div class="service-menu-item btn-vars flex-fill text-center py-2">
+      <i class="bi bi-sliders me-1"></i> Variables
+    </div>
+    <div class="rw-sep"></div>
+    <div class="service-menu-item btn-redeploy flex-fill text-center py-2">
+      <i class="bi bi-arrow-repeat me-1"></i> Redeploy
+    </div>
+  </div>
 `;
 
   function setActiveServiceMenu(el) {
@@ -916,13 +850,138 @@ function createServiceCard(service, project, staggerIndex = 0) {
   // BOTONES DE SERVICIO
   // --------------------------------------------------
 
-  div.querySelector(".btn-logs")?.addEventListener("click", (e) => {
+  div.querySelector(".btn-backoffice")?.addEventListener("click", async (e) => {
 
     setActiveServiceMenu(e.currentTarget);
+
+    try {
+      const domains = await window.api.getServiceDomains(service.projectId, service.environmentId, service.id);
+      let domain = domains?.customDomains?.[0]?.domain || domains?.serviceDomains?.[0]?.domain;
+      if (!domain) { showToast("Este servicio no tiene dominio público", "warning"); clearActiveServiceMenu(); return; }
+      if (!domain.startsWith("http")) domain = "https://" + domain;
+      window.api.openDashboardWindow(domain);
+    } catch {
+      showToast("Error al obtener URL del servicio", "danger");
+    }
+
+  });
+
+  div.querySelector(".btn-logs")?.addEventListener("click", () => {
 
     const url = `https://railway.com/project/${service.projectId}/logs?environmentId=${service.environmentId}&timeFrame=30d`;
 
     window.api.openDashboardWindow(url);
+
+  });
+
+  div.querySelector(".btn-rename-service")?.addEventListener("click", () => {
+
+    const isMobile = window.innerWidth < 992;
+
+    if (isMobile) {
+      // Modal en mobile/tablet
+      const existing = document.getElementById("renameServiceModal");
+      if (existing) existing.remove();
+
+      const modal = document.createElement("div");
+      modal.className = "modal fade";
+      modal.id = "renameServiceModal";
+      modal.setAttribute("tabindex", "-1");
+      modal.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content glass-card shadow-lg">
+            <div class="modal-header border-secondary">
+              <h5 class="modal-title fw-bold">Renombrar servicio</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+              <input type="text" class="form-control text-main" id="rename-svc-modal-input" value="${service.name.replace(/"/g, '&quot;')}">
+            </div>
+            <div class="modal-footer border-secondary p-3">
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="button" class="btn btn-sm btn-success" id="btn-svc-modal-save">Guardar</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      const bsModal = new bootstrap.Modal(modal);
+      bsModal.show();
+
+      requestAnimationFrame(() => {
+        const input = document.getElementById("rename-svc-modal-input");
+        if (input) { input.focus(); input.select(); }
+      });
+
+      modal.querySelector("#btn-svc-modal-save").onclick = async () => {
+        const newName = document.getElementById("rename-svc-modal-input")?.value.trim();
+        if (!newName || newName === service.name) { bsModal.hide(); return; }
+        window.showActionSpinner("Renombrando servicio...");
+        try {
+          await window.api.renameService(service.id, newName);
+          service.name = newName;
+          const nameEl = div.querySelector(".service-name");
+          if (nameEl) nameEl.textContent = newName;
+          showToast("Servicio renombrado", "success");
+        } catch {
+          showToast("Error al renombrar servicio", "danger");
+        } finally {
+          window.hideActionSpinner();
+          bsModal.hide();
+        }
+      };
+
+      modal.addEventListener("hidden.bs.modal", () => modal.remove());
+
+    } else {
+      // Inline en desktop
+      const nameEl = div.querySelector(".service-name");
+      if (!nameEl) return;
+      const currentName = service.name;
+
+      const inputWrapper = document.createElement("div");
+      inputWrapper.className = "d-flex align-items-center gap-1 flex-grow-1 min-w-0";
+      inputWrapper.innerHTML = `
+        <input type="text" class="form-control form-control-sm svc-rename-input" style="max-width:160px;">
+        <button class="btn btn-success btn-sm btn-svc-save px-2"><i class="bi bi-check-lg"></i></button>
+        <button class="btn btn-outline-secondary btn-sm btn-svc-cancel px-2"><i class="bi bi-x-lg"></i></button>
+      `;
+      inputWrapper.querySelector(".svc-rename-input").value = currentName;
+
+      const restoreName = () => {
+        const restored = document.createElement("span");
+        restored.className = "fw-bold service-name text-truncate";
+        restored.textContent = service.name;
+        inputWrapper.replaceWith(restored);
+      };
+
+      nameEl.replaceWith(inputWrapper);
+      inputWrapper.querySelector(".svc-rename-input").focus();
+      inputWrapper.querySelector(".svc-rename-input").select();
+
+      inputWrapper.querySelector(".btn-svc-cancel").onclick = restoreName;
+      inputWrapper.querySelector(".svc-rename-input").onkeydown = (e) => {
+        if (e.key === "Enter") inputWrapper.querySelector(".btn-svc-save").click();
+        if (e.key === "Escape") restoreName();
+      };
+
+      inputWrapper.querySelector(".btn-svc-save").onclick = async () => {
+        const newName = inputWrapper.querySelector(".svc-rename-input").value.trim();
+        if (!newName) return;
+        if (newName === currentName) { restoreName(); return; }
+        window.showActionSpinner("Renombrando servicio...");
+        try {
+          await window.api.renameService(service.id, newName);
+          service.name = newName;
+          showToast("Servicio renombrado", "success");
+        } catch {
+          showToast("Error al renombrar servicio", "danger");
+        } finally {
+          window.hideActionSpinner();
+          restoreName();
+        }
+      };
+    }
 
   });
 
@@ -1312,33 +1371,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     btnToggleTheme.addEventListener('click', toggleTheme);
   }
 
-  // --------------------------------------
-  // BOTON ABOUT
-  // --------------------------------------
-  const btnAbout = document.getElementById("btn-about");
-
-  if (btnAbout) {
-    btnAbout.addEventListener("click", async () => {
-
-      const modalEl = document.getElementById("aboutModal");
-      if (!modalEl) {
-        console.error("aboutModal no existe");
-        return;
-      }
-
-      const version = await window.api.getAppVersion();
-
-      const versionEl = document.getElementById("about-version");
-      if (versionEl) {
-        versionEl.textContent = "v" + version;
-      }
-
-      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-      modal.show();
-
-    });
-  }
-
 });
+
 
 

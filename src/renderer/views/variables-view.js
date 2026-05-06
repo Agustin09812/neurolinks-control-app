@@ -14,56 +14,31 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
         <div class="variables-panel animate-fade-up">
 
             <!-- HEADER -->
-            <div class="variables-header d-flex justify-content-between align-items-center mb-3">
-
-                <div>
-                    <h2 class="fw-bold mb-0">
-                        <i class="bi bi-sliders me-2 icon-service"></i>${serviceName}
-                    </h2>
-                    <small class="text-dim">Configuración del servicio</small>
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-light" id="btn-add-var">
-                        <i class="bi bi-plus-lg"></i>
-                    </button>
-        
-                    <button class="btn btn-sm btn-outline-light" id="btnBackVars">
+            <div class="rw-topbar mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button class="btn btn-outline-light btn-circle" id="btnBackVars" title="Volver">
                         <i class="bi bi-arrow-left"></i>
                     </button>
+                    <button class="btn btn-outline-light btn-circle" id="btn-add-var" title="Agregar variable">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
                 </div>
-        
+                <div class="text-center mb-2">
+                    <h4 class="fw-bold mb-0">
+                        <i class="bi bi-sliders me-2 icon-service"></i>${serviceName}
+                    </h4>
+                    <small class="text-dim">Configuración del servicio</small>
+                </div>
             </div>
 
             <!-- SEARCH -->
             <div class="mb-3">
-                <input 
-                    type="text" 
-                    id="vars-search" 
+                <input
+                    type="text"
+                    id="vars-search"
                     class="form-control form-control-sm"
                     placeholder="Buscar variable..."
                 >
-            </div>
-
-            <!-- FORM -->
-            <div id="vars-form" class="variables-form d-none mb-3">
-                <div class="row g-2">
-                    <div class="col-md-5">
-                        <input type="text" id="new-var-name"
-                            class="form-control form-control-sm"
-                            placeholder="Nombre">
-                    </div>
-                    <div class="col-md-5">
-                        <input type="text" id="new-var-value"
-                            class="form-control form-control-sm"
-                            placeholder="Valor">
-                    </div>
-                    <div class="col-md-2 d-grid">
-                        <button class="btn btn-warning btn-sm" id="btn-save-var">
-                            Guardar
-                        </button>
-                    </div>
-                </div>
             </div>
 
             <!-- GRID -->
@@ -87,13 +62,15 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
         document.getElementById("assistant-detail").style.display = "block";
     };
 
-    // toggle form
+    // abrir modal para agregar variable
     document.getElementById("btn-add-var").onclick = () => {
-        document.getElementById("vars-form").classList.toggle("d-none");
+        document.getElementById("new-var-name").value = "";
+        document.getElementById("new-var-value").value = "";
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("addVarModal")).show();
     };
 
-    // guardar nueva variable
-    document.getElementById("btn-save-var").onclick = () => {
+    // guardar nueva variable desde el modal
+    document.getElementById("btn-save-new-var").onclick = () => {
         handleAddVariable(projectId, environmentId, serviceId);
     };
 
@@ -138,22 +115,18 @@ async function loadVariables(projectId, environmentId, serviceId) {
             return `
             <div class="var-card" data-var-key="${safeKey}" data-var-value="${safeValue}"
                  data-project-id="${projectId}" data-env-id="${environmentId}" data-service-id="${serviceId}">
-                <div class="var-card-header">
-                    <div class="var-key-row">
-                        <span class="var-key">${safeKey}</span>
-                        <div class="var-actions-inline">
-                            <span class="badge badge-edit btn-edit-var">
-                                <i class="bi bi-pencil"></i>
-                            </span>
-                            <span class="badge badge-delete btn-delete-var">
-                                <i class="bi bi-trash"></i>
-                            </span>
-                        </div>
+                <div class="var-header-row">
+                    <span class="var-key">${safeKey}</span>
+                    <div class="var-actions-inline">
+                        <button class="var-btn-edit btn-edit-var" title="Editar">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="var-btn-delete btn-delete-var" title="Eliminar">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="var-card-body">
-                    <pre class="var-value">${safeValue}</pre>
-                </div>
+                <pre class="var-value">${safeValue}</pre>
             </div>
         `}).join("");
 
@@ -225,15 +198,15 @@ async function handleAddVariable(pId, eId, sId) {
         return;
     }
 
+    const modal = bootstrap.Modal.getInstance(document.getElementById("addVarModal"));
+    if (modal) modal.hide();
+
     window.showActionSpinner("Guardando variable...");
     try {
 
         await window.api.upsertVariable(pId, eId, sId, name, value);
 
         showToast("Variable guardada", "success");
-
-        document.getElementById("new-var-name").value = "";
-        document.getElementById("new-var-value").value = "";
 
         window.lastVarsHash = null;
         await window.waitForNextChannelRun("variables");

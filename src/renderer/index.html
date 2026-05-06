@@ -4,7 +4,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Neurolinks Control</title>
+  <title>Neurolinks - Panel de administración</title>
+  <!-- Favicons -->
+  <link href="/assets/favicon.png" rel="icon">
+  <link href="/assets/apple-touch-icon.png" rel="apple-touch-icon">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.css">
   <link rel="stylesheet" href="/assets/css/styles.css">
@@ -53,10 +56,6 @@
       <!-- Theme Toggle -->
       <div class="sidebar-item" id="btn-theme-toggle" title="Cambiar tema">
         <i class="bi bi-moon-stars" id="theme-icon"></i>
-      </div>
-
-<div class="sidebar-item" id="btn-about" title="Acerca de">
-        <i class="bi bi-info-circle"></i>
       </div>
 
       <div class="sidebar-item" onclick="openNotificationsPanel()" title="Notificaciones">
@@ -137,7 +136,7 @@
             <div class="deploy-modal-header-icon">
               <i class="bi bi-rocket-takeoff-fill"></i>
             </div>
-            <div>
+            <div class="deploy-header-text">
               <h5 class="modal-title fw-bold mb-0">Nuevo Asistente</h5>
               <div style="font-size:0.72rem;color:var(--text-dim);">Selecciona un template de Railway para desplegar</div>
             </div>
@@ -220,39 +219,6 @@
   </div>
 
 
-<!-- ABOUT MODAL -->
-  <div class="modal fade" id="aboutModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content glass-card text-light">
-
-        <div class="modal-header">
-          <h5 class="modal-title fw-bold">
-            <i class="bi bi-cpu me-2 text-info"></i>
-            Neurolinks Control
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-
-        <div class="modal-body text-center">
-
-          <div class="mb-3">
-            <i class="bi bi-box display-5 text-info"></i>
-          </div>
-
-          <div class="fw-bold mb-2" id="about-version">
-            <!-- versión dinámica -->
-          </div>
-
-          <div class="small text-dim">
-            Sistema de control y monitoreo de asistentes
-          </div>
-
-        </div>
-
-      </div>
-    </div>
-  </div>
-
   <!-- Toast Container -->
   <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999"></div>
 
@@ -272,23 +238,33 @@
         </div>
       </div>
       <div class="d-flex align-items-center gap-2">
-        <button class="btn notif-action-btn has-tooltip" onclick="markAllNotificationsRead()" title="Marcar todas como leídas">
+        <!-- Desktop: acciones en el header -->
+        <button class="btn notif-action-btn has-tooltip d-none d-md-inline-flex" onclick="markAllNotificationsRead()" title="Marcar todas como leídas">
           <i class="bi bi-envelope-open"></i>
         </button>
-        <button class="btn notif-action-btn notif-action-danger has-tooltip" onclick="clearAllNotifications()" title="Vaciar notificaciones">
+        <button class="btn notif-action-btn notif-action-danger has-tooltip d-none d-md-inline-flex" onclick="clearAllNotifications()" title="Vaciar notificaciones">
           <i class="bi bi-trash"></i>
         </button>
         <button type="button" class="btn-close btn-close-white ms-1" data-bs-dismiss="offcanvas"></button>
       </div>
     </div>
-    <div class="offcanvas-body pt-3 px-3">
-      <div id="notifications-panel-list" class="d-flex flex-column gap-2"></div>
+    <div class="offcanvas-body pt-3 px-3 d-flex flex-column">
+      <div id="notifications-panel-list" class="d-flex flex-column gap-2 flex-grow-1"></div>
+      <!-- Mobile/tablet: acciones en el footer -->
+      <div class="notif-mobile-footer d-md-none" id="notif-mobile-footer">
+        <button class="btn notif-footer-btn" onclick="markAllNotificationsRead()">
+          <i class="bi bi-envelope-open me-2"></i>Marcar como leídas
+        </button>
+        <button class="btn notif-footer-btn notif-footer-danger" onclick="clearAllNotifications()">
+          <i class="bi bi-trash me-2"></i>Vaciar
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- EDIT VARIABLE MODAL -->
   <div class="modal fade" id="editModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content glass-card">
         <div class="modal-header border-secondary">
           <h5 class="modal-title">Editar Variable</h5>
@@ -305,12 +281,34 @@
           </div>
         </div>
         <div class="modal-footer border-secondary">
-          <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
-            Cancelar
-          </button>
-          <button class="btn btn-outline-success btn-sm" id="btn-save-variable">
-            Guardar
-          </button>
+          <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-outline-success btn-sm" id="btn-save-variable">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD VARIABLE MODAL -->
+  <div class="modal fade" id="addVarModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-card">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title">Nueva Variable</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre</label>
+            <input type="text" id="new-var-name" class="form-control bg-dark text-light border-secondary" placeholder="Ej: API_KEY">
+          </div>
+          <div>
+            <label class="form-label">Valor</label>
+            <textarea id="new-var-value" rows="4" class="form-control bg-dark text-light border-secondary" placeholder="Valor de la variable"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-outline-success btn-sm" id="btn-save-new-var">Guardar</button>
         </div>
       </div>
     </div>

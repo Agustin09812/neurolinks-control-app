@@ -102,7 +102,8 @@ async function renderTicketsView(filterClientId = "") {
                     </button>
                 </div>
     
-                <div class="glass-card overflow-hidden rounded">
+                <!-- Desktop: tabla -->
+                <div class="glass-card overflow-hidden rounded d-none d-md-block">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead>
@@ -117,22 +118,18 @@ async function renderTicketsView(filterClientId = "") {
                                 </tr>
                             </thead>
                             <tbody id="tickets-table-body-view"></tbody>
-                            </table>
+                        </table>
                     </div>
+                </div>
 
-                    <!-- FIX: Paginación movida dentro del glass-card wrapper
-                         pero fuera de la tabla. Antes había un </table> duplicado -->
-                    <div class="d-flex justify-content-between align-items-center p-3 border-top border-secondary">
-                        <button class="btn btn-sm btn-outline-light" onclick="changePage(-1)">
-                            ← Anterior
-                        </button>
+                <!-- Mobile: cards -->
+                <div id="tickets-cards-view" class="d-md-none d-flex flex-column gap-2"></div>
 
-                        <span id="pagination-info" class="small text-dim"></span>
-
-                        <button class="btn btn-sm btn-outline-light" onclick="changePage(1)">
-                            Siguiente →
-                        </button>
-                    </div>
+                <!-- Paginación (compartida) -->
+                <div class="d-flex justify-content-between align-items-center mt-3 glass-card p-3 rounded">
+                    <button class="btn btn-sm btn-outline-light" onclick="changePage(-1)">← Anterior</button>
+                    <span id="pagination-info" class="small text-dim"></span>
+                    <button class="btn btn-sm btn-outline-light" onclick="changePage(1)">Siguiente →</button>
                 </div>
             </div>
         </div>
@@ -306,47 +303,84 @@ function getFilteredTickets() {
 
 function renderTicketsList() {
     const tbody = document.getElementById("tickets-table-body-view");
-    if (!tbody) return;
-    tbody.innerHTML = "";
+    const cardsView = document.getElementById("tickets-cards-view");
+    const info = document.getElementById("pagination-info");
 
     const filtered = getFilteredTickets();
 
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-dim py-5">No se encontraron tickets</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-dim py-5">No se encontraron tickets</td></tr>';
+        if (cardsView) cardsView.innerHTML = '<div class="text-dim text-center py-5">No se encontraron tickets</div>';
+        if (info) info.textContent = '';
         return;
     }
 
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;  // paginacion
-    const paginated = filtered.slice(start, start + ITEMS_PER_PAGE);  // paginacion
-
-    paginated.forEach(t => {
-        const tr = document.createElement("tr");
-        tr.className = "ticket-row";
-        tr.innerHTML = `
-            <td>
-                <div class="fw-bold">#${t.id.substring(0, 8)}</div>
-                <div class="small text-white">${escapeHtml(t.titulo)}</div>
-            </td>
-            <td>${t.clientes ? escapeHtml(t.clientes.nombre) : 'Sin cliente'}</td>
-            <td><span class="small text-dim">${escapeHtml(t.tipo)}</span></td>
-            <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
-            <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
-            <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
-            <td class="text-end">
-                <div class="d-flex gap-2 justify-content-end">
-                    <button class="btn btn-sm btn-outline-light" onclick="openEditTicket('${t.id}')"><i class="bi bi-eye"></i></button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="handleDeleteTicket('${t.id}')"><i class="bi bi-trash"></i></button>
-                </div>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginated = filtered.slice(start, start + ITEMS_PER_PAGE);
     const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-    const info = document.getElementById("pagination-info");
 
-    if (info) {
-        info.textContent = `Página ${currentPage} de ${totalPages}`;
+    // Tabla (desktop)
+    if (tbody) {
+        tbody.innerHTML = "";
+        paginated.forEach(t => {
+            const tr = document.createElement("tr");
+            tr.className = "ticket-row";
+            tr.innerHTML = `
+                <td>
+                    <div class="fw-bold">#${t.id.substring(0, 8)}</div>
+                    <div class="small text-white">${escapeHtml(t.titulo)}</div>
+                </td>
+                <td>${t.clientes ? escapeHtml(t.clientes.nombre) : 'Sin cliente'}</td>
+                <td><span class="small text-dim">${escapeHtml(t.tipo)}</span></td>
+                <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
+                <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
+                <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
+                <td class="text-end">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button class="btn btn-sm btn-outline-light" onclick="openEditTicket('${t.id}')"><i class="bi bi-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="handleDeleteTicket('${t.id}')"><i class="bi bi-trash"></i></button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
+
+    // Cards (mobile)
+    if (cardsView) {
+        cardsView.innerHTML = "";
+        paginated.forEach(t => {
+            const card = document.createElement("div");
+            card.className = "glass-card p-3 rounded";
+            card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="text-dim small">#${t.id.substring(0, 8)}</span>
+                            <span class="small text-dim">${escapeHtml(t.tipo)}</span>
+                        </div>
+                        <div class="fw-bold mb-1">${escapeHtml(t.titulo)}</div>
+                        <div class="small text-dim mb-2">${t.clientes ? escapeHtml(t.clientes.nombre) : 'Sin cliente'}</div>
+                        ${t.descripcion ? `<div class="small text-dim mb-2" style="opacity:0.7;white-space:pre-wrap;word-break:break-word;">${escapeHtml(t.descripcion.substring(0, 120))}${t.descripcion.length > 120 ? '…' : ''}</div>` : ''}
+                        <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
+                            <span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span>
+                            <span class="fw-bold small priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span>
+                            <span class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 flex-shrink-0">
+                        <button class="btn btn-sm btn-outline-light btn-card-view"><i class="bi bi-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-danger btn-card-del"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+            `;
+            card.querySelector(".btn-card-view").onclick = () => openEditTicket(t.id);
+            card.querySelector(".btn-card-del").onclick = () => handleDeleteTicket(t.id);
+            cardsView.appendChild(card);
+        });
+    }
+
+    if (info) info.textContent = `Página ${currentPage} de ${totalPages}`;
 }
 
 function openNewTicketModal() {
@@ -475,7 +509,8 @@ async function renderClientTicketsTab(clientId, container) {
                     <i class="bi bi-plus-circle me-2"></i>Nuevo Ticket
                 </button>
             </div>
-            <div class="glass-card overflow-hidden rounded">
+            <!-- Desktop: tabla -->
+            <div class="glass-card overflow-hidden rounded d-none d-md-block">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
@@ -492,6 +527,8 @@ async function renderClientTicketsTab(clientId, container) {
                     </table>
                 </div>
             </div>
+            <!-- Mobile: cards -->
+            <div id="client-tickets-cards" class="d-md-none d-flex flex-column gap-2"></div>
         </div>
     `;
 
@@ -599,65 +636,104 @@ async function renderClientTicketsTab(clientId, container) {
 
 async function loadClientTickets(clientId) {
     const tbody = document.getElementById("client-tickets-tbody");
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
+    const cardsView = document.getElementById("client-tickets-cards");
+
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
+    if (cardsView) cardsView.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></div>';
+
+    const openTicketModal = (t) => {
+        document.getElementById("clientTicketId").value = t.id;
+        document.getElementById("clientTicketTitle").value = t.titulo;
+        document.getElementById("clientTicketType").value = t.tipo;
+        document.getElementById("clientTicketStatus").value = t.estado;
+        document.getElementById("clientTicketPriority").value = t.prioridad;
+        document.getElementById("clientTicketDesc").value = t.descripcion || "";
+        document.getElementById("clientTicketModalTitle").innerText = "Editar Ticket";
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("clientTicketModal")).show();
+    };
+
+    const deleteTicket = async (id) => {
+        if (!confirm("¿Seguro que queres eliminar este ticket?")) return;
+        try {
+            await window.api.deleteTicket(id);
+            showToast("Ticket eliminado", "warning");
+            loadClientTickets(clientId);
+        } catch {
+            showToast("Error al eliminar ticket", "danger");
+        }
+    };
 
     try {
         const allTickets = await window.api.getTickets() || [];
         const tickets = allTickets.filter(t => t.cliente_id === clientId);
 
-        tbody.innerHTML = "";
+        if (tbody) tbody.innerHTML = "";
+        if (cardsView) cardsView.innerHTML = "";
 
         if (tickets.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-dim py-5">No hay tickets para este cliente</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-dim py-5">No hay tickets para este cliente</td></tr>';
+            if (cardsView) cardsView.innerHTML = '<div class="text-dim text-center py-4">No hay tickets para este cliente</div>';
             return;
         }
 
         tickets.forEach(t => {
-            const tr = document.createElement("tr");
-            tr.className = "ticket-row";
-            tr.innerHTML = `
-                <td>
-                    <div class="fw-bold small">#${t.id.substring(0, 8)}</div>
-                    <div class="small text-white">${t.titulo}</div>
-                </td>
-                <td><span class="small text-dim">${t.tipo}</span></td>
-                <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${t.estado}</span></td>
-                <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${t.prioridad || 'Baja'}</span></td>
-                <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
-                <td class="text-end">
-                    <div class="d-flex gap-2 justify-content-end">
-                        <button class="btn btn-sm btn-outline-light btn-edit-ct"><i class="bi bi-eye"></i></button>
-                        <button class="btn btn-sm btn-outline-danger btn-delete-ct"><i class="bi bi-trash"></i></button>
+            // Fila de tabla (desktop)
+            if (tbody) {
+                const tr = document.createElement("tr");
+                tr.className = "ticket-row";
+                tr.innerHTML = `
+                    <td>
+                        <div class="fw-bold small">#${t.id.substring(0, 8)}</div>
+                        <div class="small text-white">${escapeHtml(t.titulo)}</div>
+                    </td>
+                    <td><span class="small text-dim">${escapeHtml(t.tipo)}</span></td>
+                    <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
+                    <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
+                    <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
+                    <td class="text-end">
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button class="btn btn-sm btn-outline-light btn-edit-ct"><i class="bi bi-eye"></i></button>
+                            <button class="btn btn-sm btn-outline-danger btn-delete-ct"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </td>
+                `;
+                tr.querySelector(".btn-edit-ct").onclick = () => openTicketModal(t);
+                tr.querySelector(".btn-delete-ct").onclick = () => deleteTicket(t.id);
+                tbody.appendChild(tr);
+            }
+
+            // Card (mobile)
+            if (cardsView) {
+                const card = document.createElement("div");
+                card.className = "glass-card p-3 rounded";
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="text-dim small">#${t.id.substring(0, 8)}</span>
+                                <span class="small text-dim">${escapeHtml(t.tipo)}</span>
+                            </div>
+                            <div class="fw-bold mb-1">${escapeHtml(t.titulo)}</div>
+                            ${t.descripcion ? `<div class="small text-dim mb-2" style="opacity:0.75;white-space:pre-wrap;word-break:break-word;">${escapeHtml(t.descripcion.substring(0, 120))}${t.descripcion.length > 120 ? '…' : ''}</div>` : ''}
+                            <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
+                                <span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span>
+                                <span class="fw-bold small priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span>
+                                <span class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-light btn-card-edit-ct"><i class="bi bi-eye"></i></button>
+                            <button class="btn btn-sm btn-outline-danger btn-card-del-ct"><i class="bi bi-trash"></i></button>
+                        </div>
                     </div>
-                </td>
-            `;
-
-            tr.querySelector(".btn-edit-ct").onclick = () => {
-                document.getElementById("clientTicketId").value = t.id;
-                document.getElementById("clientTicketTitle").value = t.titulo;
-                document.getElementById("clientTicketType").value = t.tipo;
-                document.getElementById("clientTicketStatus").value = t.estado;
-                document.getElementById("clientTicketPriority").value = t.prioridad;
-                document.getElementById("clientTicketDesc").value = t.descripcion || "";
-                document.getElementById("clientTicketModalTitle").innerText = "Editar Ticket";
-                bootstrap.Modal.getOrCreateInstance(document.getElementById("clientTicketModal")).show();
-            };
-
-            tr.querySelector(".btn-delete-ct").onclick = async () => {
-                if (!confirm("¿Seguro que queres eliminar este ticket?")) return;
-                try {
-                    await window.api.deleteTicket(t.id);
-                    showToast("Ticket eliminado", "warning");
-                    loadClientTickets(clientId);
-                } catch {
-                    showToast("Error al eliminar ticket", "danger");
-                }
-            };
-
-            tbody.appendChild(tr);
+                `;
+                card.querySelector(".btn-card-edit-ct").onclick = () => openTicketModal(t);
+                card.querySelector(".btn-card-del-ct").onclick = () => deleteTicket(t.id);
+                cardsView.appendChild(card);
+            }
         });
     } catch {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-3">Error al cargar tickets</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-3">Error al cargar tickets</td></tr>';
+        if (cardsView) cardsView.innerHTML = '<div class="text-danger text-center py-3">Error al cargar tickets</div>';
     }
 }

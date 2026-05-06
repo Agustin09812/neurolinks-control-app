@@ -4,56 +4,307 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Neurolinks Control</title>
+  <title>Neurolinks - Panel de administración - login</title>
+  <link href="/assets/favicon.png" rel="icon">
+  <link href="/assets/apple-touch-icon.png" rel="apple-touch-icon">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.css">
-  <link rel="stylesheet" href="/assets/css/styles.css">
   <style>
+    :root {
+      --accent-primary: #38bdf8;
+      --accent-secondary: #c084fc;
+      --bg-card: rgba(15, 20, 35, 0.72);
+      --border-soft: rgba(255, 255, 255, 0.08);
+      --border-light: rgba(255, 255, 255, 0.14);
+      --text-dim: #64748b;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
+      position: relative;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
+
+    /* ---- Fondo ---- */
+    .login-bg-video {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+      filter: brightness(0.32) saturate(1.3);
+    }
+
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(56, 189, 248, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 50%, rgba(192, 132, 252, 0.08) 0%, transparent 60%),
+        linear-gradient(180deg, rgba(11, 15, 26, 0.55) 0%, rgba(11, 15, 26, 0.75) 100%);
+      z-index: 1;
+    }
+
+    /* ---- Card ---- */
     .login-card {
-      width: 340px;
+      position: relative;
+      z-index: 2;
+      width: min(420px, 92vw);
+      background: var(--bg-card);
+      backdrop-filter: blur(28px) saturate(1.6);
+      -webkit-backdrop-filter: blur(28px) saturate(1.6);
+      border: 1px solid var(--border-light);
+      border-radius: 20px;
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255,255,255,0.04) inset,
+        0 1px 0 rgba(255,255,255,0.08) inset;
+      overflow: hidden;
     }
+
+    /* ---- Header de la card ---- */
+    .login-header {
+      padding: 36px 36px 28px;
+      text-align: center;
+      border-bottom: 1px solid var(--border-soft);
+      position: relative;
+    }
+
+    .login-logo-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.2) 0%, rgba(192,132,252,0.2) 100%);
+      border: 1px solid rgba(56,189,248,0.25);
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .login-logo-wrap i {
+      font-size: 1.7rem;
+      background: linear-gradient(135deg, #38bdf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .login-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin: 0 0 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .login-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* ---- Body ---- */
+    .login-body {
+      padding: 28px 36px 32px;
+    }
+
+    /* ---- Input group ---- */
+    .login-input-wrap {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .login-input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .login-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      color: #e2e8f0;
+      font-size: 0.92rem;
+      padding: 13px 44px 13px 42px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .login-input::placeholder { color: #475569; }
+
+    .login-input:focus {
+      border-color: rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+    }
+
+    .login-toggle-pw {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px;
+      font-size: 0.95rem;
+      z-index: 2;
+      line-height: 1;
+    }
+
+    .login-toggle-pw:hover { color: #94a3b8; }
+
+    /* ---- Error ---- */
+    .login-error {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.25);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      color: #f87171;
+      margin-bottom: 16px;
+    }
+
+    /* ---- Botón ---- */
+    .login-btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+      color: #0f172a;
+      letter-spacing: 0.01em;
+      transition: opacity 0.2s, transform 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-btn:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .login-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .login-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    /* ---- Footer ---- */
+    .login-footer {
+      padding: 14px 36px 18px;
+      text-align: center;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .login-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      letter-spacing: 0.03em;
+    }
+
+    .login-badge i { font-size: 0.7rem; }
   </style>
 </head>
 
 <body class="bg-dark text-light" data-theme="dark">
 
-  <div class="login-card glass-card p-4">
+  <video class="login-bg-video" autoplay muted loop playsinline>
+    <source src="/assets/video-cover-2.mp4" type="video/mp4">
+  </video>
+  <div class="login-overlay"></div>
 
-    <div class="text-center mb-4">
-      <i class="bi bi-cpu fs-2 text-info d-block mb-2"></i>
-      <h5 class="fw-bold mb-0">Neurolinks Control</h5>
-      <div class="small text-dim mt-1">Panel de administración</div>
+  <div class="login-card">
+
+    <!-- Header -->
+    <div class="login-header">
+      <div class="login-logo-wrap">
+        <i class="bi bi-cpu-fill"></i>
+      </div>
+      <div class="login-title">Neurolinks Control</div>
+      <div class="login-subtitle">Panel de administración</div>
     </div>
 
-    <form id="login-form">
-      <div class="mb-3">
-        <input
-          type="password"
-          id="password-input"
-          class="form-control bg-dark text-light border-secondary"
-          placeholder="Contraseña"
-          autofocus
-        >
-      </div>
+    <!-- Form -->
+    <div class="login-body">
+      <form id="login-form">
 
-      <div id="error-msg" class="text-danger small mb-3" style="display:none">
-        <i class="bi bi-exclamation-circle me-1"></i>Contraseña incorrecta
-      </div>
+        <div class="login-input-wrap">
+          <i class="bi bi-lock login-input-icon"></i>
+          <input
+            type="password"
+            id="password-input"
+            class="login-input"
+            placeholder="Contraseña"
+            autofocus
+          >
+          <button type="button" class="login-toggle-pw" id="toggle-pw" tabindex="-1">
+            <i class="bi bi-eye" id="toggle-pw-icon"></i>
+          </button>
+        </div>
 
-      <button type="submit" class="btn btn-outline-info w-100" id="login-btn">
-        Ingresar
-      </button>
-    </form>
+        <div class="login-error" id="error-msg">
+          <i class="bi bi-exclamation-circle-fill"></i>
+          Contraseña incorrecta
+        </div>
+
+        <button type="submit" class="login-btn" id="login-btn">
+          Ingresar
+        </button>
+
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <div class="login-footer">
+      <span class="login-badge">
+        <i class="bi bi-shield-lock"></i>
+        Acceso restringido · Solo personal autorizado
+      </span>
+    </div>
 
   </div>
 
   <script>
+    // Toggle show/hide password
+    document.getElementById('toggle-pw').onclick = () => {
+      const input = document.getElementById('password-input');
+      const icon = document.getElementById('toggle-pw-icon');
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      icon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+    };
+
+    // Login submit
     document.getElementById('login-form').onsubmit = async (e) => {
       e.preventDefault();
       const btn = document.getElementById('login-btn');
@@ -61,7 +312,7 @@
       const password = document.getElementById('password-input').value;
 
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Ingresando...';
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px;"></span>Ingresando...';
       errorMsg.style.display = 'none';
 
       try {
@@ -74,13 +325,13 @@
         if (res.ok) {
           window.location.href = '/';
         } else {
-          errorMsg.style.display = 'block';
+          errorMsg.style.display = 'flex';
           btn.disabled = false;
           btn.textContent = 'Ingresar';
           document.getElementById('password-input').focus();
         }
       } catch {
-        errorMsg.style.display = 'block';
+        errorMsg.style.display = 'flex';
         btn.disabled = false;
         btn.textContent = 'Ingresar';
       }

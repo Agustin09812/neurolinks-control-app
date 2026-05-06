@@ -150,6 +150,16 @@ router.post('/templates/:id/deploy', async (req, res) => {
 });
 
 // Services
+router.patch('/services/:id/name', async (req, res) => {
+  const newName = sanitizeStr(req.body.newName, 200);
+  if (!newName) return res.status(400).json({ error: 'newName requerido' });
+  try {
+    const result = await railwayService.updateServiceName(req.params.id, newName);
+    await supabaseService.logAction('Renombrar Servicio', `Servicio ${req.params.id} renombrado a: ${newName}`, 'servicios', req.params.id);
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.post('/services/:id/redeploy', async (req, res) => {
   const environmentId = sanitizeStr(req.body.environmentId, 200);
   try {
@@ -222,11 +232,12 @@ router.post('/clients', async (req, res) => {
   const telefono = sanitizeStr(req.body.telefono, 20) || null;
   const plan = VALID_PLANS.includes(req.body.plan) ? req.body.plan : 'Standard';
   const vencimiento = isValidDate(req.body.vencimiento) ? (req.body.vencimiento || null) : null;
+  const abono = req.body.abono !== undefined ? (parseFloat(req.body.abono) || 0) : 0;
 
   if (!nombre) return res.status(400).json({ error: 'El nombre es requerido' });
   if (email && !isValidEmail(email)) return res.status(400).json({ error: 'Email inválido' });
 
-  const clientData = { nombre, email, empresa, telefono, plan, vencimiento };
+  const clientData = { nombre, email, empresa, telefono, plan, vencimiento, abono };
   try {
     const result = await supabaseService.createClient(clientData);
     await supabaseService.logAction('Crear Cliente', `Se creó el cliente ${nombre}`, 'clientes', result.id);
@@ -251,6 +262,7 @@ router.patch('/clients/:id', async (req, res) => {
   if (req.body.telefono !== undefined) clientData.telefono = sanitizeStr(req.body.telefono, 20) || null;
   if (req.body.plan !== undefined) clientData.plan = VALID_PLANS.includes(req.body.plan) ? req.body.plan : 'Standard';
   if (req.body.vencimiento !== undefined) clientData.vencimiento = isValidDate(req.body.vencimiento) ? (req.body.vencimiento || null) : null;
+  if (req.body.abono !== undefined) clientData.abono = parseFloat(req.body.abono) || 0;
 
   try {
     const result = await supabaseService.updateClient(req.params.id, clientData);

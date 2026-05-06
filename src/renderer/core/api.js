@@ -52,6 +52,9 @@ window.api = {
   // --------------------------------------------------
   // SERVICES
   // --------------------------------------------------
+  renameService: (serviceId, newName) =>
+    _fetch(`/api/services/${serviceId}/name`, { method: 'PATCH', body: JSON.stringify({ newName }) }),
+
   redeployService: (serviceId, environmentId) =>
     _post(`/api/services/${serviceId}/redeploy`, { environmentId }),
 

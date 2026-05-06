@@ -13,40 +13,52 @@ async function renderAuditView() {
     view.style.display = "block";
 
     view.innerHTML = `
-        <div class="animate-fade">
+        <div class="audit-layout">
 
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-                <div>
-                    <h2 class="fw-bold mb-0">REGISTRO DE ACTIVIDAD</h2>
-                </div>
-                <div class="d-flex gap-2 align-items-center">
-                    <div class="input-group input-group-sm search-input-group">
-                        <span class="input-group-text bg-dark border-secondary text-secondary">
-                            <i class="bi bi-search"></i>
-                        </span>
-                        <input type="text" class="form-control text-main" id="auditSearch" onkeyup="filterAuditLogs()">
+            <!-- Header fijo -->
+            <div class="audit-sticky-header">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div class="audit-header-title">
+                        <h2 class="fw-bold mb-0">REGISTRO DE ACTIVIDAD</h2>
                     </div>
-                    <button class="btn btn-outline-light btn-sm" onclick="loadAuditLogs()">
-                        <i class="bi bi-arrow-clockwise btn-refresh-icon"></i><span class="btn-refresh-label"> Actualizar</span>
-                    </button>
+                    <div class="d-flex gap-2 align-items-center audit-controls">
+                        <div class="input-group input-group-sm search-input-group">
+                            <span class="input-group-text bg-dark border-secondary text-secondary">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control text-main" id="auditSearch" onkeyup="filterAuditLogs()">
+                        </div>
+                        <button class="btn btn-outline-light btn-sm" onclick="loadAuditLogs()">
+                            <i class="bi bi-arrow-clockwise btn-refresh-icon"></i><span class="btn-refresh-label"> Actualizar</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div class="glass-card p-0 overflow-hidden rounded">
-                <div class="table-responsive audit-table-scroll">
-                    <table class="table table-hover mb-0 align-middle">
-                        <thead>
-                            <tr>
-                                <th>Fecha/Hora</th>
-                                <th>Acción</th>
-                                <th>Entidad</th>
-                                <th>Detalles</th>
-                                <th class="text-center">Usuario</th>
-                            </tr>
-                        </thead>
-                        <tbody id="audit-table-body"></tbody>
-                    </table>
+            <!-- Área scrolleable -->
+            <div class="audit-scroll-area">
+
+                <!-- Desktop: tabla -->
+                <div class="glass-card p-0 overflow-hidden rounded d-none d-md-block">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Fecha/Hora</th>
+                                    <th>Acción</th>
+                                    <th>Entidad</th>
+                                    <th>Detalles</th>
+                                    <th class="text-center">Usuario</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-table-body"></tbody>
+                        </table>
+                    </div>
                 </div>
+
+                <!-- Mobile: cards -->
+                <div id="audit-cards-view" class="d-md-none d-flex flex-column gap-2"></div>
+
             </div>
         </div>
     `;
@@ -103,47 +115,72 @@ async function loadAuditLogs() {
 function renderAuditLogs() {
 
     const tbody = document.getElementById("audit-table-body");
-    if (!tbody) return;
+    const cardsView = document.getElementById("audit-cards-view");
 
-    tbody.innerHTML = "";
+    if (!tbody && !cardsView) return;
 
-    if (filteredAuditLogs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-dim">Sin registros</td></tr>`;
-        return;
+    const empty = filteredAuditLogs.length === 0;
+
+    // Desktop tabla
+    if (tbody) {
+        tbody.innerHTML = empty
+            ? `<tr><td colspan="5" class="text-center py-5 text-dim">Sin registros</td></tr>`
+            : "";
+
+        if (!empty) {
+            filteredAuditLogs.forEach(log => {
+                const date = new Date(log.created_at);
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>
+                        <div class="fw-bold">${date.toLocaleDateString()}</div>
+                        <div class="small text-dim">${date.toLocaleTimeString()}</div>
+                    </td>
+                    <td>
+                        <span class="badge ${getActionBadgeClass(log.accion)}">${log.accion}</span>
+                    </td>
+                    <td>
+                        <div>${log.entidad_tipo || '-'}</div>
+                        <div class="small text-dim">${log.entidad_id || ''}</div>
+                    </td>
+                    <td class="small">${log.detalles || ''}</td>
+                    <td class="text-center small">${log.usuario || 'Sistema'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
     }
 
-    filteredAuditLogs.forEach(log => {
+    // Mobile cards
+    if (cardsView) {
+        cardsView.innerHTML = empty
+            ? `<div class="text-dim text-center py-5">Sin registros</div>`
+            : "";
 
-        const date = new Date(log.created_at);
-
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-            <td>
-                <div class="fw-bold">${date.toLocaleDateString()}</div>
-                <div class="small text-dim">${date.toLocaleTimeString()}</div>
-            </td>
-
-            <td>
-                <span class="badge ${getActionBadgeClass(log.accion)}">
-                    ${log.accion}
-                </span>
-            </td>
-
-            <td>
-                <div>${log.entidad_tipo || '-'}</div>
-                <div class="small text-dim">${log.entidad_id || ''}</div>
-            </td>
-
-            <td class="small">${log.detalles || ''}</td>
-
-            <td class="text-center small">
-                ${log.usuario || 'Sistema'}
-            </td>
-        `;
-
-        tbody.appendChild(tr);
-    });
+        if (!empty) {
+            filteredAuditLogs.forEach(log => {
+                const date = new Date(log.created_at);
+                const card = document.createElement("div");
+                card.className = "glass-card p-3 rounded";
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <span class="badge ${getActionBadgeClass(log.accion)}">${log.accion}</span>
+                        <span class="small text-dim">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span>
+                    </div>
+                    ${log.entidad_tipo ? `
+                    <div class="small mb-1">
+                        <span class="text-dim">Entidad:</span> ${log.entidad_tipo}
+                        ${log.entidad_id ? `<span class="text-dim ms-1">(${log.entidad_id})</span>` : ''}
+                    </div>` : ''}
+                    ${log.detalles ? `<div class="small text-dim mb-1" style="word-break:break-word;">${log.detalles}</div>` : ''}
+                    <div class="small text-dim mt-1">
+                        <i class="bi bi-person me-1"></i>${log.usuario || 'Sistema'}
+                    </div>
+                `;
+                cardsView.appendChild(card);
+            });
+        }
+    }
 }
 
 
