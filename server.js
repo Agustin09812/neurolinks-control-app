@@ -58,6 +58,10 @@ function requireAuth(req, res, next) {
 
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
+app.get('/sw.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'assets/sw.js'));
+});
+
 app.get('/login', (req, res) => {
   if (req.session.authenticated) return res.redirect('/');
   res.sendFile(path.join(__dirname, 'src/renderer/login.html'));
