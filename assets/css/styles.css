@@ -506,19 +506,17 @@ body[data-theme="light"].bg-dark {
   overflow-y: auto;
 }
 
-/* Audit view: altura fija + no scrollea — el scroll queda en audit-scroll-area */
+/* Audit view: altura fija, sin scroll propio, sin display override */
 #audit-view {
-  height: 100% !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Audit layout: header fijo + área scrolleable */
 .audit-layout {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  height: 100%;
   min-height: 0;
 }
 
