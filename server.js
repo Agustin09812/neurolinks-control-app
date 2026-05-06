@@ -38,7 +38,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'neurolinks-dev-secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 8 * 60 * 60 * 1000 } // 8 horas
+  cookie: { maxAge: 8 * 60 * 60 * 1000, httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production' }
 }));
 
 // --------------------------------------------------
