@@ -16,10 +16,10 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
             <!-- HEADER -->
             <div class="rw-topbar mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <button class="btn btn-outline-light btn-circle" id="btnBackVars" title="Volver">
+                    <button class="btn btn-outline-light" id="btnBackVars" title="Volver">
                         <i class="bi bi-arrow-left"></i>
                     </button>
-                    <button class="btn btn-outline-light btn-circle" id="btn-add-var" title="Agregar variable">
+                    <button class="btn btn-outline-light" id="btn-add-var" title="Agregar variable">
                         <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>

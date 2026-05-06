@@ -258,8 +258,11 @@ function renderAssistantsGrid() {
             <span class="input-group-text"><i class="bi bi-search"></i></span>
             <input type="text" class="form-control" id="searchAssistants">
           </div>
-          <button class="btn btn-outline-light btn-sm" id="btnRefreshAssistants">
-            <i class="bi bi-arrow-clockwise btn-refresh-icon"></i><span class="btn-refresh-label"> Actualizar</span>
+          <button class="btn btn-outline-light btn-sm d-none d-md-inline-flex align-items-center gap-1" id="btnRefreshAssistants">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+          </button>
+          <button class="btn btn-outline-light d-md-none" id="btnRefreshAssistantsMobile">
+            <i class="bi bi-arrow-clockwise"></i>
           </button>
         </div>
       </div>
@@ -269,15 +272,14 @@ function renderAssistantsGrid() {
 
   const grid = document.getElementById("assistants-grid");
 
-  document.getElementById("btnRefreshAssistants")?.addEventListener("click", async () => {
-
+  const _onRefreshAssistants = async () => {
     showToast("Actualizando asistentes...", "info");
-
     await loadAssistants(false);
-
     renderAssistantsGrid();
+  };
 
-  });
+  document.getElementById("btnRefreshAssistants")?.addEventListener("click", _onRefreshAssistants);
+  document.getElementById("btnRefreshAssistantsMobile")?.addEventListener("click", _onRefreshAssistants);
 
   if (!assistants.length) {
     grid.innerHTML = `
@@ -517,15 +519,15 @@ function renderDetailStructure(project) {
   <div class="rw-topbar mb-4">
     <!-- Fila 1: volver (izq) + refresh + ⋮ (der) -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <button class="btn btn-outline-light btn-circle" id="btnBackToGrid" title="Volver a Asistentes">
+      <button class="btn btn-outline-light" id="btnBackToGrid" title="Volver a Asistentes">
         <i class="bi bi-arrow-left"></i>
       </button>
       <div class="d-flex align-items-center gap-2">
-        <button class="btn btn-outline-light btn-circle" id="btnRefreshProject" title="Actualizar">
+        <button class="btn btn-outline-light" id="btnRefreshProject" title="Actualizar">
           <i class="bi bi-arrow-clockwise"></i>
         </button>
         <div class="dropdown">
-          <button class="btn btn-outline-light btn-circle" data-bs-toggle="dropdown" title="Opciones">
+          <button class="btn btn-outline-light" data-bs-toggle="dropdown" title="Opciones">
             <i class="bi bi-three-dots-vertical"></i>
           </button>
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">

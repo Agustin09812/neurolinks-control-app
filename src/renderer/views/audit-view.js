@@ -28,8 +28,11 @@ async function renderAuditView() {
                             </span>
                             <input type="text" class="form-control text-main" id="auditSearch" onkeyup="filterAuditLogs()">
                         </div>
-                        <button class="btn btn-outline-light btn-sm" onclick="loadAuditLogs()">
-                            <i class="bi bi-arrow-clockwise btn-refresh-icon"></i><span class="btn-refresh-label"> Actualizar</span>
+                        <button class="btn btn-outline-light btn-sm d-none d-md-inline-flex align-items-center gap-1" id="btnRefreshAudit" onclick="loadAuditLogs()">
+                            <i class="bi bi-arrow-clockwise"></i> Actualizar
+                        </button>
+                        <button class="btn btn-outline-light d-md-none" id="btnRefreshAuditMobile" onclick="loadAuditLogs()">
+                            <i class="bi bi-arrow-clockwise"></i>
                         </button>
                     </div>
                 </div>
@@ -78,13 +81,18 @@ async function loadAuditLogs() {
     const tbody = document.getElementById("audit-table-body");
     if (!tbody) return;
 
+    const btnDesktop = document.getElementById("btnRefreshAudit");
+    const btnMobile  = document.getElementById("btnRefreshAuditMobile");
+    const allBtns = [btnDesktop, btnMobile].filter(Boolean);
+
+    allBtns.forEach(b => { b.disabled = true; b.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; });
+
     try {
 
         auditLogs = await window.api.getAuditLogs() || [];
 
         auditLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        // Preservar el filtro de búsqueda activo si hay uno
         const searchEl = document.getElementById("auditSearch");
         if (searchEl?.value) {
             filterAuditLogs();
@@ -92,6 +100,9 @@ async function loadAuditLogs() {
             filteredAuditLogs = [...auditLogs];
             renderAuditLogs();
         }
+
+        allBtns.forEach(b => { b.innerHTML = '<i class="bi bi-check-lg"></i>'; });
+        await new Promise(r => setTimeout(r, 800));
 
     } catch (err) {
 
@@ -104,6 +115,13 @@ async function loadAuditLogs() {
                 </td>
             </tr>
         `;
+
+    } finally {
+
+        allBtns.forEach(b => { b.disabled = false; });
+        if (btnDesktop) btnDesktop.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualizar';
+        if (btnMobile)  btnMobile.innerHTML  = '<i class="bi bi-arrow-clockwise"></i>';
+
     }
 }
 
