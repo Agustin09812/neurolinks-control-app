@@ -621,6 +621,7 @@ body {
   width: 70px;
   min-width: 70px;
   height: 100vh;
+  height: 100dvh;
   position: fixed;
   top: 0;
   left: 0;
@@ -695,6 +696,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
 }
 
 .main-content {
@@ -889,7 +891,9 @@ body {
 
 #detail-side-panel {
   height: calc(100vh - 220px);
+  height: calc(100dvh - 220px);
   max-height: calc(100vh - 220px);
+  max-height: calc(100dvh - 220px);
   overflow-wrap: break-word;
   word-break: break-word;
 }
@@ -1363,6 +1367,7 @@ body {
 
 .variables-panel {
   height: calc(100vh - 140px);
+  height: calc(100dvh - 140px);
   display: flex;
   flex-direction: column;
   background: transparent;
@@ -1581,6 +1586,7 @@ body {
 
 .logs-panel {
   height: calc(100vh - 80px);
+  height: calc(100dvh - 80px);
   display: flex;
   flex-direction: column;
   padding: 16px;
@@ -2699,10 +2705,12 @@ body:not([data-theme="light"]) .form-select {
   /* Audit & payment tables */
   .audit-table-scroll {
     max-height: calc(100vh - 180px);
+    max-height: calc(100dvh - 180px);
   }
 
   .payment-table-scroll {
     max-height: calc(100vh - 260px);
+    max-height: calc(100dvh - 260px);
   }
   
   /* Service menu: full width */
@@ -2897,7 +2905,39 @@ body:not([data-theme="light"]) .form-select {
 }
 
 /* =========================================================
-   26. TOPBAR MOBILE + SIDEBAR OFFCANVAS
+   26. CROSS-BROWSER VIEWPORT FIX
+========================================================= */
+
+/* Override Bootstrap vh-100 para usar dvh en browsers modernos.
+   dvh = dynamic viewport height: se recalcula cuando aparece/desaparece
+   la barra del browser (Safari, Chrome mobile, etc.) */
+.vh-100 {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Scroll con momentum en iOS Safari (evita scroll "pegajoso") */
+.main-content,
+.audit-scroll-area,
+.variables-grid,
+.logs-terminal,
+.offcanvas-body,
+.client-tab-scroll,
+.scrollable-list,
+.table-responsive {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe area para iPhone con notch/home indicator.
+   Solo activa cuando el meta viewport tiene viewport-fit=cover */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .main-wrapper {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* =========================================================
+   27. TOPBAR MOBILE + SIDEBAR OFFCANVAS
 ========================================================= */
 
 /* Topbar — hidden by default, shown at ≤991px */
