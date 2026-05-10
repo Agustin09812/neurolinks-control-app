@@ -72,6 +72,9 @@ app.post('/login', (req, res) => {
   if (!password) return res.status(400).json({ ok: false, error: 'Contraseña requerida' });
   if (password === process.env.ADMIN_PASSWORD) {
     req.session.authenticated = true;
+    if (req.body.rememberMe) {
+      req.session.cookie.maxAge = 365 * 24 * 60 * 60 * 1000; // 1 year (effectively permanent)
+    }
     return res.json({ ok: true });
   }
   res.status(401).json({ ok: false });

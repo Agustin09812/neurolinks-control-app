@@ -281,6 +281,11 @@
           </button>
         </div>
 
+        <div class="d-flex align-items-center mb-3" style="padding: 0 2px;">
+          <input class="form-check-input me-2" type="checkbox" id="remember-me" style="cursor:pointer;background-color:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.2);width:16px;height:16px;flex-shrink:0;">
+          <label for="remember-me" style="font-size:0.8rem;color:var(--text-dim);cursor:pointer;user-select:none;">Recordar sesión</label>
+        </div>
+
         <div class="login-error" id="error-msg">
           <i class="bi bi-exclamation-circle-fill"></i>
           Contraseña incorrecta
@@ -318,12 +323,19 @@
       icon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
     };
 
+    // Restore remember-me preference
+    const rememberEl = document.getElementById('remember-me');
+    rememberEl.checked = localStorage.getItem('rememberMe') === '1';
+
     // Login submit
     document.getElementById('login-form').onsubmit = async (e) => {
       e.preventDefault();
       const btn = document.getElementById('login-btn');
       const errorMsg = document.getElementById('error-msg');
       const password = document.getElementById('password-input').value;
+      const rememberMe = rememberEl.checked;
+
+      localStorage.setItem('rememberMe', rememberMe ? '1' : '0');
 
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px;"></span>Ingresando...';
@@ -333,7 +345,7 @@
         const res = await fetch('/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password })
+          body: JSON.stringify({ password, rememberMe })
         });
 
         if (res.ok) {

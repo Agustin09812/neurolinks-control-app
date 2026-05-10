@@ -1707,6 +1707,16 @@ body {
    .update-left, .update-icon, .update-text, .update-btn —
    el sistema de updates ahora usa el modal #updateModal, no un banner. */
 
+.sidebar-item-logout:hover {
+  background: rgba(248, 113, 113, 0.12) !important;
+  color: var(--error) !important;
+}
+
+[data-theme="light"] .sidebar-item-logout:hover {
+  background: rgba(220, 38, 38, 0.1) !important;
+  color: var(--error) !important;
+}
+
 .sidebar-badge {
   position: absolute;
   top: 6px;
@@ -1886,9 +1896,13 @@ body {
   flex-shrink: 0;
 }
 
-@media (max-width: 767.98px) {
-  #notificationsCanvas .offcanvas-body {
-    padding-bottom: calc(58px + 12px);
+/* ---- Tablet + Mobile (<992px): layout ---- */
+@media (max-width: 991.98px) {
+  .sidebar { display: none; }
+  .main-wrapper {
+    margin-left: 0;
+    width: 100%;
+    padding-top: 56px;
   }
 }
 
@@ -2651,52 +2665,8 @@ body:not([data-theme="light"]) .form-select {
   }
 }
 
-/* ---- Mobile (<768px): sidebar → bottom nav bar ---- */
+/* ---- Mobile (<768px): content layout adjustments ---- */
 @media (max-width: 767.98px) {
-
-  /* Layout */
-  .sidebar {
-    width: 100%;
-    min-width: 100%;
-    height: 58px;
-    flex-direction: row;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    border-right: none;
-    border-top: 1px solid var(--border-soft);
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-    padding: 0 4px;
-    z-index: 1100;
-  }
-
-  .sidebar-menu {
-    flex-direction: row;
-    flex: 1;
-    justify-content: space-around;
-    gap: 0;
-  }
-
-  .sidebar-bottom {
-    flex-direction: row;
-    gap: 0;
-  }
-
-  .sidebar-item {
-    width: 44px;
-    height: 44px;
-  }
-
-  .main-wrapper {
-    margin-left: 0;
-    width: 100%;
-    padding-bottom: 58px;
-  }
-
-  /* Viewport height for panels that use 100vh calculations */
-  .variables-panel {
-    height: calc(100vh - 58px - 80px);
-  }
 
   /* Content area padding */
   /* .flex-grow-1.overflow-auto.p-4 {
@@ -2728,11 +2698,11 @@ body:not([data-theme="light"]) .form-select {
 
   /* Audit & payment tables */
   .audit-table-scroll {
-    max-height: calc(100vh - 58px - 180px);
+    max-height: calc(100vh - 180px);
   }
 
   .payment-table-scroll {
-    max-height: calc(100vh - 58px - 260px);
+    max-height: calc(100vh - 260px);
   }
   
   /* Service menu: full width */
@@ -2923,5 +2893,204 @@ body:not([data-theme="light"]) .form-select {
   }
   .d-flex.gap-2.flex-wrap .btn {
     flex: 1 1 auto;
+  }
+}
+
+/* =========================================================
+   26. TOPBAR MOBILE + SIDEBAR OFFCANVAS
+========================================================= */
+
+/* Topbar — hidden by default, shown at ≤991px */
+.topbar-mobile {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--bg-sidebar);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--border-light);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.18);
+  z-index: 1050;
+  align-items: center;
+  padding: 0 14px;
+  gap: 12px;
+}
+
+[data-theme="light"] .topbar-mobile {
+  background: var(--bg-sidebar);
+  border-bottom-color: var(--border-light);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+}
+
+/* Hamburger button — inside topbar */
+.btn-sidebar-toggle {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  transition: background var(--anim-dur-fast) ease;
+}
+
+.btn-sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+
+[data-theme="light"] .btn-sidebar-toggle {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: var(--border-light);
+  color: var(--text-main);
+}
+
+[data-theme="light"] .btn-sidebar-toggle:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Topbar brand */
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.topbar-brand-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--accent-primary);
+}
+
+.topbar-brand-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Offcanvas panel */
+.sidebar-offcanvas {
+  width: 264px !important;
+  background: var(--bg-sidebar) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-right: 1px solid var(--border-soft) !important;
+}
+
+.sidebar-offcanvas .offcanvas-header {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  background: transparent;
+}
+
+.sidebar-offcanvas .offcanvas-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+[data-theme="light"] .sidebar-offcanvas {
+  background: var(--bg-sidebar) !important;
+}
+
+/* Nav items inside offcanvas */
+.offcanvas-nav .sidebar-item {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 44px;
+  padding: 10px 14px;
+  justify-content: flex-start !important;
+  border-radius: 10px;
+  gap: 12px;
+  font-size: 0.88rem;
+}
+
+.offcanvas-nav .sidebar-item span {
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+/* Section label */
+.offcanvas-section-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  padding: 8px 14px 4px;
+}
+
+/* Offcanvas bottom separator */
+.offcanvas-nav-bottom {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 10px;
+  margin-top: auto;
+}
+
+/* Botón de notificaciones en el topbar */
+.btn-topbar-notif {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-light);
+  color: var(--text-dim);
+  position: relative;
+  transition: background var(--anim-dur-fast) ease, color var(--anim-dur-fast) ease;
+}
+
+.btn-topbar-notif:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+
+[data-theme="light"] .btn-topbar-notif {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: var(--border-light);
+  color: var(--text-dim);
+}
+
+[data-theme="light"] .btn-topbar-notif:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-main);
+}
+
+/* Mostrar topbar en tablet + mobile (debe ir DESPUÉS de la definición base) */
+@media (max-width: 991.98px) {
+  .topbar-mobile {
+    display: flex;
+  }
+
+  /* Empujar el offcanvas de notificaciones debajo del topbar */
+  #notificationsCanvas {
+    top: 56px !important;
+    height: calc(100% - 56px) !important;
   }
 }

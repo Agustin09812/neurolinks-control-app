@@ -69,8 +69,7 @@ document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
     btn.classList.remove("active");
   });
 
-  const activeBtn = document.querySelector(`.sidebar-item[data-view="${view}"]`);
-  if (activeBtn) activeBtn.classList.add("active");
+  document.querySelectorAll(`.sidebar-item[data-view="${view}"]`).forEach(btn => btn.classList.add("active"));
 
   switch (view) {
 

@@ -95,11 +95,11 @@ function clearAllNotifications() {
 }
 
 function updateNotificationsBadge() {
-  const badge = document.getElementById("notifications-badge");
-  if (!badge) return;
   const unread = notifications.filter(n => !n.read).length;
-  badge.style.display = unread > 0 ? "block" : "none";
-
+  ["notifications-badge", "notifications-badge-topbar"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = unread > 0 ? "block" : "none";
+  });
   const countEl = document.getElementById("notif-unread-count");
   if (countEl) countEl.textContent = unread > 0 ? unread : "";
 }

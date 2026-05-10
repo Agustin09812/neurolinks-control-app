@@ -32,6 +32,77 @@
     } catch(e) {}
   </script>
 
+  <!-- TOPBAR (tablet + mobile) -->
+  <div class="topbar-mobile" id="topbar-mobile">
+    <button class="btn btn-sidebar-toggle" id="btn-sidebar-toggle"
+      data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
+      <i class="bi bi-list"></i>
+    </button>
+    <div class="topbar-brand">
+      <span class="topbar-brand-name">Neurolinks Control</span>
+    </div>
+    <button class="btn btn-topbar-notif" id="btn-notif-topbar" onclick="openNotificationsPanel()" title="Notificaciones">
+      <i class="bi bi-bell"></i>
+      <span id="notifications-badge-topbar" class="badge-dot"></span>
+    </button>
+  </div>
+
+  <!-- SIDEBAR OFFCANVAS (tablet + mobile) -->
+  <div class="offcanvas offcanvas-start sidebar-offcanvas" tabindex="-1" id="sidebarOffcanvas">
+    <div class="offcanvas-header">
+      <div class="d-flex align-items-center gap-2">
+        <div style="width:34px;height:34px;border-radius:10px;background:rgba(56,189,248,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-cpu-fill" style="color:var(--accent-primary);font-size:0.95rem;"></i>
+        </div>
+        <div>
+          <div class="fw-bold" style="font-size:0.9rem;color:var(--text-main);">Neurolinks Control</div>
+          <div style="font-size:0.68rem;color:var(--text-dim);letter-spacing:0.03em;">Panel de administración</div>
+        </div>
+      </div>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column">
+
+      <!-- Main nav -->
+      <div class="offcanvas-nav d-flex flex-column gap-1">
+
+        <div class="offcanvas-section-label">ACCIONES</div>
+        <div class="sidebar-item" id="btnDeployAssistant-offcanvas">
+          <i class="bi bi-plus-lg"></i><span>Nuevo Proyecto</span>
+        </div>
+
+        <div class="offcanvas-section-label mt-2">NAVEGACIÓN</div>
+        <div class="sidebar-item" data-view="dashboard">
+          <i class="bi bi-bar-chart"></i><span>Dashboard</span>
+        </div>
+        <div class="sidebar-item" data-view="clients">
+          <i class="bi bi-people"></i><span>Clientes</span>
+        </div>
+        <div class="sidebar-item" data-view="audit">
+          <i class="bi bi-clipboard-data"></i><span>Auditoría</span>
+        </div>
+        <div class="sidebar-item" data-view="assistants">
+          <i class="bi bi-cpu"></i><span>Asistentes</span>
+        </div>
+
+      </div>
+
+      <!-- Spacer -->
+      <div class="flex-grow-1"></div>
+
+      <!-- Bottom actions -->
+      <div class="offcanvas-nav offcanvas-nav-bottom d-flex flex-column gap-1">
+        <div class="sidebar-item" id="btn-theme-toggle-offcanvas">
+          <i class="bi bi-moon-stars" id="theme-icon-offcanvas"></i><span id="theme-label-offcanvas">Cambiar tema</span>
+        </div>
+        <div class="sidebar-item sidebar-item-logout" id="btn-logout-offcanvas">
+          <i class="bi bi-box-arrow-right"></i><span>Cerrar sesión</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- SIDEBAR -->
   <div class="sidebar">
 
@@ -71,6 +142,12 @@
         <i class="bi bi-bell"></i>
         <span id="notifications-badge" class="badge-dot"></span>
       </div>
+
+      <!-- Logout -->
+      <div class="sidebar-item sidebar-item-logout" id="btn-logout" title="Cerrar sesión">
+        <i class="bi bi-box-arrow-right"></i>
+      </div>
+      <form id="logout-form" action="/logout" method="POST" style="display:none;"></form>
 
     </div>
 
@@ -343,6 +420,48 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');
     }
+
+    // Sidebar desktop: logout
+    document.getElementById('btn-logout').onclick = () => {
+      document.getElementById('logout-form').submit();
+    };
+
+    // Offcanvas: cerrar al hacer click en cualquier item de navegación
+    document.getElementById('sidebarOffcanvas').addEventListener('click', function(e) {
+      if (e.target.closest('.sidebar-item[data-view]')) {
+        bootstrap.Offcanvas.getInstance(this)?.hide();
+      }
+    });
+
+    // Offcanvas: "Nuevo Proyecto" → delega al botón del sidebar desktop
+    document.getElementById('btnDeployAssistant-offcanvas').addEventListener('click', function() {
+      bootstrap.Offcanvas.getInstance(document.getElementById('sidebarOffcanvas'))?.hide();
+      document.getElementById('btnDeployAssistant').click();
+    });
+
+    // Offcanvas: sincronizar ícono de tema al abrir
+    document.getElementById('sidebarOffcanvas').addEventListener('shown.bs.offcanvas', function() {
+      const theme = document.body.dataset.theme || 'dark';
+      const icon = document.getElementById('theme-icon-offcanvas');
+      const label = document.getElementById('theme-label-offcanvas');
+      if (icon) icon.className = theme === 'light' ? 'bi bi-sun-fill' : 'bi bi-moon-stars';
+      if (label) label.textContent = theme === 'light' ? 'Modo oscuro' : 'Modo claro';
+    });
+
+    // Offcanvas: theme toggle
+    document.getElementById('btn-theme-toggle-offcanvas').addEventListener('click', function() {
+      toggleTheme();
+      const theme = document.body.dataset.theme || 'dark';
+      const icon = document.getElementById('theme-icon-offcanvas');
+      const label = document.getElementById('theme-label-offcanvas');
+      if (icon) icon.className = theme === 'light' ? 'bi bi-sun-fill' : 'bi bi-moon-stars';
+      if (label) label.textContent = theme === 'light' ? 'Modo oscuro' : 'Modo claro';
+    });
+
+    // Offcanvas: logout
+    document.getElementById('btn-logout-offcanvas').addEventListener('click', function() {
+      document.getElementById('logout-form').submit();
+    });
   </script>
 </body>
 
