@@ -969,21 +969,18 @@ body {
 
 
 .btn-update-mini {
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border-radius: 25px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 1rem;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 13px;
+  font-size: 0.75rem;
+  white-space: nowrap;
   box-shadow: 0 0 6px rgba(255, 193, 7, 0.4);
-  transition: all 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
 
 .btn-update-mini:hover {
-  transform: rotate(90deg);
-  box-shadow: 0 0 10px rgba(255, 193, 7, 0.8);
+  box-shadow: 0 0 12px rgba(255, 193, 7, 0.8);
 }
 
 /* FIX: Se eliminó .btn-update-mini duplicado (ya definido arriba, línea 342).

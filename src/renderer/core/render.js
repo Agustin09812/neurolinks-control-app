@@ -320,8 +320,8 @@ function renderAssistantsGrid() {
           Servicios: ${project.services.length}
 
            ${hasUpdate ? `
-          <span class="badge bg-warning text-dark small px-2 py-1">
-           <i class="bi bi-arrow-repeat"></i> Actualización disponible
+          <span class="badge bg-warning text-dark small px-2 py-1 update-badge">
+           <i class="bi bi-info-circle-fill"></i> Update available
              </span>
            ` : ""}
         </div>
@@ -411,15 +411,15 @@ function patchAssistantsGrid() {
 
     badge.innerText = project.status.toUpperCase();
 
-    // Sync "Actualización disponible" badge
+    // Sync "Update available" badge
     const hasUpdate = project.services.some(s => s.isUpdatable);
-    const updateBadge = card.querySelector(".badge.bg-warning.text-dark.small");
+    const updateBadge = card.querySelector(".update-badge");
     if (hasUpdate && !updateBadge) {
       const servicesDiv = card.querySelector(".small.text-dim.gap-2");
       if (servicesDiv) {
         servicesDiv.insertAdjacentHTML('beforeend', `
-          <span class="badge bg-warning text-dark small px-2 py-1">
-            <i class="bi bi-arrow-repeat"></i> Actualización disponible
+          <span class="badge bg-warning text-dark small px-2 py-1 update-badge">
+            <i class="bi bi-info-circle-fill"></i> Update available
           </span>
         `);
       }
@@ -792,8 +792,9 @@ function createServiceCard(service, project, staggerIndex = 0) {
           <div class="d-flex align-items-center gap-2 flex-shrink-0">
             <span class="service-status-icon">${getStatusIcon(service.status)}</span>
             ${service.isUpdatable ? `
-              <button class="btn btn-warning btn-sm btn-update-mini" title="Actualizar servicio">
-                <i class="bi bi-arrow-repeat"></i>
+              <button class="btn btn-warning btn-sm btn-update-mini d-flex align-items-center gap-1" title="Actualizar servicio">
+                <i class="bi bi-info-circle-fill"></i>
+                <span class="d-none d-md-inline">Update available</span>
               </button>` : ""}
             <button class="btn btn-sm btn-rename-service p-0 text-dim" title="Renombrar" style="line-height:1;">
               <i class="bi bi-pencil" style="font-size:0.75rem;"></i>
@@ -1044,6 +1045,25 @@ function patchServices(project) {
     if (dateEl) {
       dateEl.textContent =
         "Último deploy: " + formatDate(service.createdAt);
+    }
+
+    // Sync update button
+    const updateBtn = existing.querySelector(".btn-update-mini");
+    if (service.isUpdatable && !updateBtn) {
+      const iconsRow = existing.querySelector(".d-flex.align-items-center.gap-2.flex-shrink-0");
+      if (iconsRow) {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-warning btn-sm btn-update-mini d-flex align-items-center gap-1";
+        btn.title = "Actualizar servicio";
+        btn.innerHTML = `<i class="bi bi-info-circle-fill"></i><span class="d-none d-md-inline">Update available</span>`;
+        btn.addEventListener("click", () => {
+          showToast("Abrí Railway para aplicar la actualización", "info");
+          window.api.openExternal(project.railwayUrl);
+        });
+        iconsRow.insertBefore(btn, iconsRow.querySelector(".service-status-icon").nextSibling);
+      }
+    } else if (!service.isUpdatable && updateBtn) {
+      updateBtn.remove();
     }
 
   });
