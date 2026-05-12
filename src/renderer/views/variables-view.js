@@ -19,8 +19,8 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
                     <button class="btn btn-outline-light" id="btnBackVars" title="Volver">
                         <i class="bi bi-arrow-left"></i>
                     </button>
-                    <button class="btn btn-outline-light" id="btn-add-var" title="Agregar variable">
-                        <i class="bi bi-plus-lg"></i>
+                    <button class="btn btn-outline-light btn-sm" id="btnAddSetting">
+                        <i class="bi bi-plus-lg me-1"></i>Añadir variable
                     </button>
                 </div>
                 <div class="text-center mb-2">
@@ -62,16 +62,8 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
         document.getElementById("assistant-detail").style.display = "block";
     };
 
-    // abrir modal para agregar variable
-    document.getElementById("btn-add-var").onclick = () => {
-        document.getElementById("new-var-name").value = "";
-        document.getElementById("new-var-value").value = "";
-        bootstrap.Modal.getOrCreateInstance(document.getElementById("addVarModal")).show();
-    };
-
-    // guardar nueva variable desde el modal
-    document.getElementById("btn-save-new-var").onclick = () => {
-        handleAddVariable(projectId, environmentId, serviceId);
+    document.getElementById("btnAddSetting").onclick = () => {
+        window.api.openExternal("https://supabase.com/dashboard/project/ygyicozjewxbyixtpjlo/editor/99056?schema=public");
     };
 
     loadVariables(projectId, environmentId, serviceId);
@@ -89,60 +81,64 @@ async function loadVariables(projectId, environmentId, serviceId) {
 
     try {
 
-        const variables = await window.api.getServiceVariables(projectId, environmentId, serviceId);
-        window.variablesCache = variables || {};
+        const settings = await window.api.getSettings(projectId);
 
-        const entries = Object.entries(variables || {});
-
-        if (entries.length === 0) {
+        if (!settings || settings.length === 0) {
             grid.innerHTML = `<div class="text-secondary">No hay variables.</div>`;
             return;
         }
 
-        grid.innerHTML = entries.map(([key, value]) => {
-            // BUG-01 FIX: Escape values to prevent XSS/HTML breakage
-            const escapeHtml = (str) => String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;')
-                .replace(/`/g, '&#96;');
+        const escapeHtml = (str) => String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/`/g, '&#96;');
 
+        grid.innerHTML = settings.map(({ key, value }) => {
             const safeKey = escapeHtml(key);
             const safeValue = escapeHtml(value);
-
             return `
-            <div class="var-card" data-var-key="${safeKey}" data-var-value="${safeValue}"
-                 data-project-id="${projectId}" data-env-id="${environmentId}" data-service-id="${serviceId}">
+            <div class="var-card" data-raw-value="${safeValue}">
                 <div class="var-header-row">
                     <span class="var-key">${safeKey}</span>
                     <div class="var-actions-inline">
-                        <button class="var-btn-edit btn-edit-var" title="Editar">
-                            <i class="bi bi-pencil-fill"></i>
+                        <button class="var-btn-edit btn-toggle-val" title="Mostrar/Ocultar">
+                            <i class="bi bi-eye-slash-fill"></i>
                         </button>
-                        <button class="var-btn-delete btn-delete-var" title="Eliminar">
-                            <i class="bi bi-trash-fill"></i>
+                        <button class="var-btn-edit btn-copy-val" title="Copiar">
+                            <i class="bi bi-clipboard-fill"></i>
                         </button>
                     </div>
                 </div>
-                <pre class="var-value">${safeValue}</pre>
-            </div>
-        `}).join("");
+                <pre class="var-value masked">••••••••••••••••</pre>
+            </div>`;
+        }).join("");
 
-        // Event delegation — remove previous handler to avoid stacking on reload
         if (grid._clickHandler) grid.removeEventListener("click", grid._clickHandler);
         grid._clickHandler = (e) => {
             const card = e.target.closest(".var-card");
             if (!card) return;
-            const k = card.dataset.varKey;
-            const v = card.dataset.varValue;
-            const pId = card.dataset.projectId;
-            const eId = card.dataset.envId;
-            const sId = card.dataset.serviceId;
+            const raw = card.dataset.rawValue;
+            const pre = card.querySelector(".var-value");
 
-            if (e.target.closest(".btn-edit-var")) openEditModal(pId, eId, sId, k, v);
-            else if (e.target.closest(".btn-delete-var")) handleDeleteVariable(pId, eId, sId, k);
+            if (e.target.closest(".btn-toggle-val")) {
+                const icon = card.querySelector(".btn-toggle-val i");
+                if (pre.classList.contains("masked")) {
+                    pre.textContent = raw;
+                    pre.classList.remove("masked");
+                    icon.className = "bi bi-eye-fill";
+                } else {
+                    pre.textContent = "••••••••••••••••";
+                    pre.classList.add("masked");
+                    icon.className = "bi bi-eye-slash-fill";
+                }
+            } else if (e.target.closest(".btn-copy-val")) {
+                navigator.clipboard.writeText(raw).then(() => {
+                    showToast("Copiado al portapapeles", "success");
+                });
+            }
         };
         grid.addEventListener("click", grid._clickHandler);
 
@@ -165,169 +161,17 @@ async function loadVariables(projectId, environmentId, serviceId) {
             const q = e.target.value.toLowerCase();
             grid.querySelectorAll(".var-card").forEach(card => {
                 const k = card.querySelector(".var-key").textContent.toLowerCase();
-                const v = card.querySelector(".var-value").textContent.toLowerCase();
-                card.style.display = (k.includes(q) || v.includes(q)) ? "" : "none";
+                card.style.display = k.includes(q) ? "" : "none";
             });
         };
 
-        // Reaplica el filtro si el usuario ya había escrito algo antes del reload
         if (currentVal) {
             grid.querySelectorAll(".var-card").forEach(card => {
                 const k = card.querySelector(".var-key").textContent.toLowerCase();
-                const v = card.querySelector(".var-value").textContent.toLowerCase();
-                card.style.display = (k.includes(currentVal) || v.includes(currentVal)) ? "" : "none";
+                card.style.display = k.includes(currentVal) ? "" : "none";
             });
         }
 
     }
 
 }
-
-
-// --------------------------------------------------
-// ADD VARIABLE
-// --------------------------------------------------
-
-async function handleAddVariable(pId, eId, sId) {
-
-    const name = document.getElementById("new-var-name").value.trim();
-    const value = document.getElementById("new-var-value").value.trim();
-
-    if (!name || !value) {
-        showToast("Nombre y valor requeridos", "warning");
-        return;
-    }
-
-    const modal = bootstrap.Modal.getInstance(document.getElementById("addVarModal"));
-    if (modal) modal.hide();
-
-    window.showActionSpinner("Guardando variable...");
-    try {
-
-        await window.api.upsertVariable(pId, eId, sId, name, value);
-
-        showToast("Variable guardada", "success");
-
-        window.lastVarsHash = null;
-        await window.waitForNextChannelRun("variables");
-
-    } catch (err) {
-
-        showToast("Error: " + err.message, "danger");
-
-    } finally {
-
-        window.hideActionSpinner();
-
-    }
-}
-
-
-// --------------------------------------------------
-// DELETE VARIABLE
-// --------------------------------------------------
-
-async function handleDeleteVariable(pId, eId, sId, name) {
-
-    if (!confirm(`¿Eliminar ${name}?`)) return;
-
-    window.showActionSpinner("Eliminando variable...");
-    try {
-
-        await window.api.deleteVariable(pId, eId, sId, name);
-
-        showToast("Variable eliminada", "info");
-
-        window.lastVarsHash = null;
-        await window.waitForNextChannelRun("variables");
-
-    } catch (err) {
-
-        showToast("Error: " + err.message, "danger");
-
-    } finally {
-
-        window.hideActionSpinner();
-
-    }
-}
-
-
-// --------------------------------------------------
-// EDIT (MODAL)
-// --------------------------------------------------
-
-let editContext = {
-    projectId: null,
-    environmentId: null,
-    serviceId: null,
-    originalKey: null
-};
-
-function openEditModal(pId, eId, sId, key, value) {
-
-    editContext = {
-        projectId: pId,
-        environmentId: eId,
-        serviceId: sId,
-        originalKey: key
-    };
-
-    document.getElementById("var-name").value = key;
-    document.getElementById("var-value").value = value;
-
-    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById("editModal"));
-    modal.show();
-}
-
-
-// --------------------------------------------------
-// SAVE EDIT
-// --------------------------------------------------
-
-document.addEventListener("click", async (e) => {
-
-    if (e.target.id !== "btn-save-variable") return;
-
-    const newKey = document.getElementById("var-name").value.trim();
-    const newValue = document.getElementById("var-value").value;
-
-    if (!newKey) {
-        showToast("Nombre requerido", "warning");
-        return;
-    }
-
-    window.showActionSpinner("Actualizando variable...");
-    try {
-
-        if (editContext.originalKey !== newKey) {
-            await window.api.deleteVariable(
-                editContext.projectId,
-                editContext.environmentId,
-                editContext.serviceId,
-                editContext.originalKey
-            );
-        }
-
-        await window.api.upsertVariable(
-            editContext.projectId,
-            editContext.environmentId,
-            editContext.serviceId,
-            newKey,
-            newValue
-        );
-
-        showToast("Variable actualizada", "success");
-
-        bootstrap.Modal.getInstance(document.getElementById("editModal")).hide();
-
-        window.lastVarsHash = null;
-        await window.waitForNextChannelRun("variables");
-
-    } catch (err) {
-        showToast("Error: " + err.message, "danger");
-    } finally {
-        window.hideActionSpinner();
-    }
-
-});

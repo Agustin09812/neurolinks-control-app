@@ -59,6 +59,11 @@ window.api = {
     _post(`/api/services/${serviceId}/redeploy`, { environmentId }),
 
   // --------------------------------------------------
+  // SETTINGS (Supabase)
+  // --------------------------------------------------
+  getSettings: (projectId) => _fetch(`/api/settings/${projectId}`),
+
+  // --------------------------------------------------
   // VARIABLES
   // --------------------------------------------------
   getServiceVariables: (projectId, environmentId, serviceId) =>

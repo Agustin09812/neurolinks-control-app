@@ -178,71 +178,101 @@ function getPlanBadgeClass(plan) {
     }[plan] || 'bg-secondary text-white';
 }
 
+function _buildClientCol(c, isNew, index) {
+    const initials = c.nombre.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+    const col = document.createElement("div");
+    col.className = "col-12 col-sm-6 col-md-6 col-lg-4 col-xl-3";
+    col.innerHTML = `
+        <div class="glass-card p-3 h-100 hover-lift clickable client-card${isNew ? " anim-card-enter" : ""}"
+        ${isNew ? `style="--si:${index}"` : ""} data-id="${c.id}">
+            <div class="d-flex align-items-center gap-3">
+                <div class="client-avatar-lg flex-shrink-0">${initials}</div>
+                <div class="flex-grow-1 min-w-0 overflow-hidden">
+                    <div class="fw-bold text-truncate client-name">${escapeHtml(c.nombre)}</div>
+                    <div class="small text-dim text-truncate client-empresa">${escapeHtml(c.empresa || 'Particular')}</div>
+                    <div class="small text-dim text-truncate client-abono">$${escapeHtml(String(c.abono ?? 0))}/mes</div>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <span class="badge client-plan ${getPlanBadgeClass(c.plan)}">${escapeHtml(c.plan || 'Standard')}</span>
+                        <span class="small text-dim" id="ast-count-${c.id}"><i class="bi bi-robot"></i></span>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-light flex-shrink-0 btn-edit-client" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    col.querySelector(".client-card").addEventListener("click", (e) => {
+        if (e.target.closest(".btn-edit-client")) return;
+        openClientDetail(c.id);
+    });
+    col.querySelector(".btn-edit-client").addEventListener("click", (e) => {
+        e.stopPropagation();
+        openEditClient(c.id);
+    });
+    return col;
+}
+
 function renderClientCards() {
     const grid = document.getElementById("clients-cards-grid");
     if (!grid) return;
 
     const filtered = getFilteredClients();
 
-    // Capture IDs already rendered before clearing — skip entrance animation for them
-    const existingIds = new Set(
-        [...grid.querySelectorAll(".client-card[data-id]")].map(el => el.dataset.id)
+    // Map of id -> card element currently in DOM
+    const rendered = new Map(
+        [...grid.querySelectorAll(".client-card[data-id]")].map(el => [el.dataset.id, el.closest(".col-12")])
     );
 
-    grid.innerHTML = "";
+    // Clear skeleton placeholders before first real render
+    if (rendered.size === 0 && grid.children.length > 0) grid.innerHTML = "";
+
+    const filteredIds = new Set(filtered.map(c => c.id));
+
+    // Remove cards no longer in filtered list
+    rendered.forEach((col, id) => {
+        if (!filteredIds.has(id)) col.remove();
+    });
 
     if (filtered.length === 0) {
-        grid.innerHTML = `
-            <div class="col-12 text-center text-secondary py-5">
-                No se encontraron clientes
-            </div>
-        `;
+        if (!grid.querySelector(".no-clients-msg")) {
+            grid.innerHTML = `<div class="col-12 text-center text-secondary py-5 no-clients-msg">No se encontraron clientes</div>`;
+        }
         return;
     }
 
+    // Remove empty-state if present
+    grid.querySelector(".no-clients-msg")?.remove();
+
     filtered.forEach((c, index) => {
-        const initials = c.nombre.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
-        const isNew = !existingIds.has(c.id);
-        const col = document.createElement("div");
-        col.className = "col-12 col-sm-6 col-md-6 col-lg-4 col-xl-3";
+        const existingCol = rendered.get(c.id);
 
-        col.innerHTML = `
-            <div class="glass-card p-3 h-100 hover-lift clickable client-card${isNew ? " anim-card-enter" : ""}"
-            ${isNew ? `style="--si:${index}"` : ""} data-id="${c.id}">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="client-avatar-lg flex-shrink-0">${initials}</div>
-                    <div class="flex-grow-1 min-w-0 overflow-hidden">
-                        <div class="fw-bold text-truncate">${escapeHtml(c.nombre)}</div>
-                        <div class="small text-dim text-truncate">${escapeHtml(c.empresa || 'Particular')}</div>
-                        <div class="small text-dim text-truncate">$${escapeHtml(String(c.abono ?? 0))}/mes</div>
-                        <div class="d-flex align-items-center gap-2 mt-1">
-                            <span class="badge ${getPlanBadgeClass(c.plan)}">${escapeHtml(c.plan || 'Standard')}</span>
-                            <span class="small text-dim" id="ast-count-${c.id}"><i class="bi bi-robot"></i></span>
-                        </div>
-                    </div>
-                    <button class="btn btn-sm btn-outline-light flex-shrink-0 btn-edit-client" title="Editar">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                </div>
-            </div>
-        `;
+        if (existingCol) {
+            // Patch fields in place — preserves ast-count and event listeners
+            const card = existingCol.querySelector(".client-card");
+            const nameEl = card.querySelector(".client-name");
+            const empresaEl = card.querySelector(".client-empresa");
+            const abonoEl = card.querySelector(".client-abono");
+            const planEl = card.querySelector(".client-plan");
 
-        col.querySelector(".client-card").addEventListener("click", (e) => {
-            if (e.target.closest(".btn-edit-client")) return;
-            openClientDetail(c.id);
-        });
-
-        col.querySelector(".btn-edit-client").addEventListener("click", (e) => {
-            e.stopPropagation();
-            openEditClient(c.id);
-        });
-
-        grid.appendChild(col);
-
-        window.api.getClientProjects(c.id).then(ids => {
-            const el = document.getElementById(`ast-count-${c.id}`);
-            if (el) el.innerHTML = `<i class="bi bi-robot"></i> ${ids.length}`;
-        }).catch(() => {});
+            if (nameEl) nameEl.textContent = c.nombre;
+            if (empresaEl) empresaEl.textContent = c.empresa || 'Particular';
+            if (abonoEl) abonoEl.textContent = `$${c.abono ?? 0}/mes`;
+            if (planEl) {
+                planEl.className = `badge client-plan ${getPlanBadgeClass(c.plan)}`;
+                planEl.textContent = c.plan || 'Standard';
+            }
+        } else {
+            const col = _buildClientCol(c, true, index);
+            grid.appendChild(col);
+            window.api.getClientProjects(c.id).then(ids => {
+                const el = document.getElementById(`ast-count-${c.id}`);
+                if (el) {
+                    const activeCount = assistants.filter(p => ids.includes(p.id)).length;
+                    el.innerHTML = `<i class="bi bi-robot"></i> ${activeCount}`;
+                }
+            }).catch(() => {});
+        }
     });
 }
 
@@ -575,6 +605,16 @@ async function loadDetailPayments(clientId) {
 // ASSISTANT SECTION
 // -----------------------------------------------
 
+function refreshAstCount(clientId) {
+    window.api.getClientProjects(clientId).then(ids => {
+        const el = document.getElementById(`ast-count-${clientId}`);
+        if (el) {
+            const activeCount = assistants.filter(p => ids.includes(p.id)).length;
+            el.innerHTML = `<i class="bi bi-robot"></i> ${activeCount}`;
+        }
+    }).catch(() => {});
+}
+
 async function loadClientAssistantSection(clientId) {
     const wrap = document.getElementById("detail-assistants-container");
     if (!wrap) return;
@@ -693,6 +733,7 @@ async function loadClientAssistantSection(clientId) {
                         await window.api.unlinkProjectClient(p.id);
                         showToast("Asistente desvinculado", "warning");
                         loadClientAssistantSection(clientId);
+                        refreshAstCount(clientId);
                     } catch { showToast("Error al desvincular", "danger"); }
                 };
 
@@ -796,6 +837,7 @@ async function renderLinkAssistantList(clientId, bsModal, search = "") {
                     showToast("Asistente vinculado", "success");
                     bsModal.hide();
                     loadClientAssistantSection(clientId);
+                    refreshAstCount(clientId);
                 } catch {
                     showToast("Error al vincular", "danger");
                 }

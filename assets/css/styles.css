@@ -1096,6 +1096,26 @@ body {
   animation: fadeUp 0.5s ease-out forwards;
 }
 
+.ticket-new-row {
+  animation: ticketEnter 0.5s ease-out forwards;
+}
+
+@keyframes ticketEnter {
+  from { opacity: 0; background-color: rgba(99, 102, 241, 0.15); }
+  60%  { background-color: rgba(99, 102, 241, 0.08); }
+  to   { opacity: 1; background-color: transparent; }
+}
+
+.audit-new-row {
+  animation: auditEnter 0.5s ease-out forwards;
+}
+
+@keyframes auditEnter {
+  from { opacity: 0; background-color: rgba(34, 197, 94, 0.12); }
+  60%  { background-color: rgba(34, 197, 94, 0.05); }
+  to   { opacity: 1; background-color: transparent; }
+}
+
 
 /* =========================================================
    14. SPLASH SCREEN

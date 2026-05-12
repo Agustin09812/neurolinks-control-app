@@ -89,16 +89,19 @@ async function loadAuditLogs() {
 
     try {
 
-        auditLogs = await window.api.getAuditLogs() || [];
+        const existingIds = new Set(auditLogs.map(l => l.id));
+        const fetched = await window.api.getAuditLogs() || [];
+        fetched.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        auditLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        const newLogs = fetched.filter(l => !existingIds.has(l.id));
+        auditLogs = fetched;
 
         const searchEl = document.getElementById("auditSearch");
         if (searchEl?.value) {
             filterAuditLogs();
         } else {
             filteredAuditLogs = [...auditLogs];
-            renderAuditLogs();
+            _patchAuditLogs(newLogs);
         }
 
         allBtns.forEach(b => { b.innerHTML = '<i class="bi bi-check-lg"></i>'; });
@@ -127,8 +130,84 @@ async function loadAuditLogs() {
 
 
 // --------------------------------------------------
-// RENDER
+// RENDER / PATCH
 // --------------------------------------------------
+
+function _buildAuditRow(log) {
+    const date = new Date(log.created_at);
+    const tr = document.createElement("tr");
+    tr.dataset.logId = log.id;
+    tr.innerHTML = `
+        <td>
+            <div class="fw-bold">${date.toLocaleDateString()}</div>
+            <div class="small text-dim">${date.toLocaleTimeString()}</div>
+        </td>
+        <td>
+            <span class="badge ${getActionBadgeClass(log.accion)}">${log.accion}</span>
+        </td>
+        <td>
+            <div>${log.entidad_tipo || '-'}</div>
+            <div class="small text-dim">${log.entidad_id || ''}</div>
+        </td>
+        <td class="small">${log.detalles || ''}</td>
+        <td class="text-center small">${log.usuario || 'Sistema'}</td>
+    `;
+    return tr;
+}
+
+function _buildAuditCard(log) {
+    const date = new Date(log.created_at);
+    const card = document.createElement("div");
+    card.dataset.logId = log.id;
+    card.className = "glass-card p-3 rounded";
+    card.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <span class="badge ${getActionBadgeClass(log.accion)}">${log.accion}</span>
+            <span class="small text-dim">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span>
+        </div>
+        ${log.entidad_tipo ? `
+        <div class="small mb-1">
+            <span class="text-dim">Entidad:</span> ${log.entidad_tipo}
+            ${log.entidad_id ? `<span class="text-dim ms-1">(${log.entidad_id})</span>` : ''}
+        </div>` : ''}
+        ${log.detalles ? `<div class="small text-dim mb-1" style="word-break:break-word;">${log.detalles}</div>` : ''}
+        <div class="small text-dim mt-1">
+            <i class="bi bi-person me-1"></i>${log.usuario || 'Sistema'}
+        </div>
+    `;
+    return card;
+}
+
+function _patchAuditLogs(newLogs) {
+    const tbody = document.getElementById("audit-table-body");
+    const cardsView = document.getElementById("audit-cards-view");
+    if (!tbody && !cardsView) return;
+
+    const hasRows = tbody && [...tbody.children].some(r => !r.querySelector('td[colspan]'));
+
+    if (!hasRows) {
+        renderAuditLogs();
+        return;
+    }
+
+    if (newLogs.length === 0) return;
+
+    if (tbody) {
+        newLogs.forEach(log => {
+            const tr = _buildAuditRow(log);
+            tr.classList.add('audit-new-row');
+            tbody.prepend(tr);
+        });
+    }
+
+    if (cardsView && cardsView.querySelector('[data-log-id]')) {
+        newLogs.forEach(log => {
+            const card = _buildAuditCard(log);
+            card.classList.add('audit-new-row');
+            cardsView.prepend(card);
+        });
+    }
+}
 
 function renderAuditLogs() {
 
@@ -139,65 +218,20 @@ function renderAuditLogs() {
 
     const empty = filteredAuditLogs.length === 0;
 
-    // Desktop tabla
     if (tbody) {
         tbody.innerHTML = empty
             ? `<tr><td colspan="5" class="text-center py-5 text-dim">Sin registros</td></tr>`
             : "";
 
-        if (!empty) {
-            filteredAuditLogs.forEach(log => {
-                const date = new Date(log.created_at);
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>
-                        <div class="fw-bold">${date.toLocaleDateString()}</div>
-                        <div class="small text-dim">${date.toLocaleTimeString()}</div>
-                    </td>
-                    <td>
-                        <span class="badge ${getActionBadgeClass(log.accion)}">${log.accion}</span>
-                    </td>
-                    <td>
-                        <div>${log.entidad_tipo || '-'}</div>
-                        <div class="small text-dim">${log.entidad_id || ''}</div>
-                    </td>
-                    <td class="small">${log.detalles || ''}</td>
-                    <td class="text-center small">${log.usuario || 'Sistema'}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
+        if (!empty) filteredAuditLogs.forEach(log => tbody.appendChild(_buildAuditRow(log)));
     }
 
-    // Mobile cards
     if (cardsView) {
         cardsView.innerHTML = empty
             ? `<div class="text-dim text-center py-5">Sin registros</div>`
             : "";
 
-        if (!empty) {
-            filteredAuditLogs.forEach(log => {
-                const date = new Date(log.created_at);
-                const card = document.createElement("div");
-                card.className = "glass-card p-3 rounded";
-                card.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                        <span class="badge ${getActionBadgeClass(log.accion)}">${log.accion}</span>
-                        <span class="small text-dim">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span>
-                    </div>
-                    ${log.entidad_tipo ? `
-                    <div class="small mb-1">
-                        <span class="text-dim">Entidad:</span> ${log.entidad_tipo}
-                        ${log.entidad_id ? `<span class="text-dim ms-1">(${log.entidad_id})</span>` : ''}
-                    </div>` : ''}
-                    ${log.detalles ? `<div class="small text-dim mb-1" style="word-break:break-word;">${log.detalles}</div>` : ''}
-                    <div class="small text-dim mt-1">
-                        <i class="bi bi-person me-1"></i>${log.usuario || 'Sistema'}
-                    </div>
-                `;
-                cardsView.appendChild(card);
-            });
-        }
+        if (!empty) filteredAuditLogs.forEach(log => cardsView.appendChild(_buildAuditCard(log)));
     }
 }
 

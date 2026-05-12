@@ -159,15 +159,7 @@ async function renderTicketsView(filterClientId = "") {
                                         <select class="form-select" id="ticketClientView" required></select>
                                     </div>
 
-                                    <!-- TIPO -->
-                                    <div class="col-md-3">
-                                        <label class="form-label text-dim small fw-bold">TIPO</label>
-                                        <select class="form-select" id="ticketTypeView">
-                                            <option value="Soporte">Soporte</option>
-                                            <option value="Mejora">Mejora</option>
-                                            <option value="Bugs">Bugs</option>
-                                        </select>
-                                    </div>
+                                    <input type="hidden" id="ticketTypeView" value="Asistencia Externa">
 
                                     <!-- ESTADO -->
                                     <div class="col-md-3">
@@ -238,6 +230,70 @@ async function populateTicketFilters() {
     } catch (err) {
         console.error("Error populating ticket filters:", err);
     }
+}
+
+function prependNewTickets(newTickets) {
+    const tbody = document.getElementById("tickets-table-body-view");
+    const cardsView = document.getElementById("tickets-cards-view");
+
+    newTickets.forEach(t => {
+        allTicketsView.unshift(t);
+
+        if (tbody) {
+            const tr = document.createElement("tr");
+            tr.className = "ticket-row ticket-new-row";
+            tr.innerHTML = `
+                <td>
+                    <div class="fw-bold">#${t.id.substring(0, 8)}</div>
+                    <div class="small text-white">${escapeHtml(t.titulo)}</div>
+                </td>
+                <td>${t.clientes ? escapeHtml(t.clientes.nombre) : 'Sin cliente'}</td>
+                <td><span class="small text-dim">${escapeHtml(t.tipo)}</span></td>
+                <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
+                <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
+                <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
+                <td class="text-end">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button class="btn btn-sm btn-outline-light" onclick="openEditTicket('${t.id}')"><i class="bi bi-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="handleDeleteTicket('${t.id}')"><i class="bi bi-trash"></i></button>
+                    </div>
+                </td>
+            `;
+            tbody.insertBefore(tr, tbody.firstChild);
+        }
+
+        if (cardsView) {
+            const card = document.createElement("div");
+            card.className = "glass-card p-3 rounded ticket-new-row";
+            card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="text-dim small">#${t.id.substring(0, 8)}</span>
+                            <span class="small text-dim">${escapeHtml(t.tipo)}</span>
+                        </div>
+                        <div class="fw-bold mb-1">${escapeHtml(t.titulo)}</div>
+                        <div class="small text-dim mb-2">${t.clientes ? escapeHtml(t.clientes.nombre) : 'Sin cliente'}</div>
+                        <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
+                            <span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span>
+                            <span class="fw-bold small priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span>
+                            <span class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 flex-shrink-0">
+                        <button class="btn btn-sm btn-outline-light btn-card-view"><i class="bi bi-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-danger btn-card-del"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+            `;
+            card.querySelector(".btn-card-view").onclick = () => openEditTicket(t.id);
+            card.querySelector(".btn-card-del").onclick = () => handleDeleteTicket(t.id);
+            cardsView.insertBefore(card, cardsView.firstChild);
+        }
+    });
+
+    lastTicketsCount = allTicketsView.length;
+    window.ticketsData = allTicketsView;
 }
 
 async function loadTicketsData() {
@@ -557,14 +613,7 @@ async function renderClientTicketsTab(clientId, container) {
                                 <label class="form-label text-dim small fw-bold required">TITULO</label>
                                 <input type="text" class="form-control text-main" id="clientTicketTitle" required>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label text-dim small fw-bold">TIPO</label>
-                                <select class="form-select" id="clientTicketType">
-                                    <option value="Soporte">Soporte</option>
-                                    <option value="Mejora">Mejora</option>
-                                    <option value="Bugs">Bugs</option>
-                                </select>
-                            </div>
+                            <input type="hidden" id="clientTicketType" value="Asistencia Externa">
                             <div class="col-md-3">
                                 <label class="form-label text-dim small fw-bold">ESTADO</label>
                                 <select class="form-select" id="clientTicketStatus">

@@ -184,6 +184,42 @@ const _ch = {
     }
   },
 
+  tickets: {
+    _t: 0, _running: false, _ver: 0, _count: -1, _callbacks: [],
+
+    rate() { return _deepIdleMode ? 120000 : _idleMode ? 60000 : 30000; },
+
+    due() { return Date.now() - this._t >= this.rate(); },
+
+    async run() {
+      this._running = true;
+      this._t = Date.now();
+      const v = ++this._ver;
+      try {
+        const tickets = await window.api.getTickets().catch(() => null);
+        if (v !== this._ver || !tickets) return;
+
+        window.ticketsData = tickets;
+
+        if (this._count >= 0 && tickets.length > this._count) {
+          const newOnes = tickets.slice(0, tickets.length - this._count);
+          newOnes.forEach(t => {
+            addNotification("ticket", "Nuevo ticket recibido", `Ticket: ${t.titulo || "Sin título"}`, `ticket-${t.id}`);
+          });
+          showToast("Nuevos tickets recibidos", "info");
+          if (localStorage.getItem("activeView") === "tickets" && !isUserInteracting()) {
+            prependNewTickets?.(newOnes);
+          }
+        }
+
+        this._count = tickets.length;
+      } finally {
+        this._running = false;
+        this._callbacks.splice(0).forEach(cb => cb());
+      }
+    }
+  },
+
   variables: {
     _t: 0, _running: false, _ver: 0, _callbacks: [],
 

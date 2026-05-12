@@ -26,7 +26,7 @@ function isValidDate(dateStr) {
 }
 
 const VALID_PLANS = ['Standard', 'Premium', 'Enterprise', 'Baja'];
-const VALID_TICKET_TIPOS = ['Soporte', 'Mejora', 'Bugs'];
+const VALID_TICKET_TIPOS = ['Soporte', 'Mejora', 'Bugs', 'Asistencia Externa', 'Ventas', 'Técnico', 'Otro'];
 const VALID_TICKET_ESTADOS = ['Abierto', 'En Progreso', 'En progreso', 'Cerrado'];
 const VALID_TICKET_PRIORIDADES = ['Baja', 'Media', 'Alta'];
 const VALID_PAYMENT_METODOS = ['Transferencia', 'Efectivo', 'Mercado Pago', 'Crypto', 'Cripto', 'Otro'];
@@ -206,6 +206,12 @@ router.post('/variables/delete', async (req, res) => {
   const name = sanitizeStr(req.body.name, 200);
   if (!name) return res.status(400).json({ error: 'El nombre de la variable es requerido' });
   try { res.json(await railwayService.deleteVariable(projectId, environmentId, serviceId, name)); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Settings (Supabase secundaria)
+router.get('/settings/:projectId', async (req, res) => {
+  try { res.json(await supabaseService.getSettings(req.params.projectId)); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
