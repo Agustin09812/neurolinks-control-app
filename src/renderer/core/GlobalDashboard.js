@@ -95,7 +95,7 @@ function renderRecentTickets(tickets) {
       <span class="indicator-dot" style="background:${dotColor};"></span>
       <div class="flex-grow-1 overflow-hidden">
         <div class="fw-semibold text-truncate ticket-list-name">${t.titulo}</div>
-        <div class="ticket-list-client">${t.clientes ? t.clientes.nombre : 'Sin cliente'}</div>
+        <div class="ticket-list-client">${t.clientes ? t.clientes.nombre : (t.chat_id || 'Sin cliente')}</div>
       </div>
       <span class="prio-pill" style="background:${pillBg};color:${dotColor};">${t.prioridad || 'Baja'}</span>
     </div>`;

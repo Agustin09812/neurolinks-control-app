@@ -47,7 +47,6 @@ async function renderTicketsView(filterClientId = "") {
                                 onchange="handleTicketFilter('status', this.value)">
                                 <option value="">Estado</option>
                                 <option value="Abierto">Abierto</option>
-                                <option value="En Progreso">En Progreso</option>
                                 <option value="Cerrado">Cerrado</option>
                             </select>
                         </div>
@@ -166,8 +165,7 @@ async function renderTicketsView(filterClientId = "") {
                                         <label class="form-label text-dim small fw-bold">ESTADO</label>
                                         <select class="form-select" id="ticketStatusView">
                                             <option value="Abierto">Abierto</option>
-                                            <option value="En Progreso">En Progreso</option>
-                                            <option value="Cerrado">Cerrado</option>
+                                                        <option value="Cerrado">Cerrado</option>
                                         </select>
                                     </div>
 
@@ -247,7 +245,7 @@ function prependNewTickets(newTickets) {
                     <div class="fw-bold">#${t.id.substring(0, 8)}</div>
                     <div class="small text-white">${escapeHtml(t.titulo)}</div>
                 </td>
-                <td>${t.clientes ? escapeHtml(t.clientes.nombre) : 'Sin cliente'}</td>
+                <td>${t.clientes ? escapeHtml(t.clientes.nombre) : (t.chat_id ? escapeHtml(t.chat_id) : 'Sin cliente')}</td>
                 <td><span class="small text-dim">${escapeHtml(t.tipo)}</span></td>
                 <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
                 <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
@@ -273,7 +271,7 @@ function prependNewTickets(newTickets) {
                             <span class="small text-dim">${escapeHtml(t.tipo)}</span>
                         </div>
                         <div class="fw-bold mb-1">${escapeHtml(t.titulo)}</div>
-                        <div class="small text-dim mb-2">${t.clientes ? escapeHtml(t.clientes.nombre) : 'Sin cliente'}</div>
+                        <div class="small text-dim mb-2">${t.clientes ? escapeHtml(t.clientes.nombre) : (t.chat_id ? escapeHtml(t.chat_id) : 'Sin cliente')}</div>
                         <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
                             <span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span>
                             <span class="fw-bold small priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span>
@@ -307,14 +305,16 @@ async function loadTicketsData() {
         if (previousCount !== 0 && allTicketsView.length > previousCount) {
             const newTickets = allTicketsView.slice(0, allTicketsView.length - previousCount);
             newTickets.forEach(t => {
+                const clientName = t.clientes?.nombre || t.chat_id || 'cliente desconocido';
                 addNotification(
                     "ticket",
-                    "Nuevo ticket recibido",
-                    `Ticket: ${t.titulo || "Sin título"}`,
+                    "Nuevo ticket pendiente",
+                    `Nuevo ticket de: ${clientName} — ${t.titulo || 'Sin título'}`,
                     `ticket-${t.id}`
                 );
             });
-            showToast("Nuevos tickets recibidos", "info");
+            const count = newTickets.length;
+            showToast(`<i class="bi bi-ticket-perforated-fill me-2"></i>${count === 1 ? 'Nuevo ticket pendiente' : `${count} nuevos tickets pendientes`}`, "danger");
         }
 
         lastTicketsCount = allTicketsView.length;
@@ -386,7 +386,7 @@ function renderTicketsList() {
                     <div class="fw-bold">#${t.id.substring(0, 8)}</div>
                     <div class="small text-white">${escapeHtml(t.titulo)}</div>
                 </td>
-                <td>${t.clientes ? escapeHtml(t.clientes.nombre) : 'Sin cliente'}</td>
+                <td>${t.clientes ? escapeHtml(t.clientes.nombre) : (t.chat_id ? escapeHtml(t.chat_id) : 'Sin cliente')}</td>
                 <td><span class="small text-dim">${escapeHtml(t.tipo)}</span></td>
                 <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
                 <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
@@ -416,7 +416,7 @@ function renderTicketsList() {
                             <span class="small text-dim">${escapeHtml(t.tipo)}</span>
                         </div>
                         <div class="fw-bold mb-1">${escapeHtml(t.titulo)}</div>
-                        <div class="small text-dim mb-2">${t.clientes ? escapeHtml(t.clientes.nombre) : 'Sin cliente'}</div>
+                        <div class="small text-dim mb-2">${t.clientes ? escapeHtml(t.clientes.nombre) : (t.chat_id ? escapeHtml(t.chat_id) : 'Sin cliente')}</div>
                         ${t.descripcion ? `<div class="small text-dim mb-2" style="opacity:0.7;white-space:pre-wrap;word-break:break-word;">${escapeHtml(t.descripcion.substring(0, 120))}${t.descripcion.length > 120 ? '…' : ''}</div>` : ''}
                         <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
                             <span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span>
@@ -518,7 +518,7 @@ function exportTicketsToCSV() {
     const rows = filtered.map(t => [
         escapeCSV(t.id),
         escapeCSV(t.titulo),
-        escapeCSV(t.clientes ? t.clientes.nombre : 'Sin cliente'),
+        escapeCSV(t.clientes ? t.clientes.nombre : (t.chat_id || 'Sin cliente')),
         escapeCSV(t.tipo),
         escapeCSV(t.estado),
         escapeCSV(t.prioridad || 'Baja'),
@@ -556,11 +556,11 @@ function changePage(direction) {
 // TABS DE CLIENTE: Tickets inline en client-detail
 // -----------------------------------------------
 
-async function renderClientTicketsTab(clientId, container) {
+async function renderClientTicketsTab(clientId, container, clientTelefono = null) {
     container.innerHTML = `
         <div>
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="text-dim small fw-bold mb-0">TICKETS DEL CLIENTE</h6>
+                <h6 class="text-dim small fw-bold mb-0" id="client-tickets-header">TICKETS DEL CLIENTE</h6>
                 <button class="btn btn-outline-light btn-sm" id="btn-new-client-ticket">
                     <i class="bi bi-plus-circle me-2"></i>Nuevo Ticket
                 </button>
@@ -618,8 +618,7 @@ async function renderClientTicketsTab(clientId, container) {
                                 <label class="form-label text-dim small fw-bold">ESTADO</label>
                                 <select class="form-select" id="clientTicketStatus">
                                     <option value="Abierto">Abierto</option>
-                                    <option value="En Progreso">En Progreso</option>
-                                    <option value="Cerrado">Cerrado</option>
+                                        <option value="Cerrado">Cerrado</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -674,16 +673,16 @@ async function renderClientTicketsTab(clientId, container) {
                 showToast("Ticket creado correctamente", "success");
             }
             bootstrap.Modal.getInstance(modalEl).hide();
-            loadClientTickets(clientId);
+            loadClientTickets(clientId, clientTelefono);
         } catch {
             showToast("Error al guardar ticket", "danger");
         }
     };
 
-    loadClientTickets(clientId);
+    loadClientTickets(clientId, clientTelefono);
 }
 
-async function loadClientTickets(clientId) {
+async function loadClientTickets(clientId, clientTelefono = null) {
     const tbody = document.getElementById("client-tickets-tbody");
     const cardsView = document.getElementById("client-tickets-cards");
 
@@ -706,18 +705,31 @@ async function loadClientTickets(clientId) {
         try {
             await window.api.deleteTicket(id);
             showToast("Ticket eliminado", "warning");
-            loadClientTickets(clientId);
+            loadClientTickets(clientId, clientTelefono);
         } catch {
             showToast("Error al eliminar ticket", "danger");
         }
     };
 
     try {
-        const allTickets = await window.api.getTickets() || [];
-        const tickets = allTickets.filter(t => t.cliente_id === clientId);
+        const [allTickets, clientProjects] = await Promise.all([
+            window.api.getTickets(),
+            window.api.getClientProjects(clientId)
+        ]);
+        const tickets = (allTickets || []).filter(t =>
+            t.cliente_id === clientId ||
+            (clientTelefono && t.chat_id === clientTelefono) ||
+            (t.project_id && (clientProjects || []).includes(t.project_id))
+        );
 
         if (tbody) tbody.innerHTML = "";
         if (cardsView) cardsView.innerHTML = "";
+
+        const headerEl = document.getElementById("client-tickets-header");
+        if (headerEl) {
+            const pending = tickets.filter(t => t.estado !== 'Cerrado').length;
+            headerEl.innerHTML = `TICKETS DEL CLIENTE${pending > 0 ? ` <span class="badge bg-danger text-white fw-normal ms-1">${pending} pendiente${pending !== 1 ? 's' : ''}</span>` : ''}`;
+        }
 
         if (tickets.length === 0) {
             if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-dim py-5">No hay tickets para este cliente</td></tr>';

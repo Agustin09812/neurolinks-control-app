@@ -27,7 +27,7 @@ function isValidDate(dateStr) {
 
 const VALID_PLANS = ['Standard', 'Premium', 'Enterprise', 'Baja'];
 const VALID_TICKET_TIPOS = ['Soporte', 'Mejora', 'Bugs', 'Asistencia Externa', 'Ventas', 'Técnico', 'Otro'];
-const VALID_TICKET_ESTADOS = ['Abierto', 'En Progreso', 'En progreso', 'Cerrado'];
+const VALID_TICKET_ESTADOS = ['Abierto', 'Cerrado'];
 const VALID_TICKET_PRIORIDADES = ['Baja', 'Media', 'Alta'];
 const VALID_PAYMENT_METODOS = ['Transferencia', 'Efectivo', 'Mercado Pago', 'Crypto', 'Cripto', 'Otro'];
 

@@ -4,6 +4,15 @@ let clientsSearchQuery = "";
 let clientsPlanFilter = "";
 let currentClientDetailId = null;
 
+const _clientsWithTickets = new Set();
+function _updateClientsSidebarDot() {
+    const has = _clientsWithTickets.size > 0;
+    ['clients-ticket-badge', 'clients-ticket-badge-mobile'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = has ? 'block' : 'none';
+    });
+}
+
 async function renderClientsView() {
     const secondary = document.getElementById("integrated-log-container");
     if (secondary) secondary.remove();
@@ -191,9 +200,10 @@ function _buildClientCol(c, isNew, index) {
                     <div class="fw-bold text-truncate client-name">${escapeHtml(c.nombre)}</div>
                     <div class="small text-dim text-truncate client-empresa">${escapeHtml(c.empresa || 'Particular')}</div>
                     <div class="small text-dim text-truncate client-abono">$${escapeHtml(String(c.abono ?? 0))}/mes</div>
-                    <div class="d-flex align-items-center gap-2 mt-1">
+                    <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
                         <span class="badge client-plan ${getPlanBadgeClass(c.plan)}">${escapeHtml(c.plan || 'Standard')}</span>
                         <span class="small text-dim" id="ast-count-${c.id}"><i class="bi bi-robot"></i></span>
+                        <span class="small text-danger fw-semibold" id="ticket-count-${c.id}" style="display:none"><i class="bi bi-ticket-perforated-fill me-1"></i><span class="tc-val"></span></span>
                     </div>
                 </div>
                 <button class="btn btn-sm btn-outline-light flex-shrink-0 btn-edit-client" title="Editar">
@@ -271,6 +281,20 @@ function renderClientCards() {
                     const activeCount = assistants.filter(p => ids.includes(p.id)).length;
                     el.innerHTML = `<i class="bi bi-robot"></i> ${activeCount}`;
                 }
+            }).catch(() => {});
+            window.api.getClientPendingTickets(c.id).then(count => {
+                const el = document.getElementById(`ticket-count-${c.id}`);
+                if (el) {
+                    if (count > 0) {
+                        el.querySelector('.tc-val').textContent = count;
+                        el.style.display = '';
+                    } else {
+                        el.style.display = 'none';
+                    }
+                }
+                if (count > 0) _clientsWithTickets.add(c.id);
+                else _clientsWithTickets.delete(c.id);
+                _updateClientsSidebarDot();
             }).catch(() => {});
         }
     });
@@ -409,7 +433,7 @@ async function loadClientFullDetail(client) {
     loadClientAssistantSection(client.id);
 
     const ticketsContainer = document.getElementById("client-tickets-container");
-    if (ticketsContainer) renderClientTicketsTab(client.id, ticketsContainer);
+    if (ticketsContainer) renderClientTicketsTab(client.id, ticketsContainer, client.telefono);
 }
 
 // -----------------------------------------------

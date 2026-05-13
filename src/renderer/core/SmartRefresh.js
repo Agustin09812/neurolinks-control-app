@@ -185,7 +185,7 @@ const _ch = {
   },
 
   tickets: {
-    _t: 0, _running: false, _ver: 0, _count: -1, _callbacks: [],
+    _t: 0, _running: false, _ver: 0, _seenIds: new Set(), _initialized: false, _callbacks: [],
 
     rate() { return _deepIdleMode ? 120000 : _idleMode ? 60000 : 30000; },
 
@@ -201,18 +201,35 @@ const _ch = {
 
         window.ticketsData = tickets;
 
-        if (this._count >= 0 && tickets.length > this._count) {
-          const newOnes = tickets.slice(0, tickets.length - this._count);
-          newOnes.forEach(t => {
-            addNotification("ticket", "Nuevo ticket recibido", `Ticket: ${t.titulo || "Sin título"}`, `ticket-${t.id}`);
+        const pending = tickets.filter(t => t.estado !== 'Cerrado');
+        const unseen = pending.filter(t => !this._seenIds.has(t.id));
+
+        if (unseen.length > 0) {
+          unseen.forEach(t => {
+            this._seenIds.add(t.id);
+            const clientName = t.clientes?.nombre || t.chat_id || 'cliente desconocido';
+            addNotification("ticket", "Nuevo ticket pendiente", `Nuevo ticket de: ${clientName} — ${t.titulo || 'Sin título'}`, `ticket-${t.id}`);
           });
-          showToast("Nuevos tickets recibidos", "info");
-          if (localStorage.getItem("activeView") === "tickets" && !isUserInteracting()) {
-            prependNewTickets?.(newOnes);
+
+          const count = unseen.length;
+          const isFirstLoad = !this._initialized;
+          const toastMsg = isFirstLoad
+            ? `<i class="bi bi-ticket-perforated-fill me-2"></i>${count === 1 ? '1 ticket pendiente sin responder' : `${count} tickets pendientes sin responder`}`
+            : `<i class="bi bi-ticket-perforated-fill me-2"></i>${count === 1 ? 'Nuevo ticket pendiente' : `${count} nuevos tickets pendientes`}`;
+          showToast(toastMsg, "danger");
+
+          if (!isFirstLoad && localStorage.getItem("activeView") === "tickets" && !isUserInteracting()) {
+            prependNewTickets?.(unseen);
           }
         }
 
-        this._count = tickets.length;
+        // Remove closed tickets from seen set so they don't block re-notification if reopened
+        const pendingIds = new Set(pending.map(t => t.id));
+        for (const id of this._seenIds) {
+          if (!pendingIds.has(id)) this._seenIds.delete(id);
+        }
+
+        this._initialized = true;
       } finally {
         this._running = false;
         this._callbacks.splice(0).forEach(cb => cb());

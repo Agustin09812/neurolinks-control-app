@@ -181,9 +181,6 @@ const supabaseService = {
         // Normalizar ESTADO para evitar violar constraint
         const estadoMap = {
             "abierto": "Abierto",
-            "en progreso": "En progreso",
-            "en progreso ": "En progreso",
-            "enprogreso": "En progreso",
             "cerrado": "Cerrado"
         };
 
@@ -294,11 +291,26 @@ const supabaseService = {
     },
 
     async getClientPendingTickets(clientId) {
-        const { count, error } = await supabase2
+        const { data: projects } = await supabase2
+            .from('proyectos_railway')
+            .select('railway_project_id')
+            .eq('cliente_id', clientId);
+
+        const projectIds = (projects || []).map(p => p.railway_project_id);
+
+        let query = supabase2
             .from('tickets')
             .select('*', { count: 'exact', head: true })
-            .eq('cliente_id', clientId)
+            .eq('tipo', 'Asistencia Externa')
             .neq('estado', 'Cerrado');
+
+        if (projectIds.length > 0) {
+            query = query.or(`cliente_id.eq.${clientId},project_id.in.(${projectIds.join(',')})`);
+        } else {
+            query = query.eq('cliente_id', clientId);
+        }
+
+        const { count, error } = await query;
         if (error) throw error;
         return count || 0;
     },
