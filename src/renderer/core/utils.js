@@ -27,7 +27,7 @@ function getStatusIcon(status) {
     case "checking":
       return `<i class="bi bi-arrow-repeat text-warning"></i>`;
     default:
-      return `<i class="bi bi-circle text-secondary"></i>`;
+      return `<i class="bi bi-circle text-white/40"></i>`;
   }
 }
 

@@ -15,26 +15,21 @@ async function renderAuditView() {
     view.innerHTML = `
         <div class="audit-layout">
 
-            <!-- Header fijo -->
-            <div class="audit-sticky-header">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                    <div class="audit-header-title">
-                        <h2 class="fw-bold mb-0">REGISTRO DE ACTIVIDAD</h2>
+            <!-- Cabecera flotante -->
+            <div class="view-header">
+                <div class="view-header-left">
+                    <h2 class="view-header-title">REGISTRO DE ACTIVIDAD</h2>
+                </div>
+                <div class="view-header-controls">
+                    <div class="input-group input-group-sm search-input-group">
+                        <span class="input-group-text text-dim">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control text-main" id="auditSearch" onkeyup="filterAuditLogs()">
                     </div>
-                    <div class="d-flex gap-2 align-items-center audit-controls">
-                        <div class="input-group input-group-sm search-input-group">
-                            <span class="input-group-text bg-dark border-secondary text-secondary">
-                                <i class="bi bi-search"></i>
-                            </span>
-                            <input type="text" class="form-control text-main" id="auditSearch" onkeyup="filterAuditLogs()">
-                        </div>
-                        <button class="btn btn-outline-light btn-sm d-none d-md-inline-flex align-items-center gap-1" id="btnRefreshAudit" onclick="loadAuditLogs()">
-                            <i class="bi bi-arrow-clockwise"></i> Actualizar
-                        </button>
-                        <button class="btn btn-outline-light d-md-none" id="btnRefreshAuditMobile" onclick="loadAuditLogs()">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                    </div>
+                    <button class="btn btn-outline-light btn-sm" id="btnRefreshAudit" onclick="loadAuditLogs()">
+                        <i class="bi bi-arrow-clockwise btn-refresh-icon mr-2"></i><span class="btn-refresh-label">Actualizar</span>
+                    </button>
                 </div>
             </div>
 
@@ -42,7 +37,7 @@ async function renderAuditView() {
             <div class="audit-scroll-area">
 
                 <!-- Desktop: tabla -->
-                <div class="glass-card p-0 overflow-hidden rounded d-none d-md-block">
+                <div class="glass-card p-0 overflow-hidden rounded hidden md:block">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0 align-middle">
                             <thead>
@@ -60,7 +55,7 @@ async function renderAuditView() {
                 </div>
 
                 <!-- Mobile: cards -->
-                <div id="audit-cards-view" class="d-md-none d-flex flex-column gap-2"></div>
+                <div id="audit-cards-view" class="md:hidden flex flex-col gap-2"></div>
 
             </div>
         </div>
@@ -81,11 +76,9 @@ async function loadAuditLogs() {
     const tbody = document.getElementById("audit-table-body");
     if (!tbody) return;
 
-    const btnDesktop = document.getElementById("btnRefreshAudit");
-    const btnMobile  = document.getElementById("btnRefreshAuditMobile");
-    const allBtns = [btnDesktop, btnMobile].filter(Boolean);
+    const btn = document.getElementById("btnRefreshAudit");
 
-    allBtns.forEach(b => { b.disabled = true; b.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; });
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; }
 
     try {
 
@@ -104,7 +97,7 @@ async function loadAuditLogs() {
             _patchAuditLogs(newLogs);
         }
 
-        allBtns.forEach(b => { b.innerHTML = '<i class="bi bi-check-lg"></i>'; });
+        if (btn) btn.innerHTML = '<i class="bi bi-check-lg"></i>';
         await new Promise(r => setTimeout(r, 800));
 
     } catch (err) {
@@ -113,7 +106,7 @@ async function loadAuditLogs() {
 
         tbody.innerHTML = `
             <tr>
-                <td colspan="5" class="text-center py-5 text-danger">
+                <td colspan="5" class="text-center py-12 text-red-400">
                     Error al cargar auditoría
                 </td>
             </tr>
@@ -121,9 +114,10 @@ async function loadAuditLogs() {
 
     } finally {
 
-        allBtns.forEach(b => { b.disabled = false; });
-        if (btnDesktop) btnDesktop.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualizar';
-        if (btnMobile)  btnMobile.innerHTML  = '<i class="bi bi-arrow-clockwise"></i>';
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise btn-refresh-icon mr-2"></i><span class="btn-refresh-label">Actualizar</span>';
+        }
 
     }
 }
@@ -139,18 +133,18 @@ function _buildAuditRow(log) {
     tr.dataset.logId = log.id;
     tr.innerHTML = `
         <td>
-            <div class="fw-bold">${date.toLocaleDateString()}</div>
-            <div class="small text-dim">${date.toLocaleTimeString()}</div>
+            <div class="font-bold">${date.toLocaleDateString()}</div>
+            <div class="text-sm text-dim">${date.toLocaleTimeString()}</div>
         </td>
         <td>
             <span class="badge ${getActionBadgeClass(log.accion)}">${log.accion}</span>
         </td>
         <td>
             <div>${log.entidad_tipo || '-'}</div>
-            <div class="small text-dim">${log.entidad_id || ''}</div>
+            <div class="text-sm text-dim">${log.entidad_id || ''}</div>
         </td>
-        <td class="small">${log.detalles || ''}</td>
-        <td class="text-center small">${log.usuario || 'Sistema'}</td>
+        <td class="text-sm">${log.detalles || ''}</td>
+        <td class="text-center text-sm">${log.usuario || 'Sistema'}</td>
     `;
     return tr;
 }
@@ -159,20 +153,20 @@ function _buildAuditCard(log) {
     const date = new Date(log.created_at);
     const card = document.createElement("div");
     card.dataset.logId = log.id;
-    card.className = "glass-card p-3 rounded";
+    card.className = "glass-card p-4 rounded";
     card.innerHTML = `
-        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+        <div class="flex justify-between items-start gap-2 mb-2">
             <span class="badge ${getActionBadgeClass(log.accion)}">${log.accion}</span>
-            <span class="small text-dim">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span>
+            <span class="text-sm text-dim">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span>
         </div>
         ${log.entidad_tipo ? `
-        <div class="small mb-1">
+        <div class="text-sm mb-1">
             <span class="text-dim">Entidad:</span> ${log.entidad_tipo}
-            ${log.entidad_id ? `<span class="text-dim ms-1">(${log.entidad_id})</span>` : ''}
+            ${log.entidad_id ? `<span class="text-dim ml-1">(${log.entidad_id})</span>` : ''}
         </div>` : ''}
-        ${log.detalles ? `<div class="small text-dim mb-1" style="word-break:break-word;">${log.detalles}</div>` : ''}
-        <div class="small text-dim mt-1">
-            <i class="bi bi-person me-1"></i>${log.usuario || 'Sistema'}
+        ${log.detalles ? `<div class="text-sm text-dim mb-1" style="word-break:break-word;">${log.detalles}</div>` : ''}
+        <div class="text-sm text-dim mt-1">
+            <i class="bi bi-person mr-1"></i>${log.usuario || 'Sistema'}
         </div>
     `;
     return card;
@@ -220,7 +214,7 @@ function renderAuditLogs() {
 
     if (tbody) {
         tbody.innerHTML = empty
-            ? `<tr><td colspan="5" class="text-center py-5 text-dim">Sin registros</td></tr>`
+            ? `<tr><td colspan="5" class="text-center py-12 text-dim">Sin registros</td></tr>`
             : "";
 
         if (!empty) filteredAuditLogs.forEach(log => tbody.appendChild(_buildAuditRow(log)));
@@ -228,7 +222,7 @@ function renderAuditLogs() {
 
     if (cardsView) {
         cardsView.innerHTML = empty
-            ? `<div class="text-dim text-center py-5">Sin registros</div>`
+            ? `<div class="text-dim text-center py-12">Sin registros</div>`
             : "";
 
         if (!empty) filteredAuditLogs.forEach(log => cardsView.appendChild(_buildAuditCard(log)));
@@ -259,8 +253,8 @@ function filterAuditLogs() {
 // --------------------------------------------------
 
 function getActionBadgeClass(action) {
-    if (!action) return 'bg-secondary';
+    if (!action) return 'badge-status-secondary';
     const a = action.toLowerCase();
-    const map = [['delete','bg-danger'],['create','bg-success'],['update','bg-warning'],['deploy','bg-info']];
-    return map.find(([k]) => a.includes(k))?.[1] ?? 'bg-secondary';
+    const map = [['delete','badge-status-danger'],['create','badge-status-success'],['update','badge-status-warning'],['deploy','badge-status-info']];
+    return map.find(([k]) => a.includes(k))?.[1] ?? 'badge-status-secondary';
 }

@@ -10,5 +10,5 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  e.respondWith(fetch(e.request));
+  // No interceptar nada — solo registrar el SW para habilitar instalación PWA
 });

@@ -1,3 +1,4 @@
+
 var assistants = [];
 var selectedProjectId = null;
 let renderToken = 0;
@@ -94,16 +95,16 @@ document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
         loadAssistants(false);
       } else {
         const _skCard = `
-          <div class="col-xl-3 col-lg-4 col-md-6">
-            <div class="glass-card p-4 h-100">
-              <div class="d-flex align-items-start gap-3 mb-4">
-                <div class="skeleton flex-shrink-0" style="width:44px;height:44px;border-radius:12px"></div>
-                <div class="flex-grow-1">
+          <div class="">
+            <div class="glass-card p-6 h-full">
+              <div class="flex items-start gap-4 mb-6">
+                <div class="skeleton shrink-0" style="width:44px;height:44px;border-radius:12px"></div>
+                <div class="grow">
                   <div class="skeleton mb-2" style="height:15px;width:70%"></div>
                   <div class="skeleton" style="height:22px;width:90px;border-radius:20px"></div>
                 </div>
               </div>
-              <div class="d-flex gap-2 flex-wrap">
+              <div class="flex gap-2 flex-wrap">
                 <div class="skeleton" style="height:20px;width:80px;border-radius:10px"></div>
                 <div class="skeleton" style="height:20px;width:60px;border-radius:10px"></div>
               </div>
@@ -111,13 +112,13 @@ document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
           </div>`;
         document.getElementById(viewMap.assistants).innerHTML = `
           <div class="mt-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="flex justify-between items-center mb-6">
               <div>
-                <h2 class="fw-bold mb-0">MIS ASISTENTES</h2>
-                <p class="small mb-0 text-dim">Gestión técnica de proyectos desplegados en Railway</p>
+                <h2 class="font-bold mb-0">MIS ASISTENTES</h2>
+                <p class="text-sm mb-0 text-dim">Gestión técnica de proyectos desplegados en Railway</p>
               </div>
             </div>
-            <div class="row g-4">${_skCard.repeat(4)}</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">${_skCard.repeat(4)}</div>
           </div>`;
         await loadAssistants(false);
       }
@@ -164,17 +165,16 @@ function showToast(message, type = "success") {
   const toastId = "toast-" + Date.now();
   const icon = type === "success" ? "bi-check-circle-fill" : (type === "warning" ? "bi-exclamation-triangle-fill" : "bi-exclamation-circle-fill");
 
-  // Mapeo de colores bootstrap
-  const bgClass = type === 'danger' ? 'bg-danger' : (type === 'warning' ? 'bg-warning text-dark' : 'toast-themed');
+  const bgClass = type === 'danger' ? 'toast-danger' : (type === 'warning' ? 'toast-warning' : 'toast-themed');
 
   const toastHtml = `
-    <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="d-flex">
-        <div class="toast-body d-flex align-items-center gap-2">
+    <div id="${toastId}" class="toast ${bgClass}" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="flex items-center">
+        <div class="toast-body flex items-center gap-2">
           <i class="bi ${icon}"></i>
           <div>${message}</div>
         </div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white mr-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
       </div>
     </div>
   `;
@@ -244,45 +244,57 @@ function renderAssistantsGrid() {
   const container = document.getElementById("assistants-view");
   if (!container) return;
 
+  // Dispose any existing tooltip before destroying the DOM element
+  if (window.bootstrap) {
+    const prevToggle = container.querySelector("#btnToggleView");
+    if (prevToggle) bootstrap.Tooltip.getInstance(prevToggle)?.dispose();
+  }
+
+  const isListView = localStorage.getItem("assistantsView") === "list";
+
   container.innerHTML = `
-      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-        <div class="assistants-header-title">
-          <h2 class="fw-bold mb-0">MIS ASISTENTES</h2>
-          <p class="small mb-0 text-dim">
-            Gestión técnica de proyectos desplegados en Railway
-          </p>
-        </div>
-        <div class="d-flex gap-2 align-items-center assistants-controls">
-          <div class="input-group input-group-sm search-input-group">
-            <span class="input-group-text"><i class="bi bi-search"></i></span>
-            <input type="text" class="form-control" id="searchAssistants">
-          </div>
-          <button class="btn btn-outline-light btn-sm d-none d-md-inline-flex align-items-center gap-1" id="btnRefreshAssistants">
-            <i class="bi bi-arrow-clockwise"></i> Actualizar
-          </button>
-          <button class="btn btn-outline-light d-md-none" id="btnRefreshAssistantsMobile">
-            <i class="bi bi-arrow-clockwise"></i>
-          </button>
-        </div>
+    <div class="view-header">
+      <div class="view-header-left">
+        <h2 class="view-header-title">MIS ASISTENTES</h2>
+        <p class="view-header-subtitle">Gestión técnica de proyectos desplegados en Railway</p>
       </div>
-      <div id="assistants-grid" class="row g-4"></div>
-    
+      <div class="view-header-controls">
+        <div class="input-group input-group-sm search-input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" id="searchAssistants">
+        </div>
+        <button class="btn btn-outline-light btn-sm" id="btnToggleView" title="${isListView ? 'Vista cuadrícula' : 'Vista lista'}" data-bs-toggle="tooltip" data-bs-placement="bottom">
+          <i class="bi bi-${isListView ? 'grid' : 'list-ul'}"></i>
+        </button>
+        <button class="btn btn-outline-light btn-sm" id="btnRefreshAssistants">
+          <i class="bi bi-arrow-clockwise btn-refresh-icon mr-2"></i>
+          <span class="btn-refresh-label">Actualizar</span>
+        </button>
+      </div>
+    </div>
+    <div id="assistants-grid" class="${isListView ? 'flex flex-col gap-2' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'}"></div>
   `;
 
   const grid = document.getElementById("assistants-grid");
 
-  const _onRefreshAssistants = async () => {
+  const toggleBtn = document.getElementById("btnToggleView");
+  toggleBtn?.addEventListener("click", () => {
+    localStorage.setItem("assistantsView", isListView ? "grid" : "list");
+    renderAssistantsGrid();
+  });
+  if (toggleBtn && window.bootstrap) {
+    new bootstrap.Tooltip(toggleBtn, { placement: 'bottom', trigger: 'hover', delay: { show: 200, hide: 100 } });
+  }
+
+  document.getElementById("btnRefreshAssistants")?.addEventListener("click", async () => {
     showToast("Actualizando asistentes...", "info");
     await loadAssistants(false);
     renderAssistantsGrid();
-  };
-
-  document.getElementById("btnRefreshAssistants")?.addEventListener("click", _onRefreshAssistants);
-  document.getElementById("btnRefreshAssistantsMobile")?.addEventListener("click", _onRefreshAssistants);
+  });
 
   if (!assistants.length) {
     grid.innerHTML = `
-      <div class="col-12 text-center text-secondary py-5">
+      <div class="col-span-full text-center text-white/50 py-12">
         No hay asistentes desplegados.
       </div>
     `;
@@ -292,56 +304,52 @@ function renderAssistantsGrid() {
   assistants.forEach((project, index) => {
 
     const statusColor = getStatusColor(project.status);
-
-    const col = document.createElement("div");
-    col.className = "col-12 col-sm-6 col-md-6 col-lg-4 col-xl-3";
     const hasUpdate = project.services.some(s => s.isUpdatable);
+    const col = document.createElement("div");
+    col.className = "";
 
-    col.innerHTML = `
-      <div class="glass-card p-4 h-100 assistant-card hover-lift clickable anim-card-enter"
-      style="--si:${index}"
-      data-id="${project.id}"
-      data-name="${project.name.toLowerCase()}">
-        <div class="d-flex justify-content-between align-items-start mb-3">
-          <h5 class="fw-bold mb-0 text-truncate text-truncate-75">
-            ${project.name}
-          </h5>
-          <span class="badge bg-${statusColor} bg-opacity-10 text-${statusColor} 
-            border border-${statusColor} border-opacity-25">
-            ${project.status.toUpperCase()}
-          </span>
+    if (isListView) {
+      col.innerHTML = `
+        <div class="glass-card px-4 py-3 flex items-center gap-3 assistant-card hover-lift clickable anim-card-enter"
+          style="--si:${index}"
+          data-id="${project.id}"
+          data-name="${project.name.toLowerCase()}">
+          <div class="flex-1 min-w-0">
+            <div class="font-bold truncate">${project.name}</div>
+            <div class="text-xs text-white/50">ID: ${project.id.substring(0, 8)}</div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0 assistant-services-info">
+            <span class="text-sm text-dim hidden sm:block">Servicios: ${project.services.length}</span>
+            <span class="badge badge-status-${statusColor} assistant-status-badge">${project.status.toUpperCase()}</span>
+            ${hasUpdate ? `<span class="badge badge-status-warning update-badge"><i class="bi bi-info-circle-fill"></i></span>` : ""}
+          </div>
         </div>
-
-        <div class="small text-secondary mb-3">
-          ID: ${project.id.substring(0, 8)}
+      `;
+    } else {
+      col.innerHTML = `
+        <div class="glass-card p-4 h-full assistant-card hover-lift clickable anim-card-enter"
+          style="--si:${index}"
+          data-id="${project.id}"
+          data-name="${project.name.toLowerCase()}">
+          <div class="font-bold truncate mb-2">${project.name}</div>
+          <div class="flex items-center gap-2 mb-3 flex-wrap">
+            <span class="badge badge-status-${statusColor} assistant-status-badge">${project.status.toUpperCase()}</span>
+            <span class="text-xs text-white/50">ID: ${project.id.substring(0, 8)}</span>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap text-sm text-dim assistant-services-info">
+            <span>Servicios: ${project.services.length}</span>
+            ${hasUpdate ? `<span class="badge badge-status-warning update-badge"><i class="bi bi-info-circle-fill mr-1"></i>Update</span>` : ""}
+          </div>
         </div>
-
-        <div class="small text-dim gap-2">
-          Servicios: ${project.services.length}
-
-           ${hasUpdate ? `
-          <span class="badge bg-warning text-dark small px-2 py-1 update-badge">
-           <i class="bi bi-info-circle-fill"></i> Update available
-             </span>
-           ` : ""}
-        </div>
-        
-      </div>
-    `;
+      `;
+    }
 
     col.querySelector(".assistant-card").addEventListener("click", async () => {
-
       selectedProjectId = project.id;
-
       document.getElementById("assistants-view").style.display = "none";
-
-      // fetch fresh data
       await loadAssistants(true);
-
       const fresh = assistants.find(a => a.id === project.id);
-
       if (!fresh) return;
-
       renderDetail(fresh);
     });
 
@@ -351,44 +359,34 @@ function renderAssistantsGrid() {
   const searchInput = document.getElementById("searchAssistants");
 
   if (searchInput) {
-
     searchInput.addEventListener("input", (e) => {
-
       const value = e.target.value.toLowerCase();
-
       let visible = 0;
 
       document.querySelectorAll(".assistant-card").forEach(card => {
-
         const name = card.dataset.name;
-        const col = card.closest("[class*='col-']");
-
+        const col = card.parentElement;
         if (name.includes(value)) {
           col.style.display = "";
           visible++;
         } else {
           col.style.display = "none";
         }
-
       });
 
-      // Mensaje vacio
       let empty = document.getElementById("empty-search");
-
       if (visible === 0) {
         if (!empty) {
           document.getElementById("assistants-grid").insertAdjacentHTML("beforeend", `
-          <div id="empty-search" class="col-12 text-center text-secondary py-5">
-            No se encontraron asistentes
-          </div>
-        `);
+            <div id="empty-search" class="col-span-full text-center text-white/50 py-12">
+              No se encontraron asistentes
+            </div>
+          `);
         }
       } else {
         if (empty) empty.remove();
       }
-
     });
-
   }
 }
 
@@ -402,27 +400,23 @@ function patchAssistantsGrid() {
     const card = grid.querySelector(`[data-id="${project.id}"]`);
     if (!card) return;
 
-    const badge = card.querySelector(".badge");
+    const badge = card.querySelector(".assistant-status-badge");
     if (!badge) return;
 
     const statusColor = getStatusColor(project.status);
-
-    badge.className = `badge bg-${statusColor} bg-opacity-10 text-${statusColor} border border-${statusColor} border-opacity-25`;
-
+    badge.className = `badge badge-status-${statusColor} assistant-status-badge`;
     badge.innerText = project.status.toUpperCase();
 
-    // Sync "Update available" badge
     const hasUpdate = project.services.some(s => s.isUpdatable);
     const updateBadge = card.querySelector(".update-badge");
-    if (hasUpdate && !updateBadge) {
-      const servicesDiv = card.querySelector(".small.text-dim.gap-2");
-      if (servicesDiv) {
-        servicesDiv.insertAdjacentHTML('beforeend', `
-          <span class="badge bg-warning text-dark small px-2 py-1 update-badge">
-            <i class="bi bi-info-circle-fill"></i> Update available
-          </span>
-        `);
-      }
+    const servicesInfo = card.querySelector(".assistant-services-info");
+
+    if (hasUpdate && !updateBadge && servicesInfo) {
+      servicesInfo.insertAdjacentHTML('beforeend', `
+        <span class="badge badge-status-warning update-badge">
+          <i class="bi bi-info-circle-fill mr-1"></i>Update
+        </span>
+      `);
     } else if (!hasUpdate && updateBadge) {
       updateBadge.remove();
     }
@@ -515,42 +509,42 @@ function renderDetailStructure(project) {
 <div class="anim-slide-right">
 
   <!-- TOPBAR -->
-  <div class="rw-topbar mb-4">
+  <div class="rw-topbar mb-6">
     <!-- Fila 1: volver (izq) + refresh + ⋮ (der) -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <button class="btn btn-outline-light" id="btnBackToGrid" title="Volver a Asistentes">
+    <div class="flex justify-between items-center mb-4">
+      <button class="btn btn-outline-light" id="btnBackToGrid" title="Volver a Asistentes" data-bs-toggle="tooltip" data-bs-placement="bottom">
         <i class="bi bi-arrow-left"></i>
       </button>
-      <div class="d-flex align-items-center gap-2">
-        <button class="btn btn-outline-light" id="btnRefreshProject" title="Actualizar">
+      <div class="flex items-center gap-2">
+        <button class="btn btn-outline-light" id="btnRefreshProject" title="Actualizar" data-bs-toggle="tooltip" data-bs-placement="bottom">
           <i class="bi bi-arrow-clockwise"></i>
         </button>
         <div class="dropdown">
-          <button class="btn btn-outline-light" data-bs-toggle="dropdown" title="Opciones">
+          <button class="btn btn-outline-light" data-bs-toggle="dropdown">
             <i class="bi bi-three-dots-vertical"></i>
           </button>
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
-            <li><button class="dropdown-item btn-rename"><i class="bi bi-pencil me-2"></i>Cambiar nombre</button></li>
-            <li><button class="dropdown-item btn-railway"><i class="bi bi-box-arrow-up-right me-2"></i>Abrir Railway</button></li>
+            <li><button class="dropdown-item btn-rename"><i class="bi bi-pencil mr-2"></i>Cambiar nombre</button></li>
+            <li><button class="dropdown-item btn-railway"><i class="bi bi-box-arrow-up-right mr-2"></i>Abrir Railway</button></li>
             <li><hr class="dropdown-divider"></li>
-            <li><button class="dropdown-item text-danger btn-delete-project"><i class="bi bi-trash me-2"></i>Eliminar proyecto</button></li>
+            <li><button class="dropdown-item text-danger btn-delete-project"><i class="bi bi-trash mr-2"></i>Eliminar proyecto</button></li>
           </ul>
         </div>
       </div>
     </div>
     <!-- Fila 2: título centrado y grande -->
     <div class="text-center mb-2">
-      <h4 class="fw-bold mb-0" id="project-title">${project.name}</h4>
+      <h4 class="font-bold mb-0" id="project-title">${project.name}</h4>
     </div>
     <!-- Fila 3: submenu — counters + badges centrados -->
-    <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap pt-2" style="border-top: 1px solid var(--border-soft);">
-      <div id="header-status-row" class="d-flex gap-3 small align-items-center"></div>
-      <div id="header-badges" class="d-flex gap-2 flex-wrap align-items-center"></div>
+    <div class="flex justify-center items-center gap-4 flex-wrap pt-2" style="border-top: 1px solid var(--border-soft);">
+      <div id="header-status-row" class="flex gap-4 text-sm items-center"></div>
+      <div id="header-badges" class="flex gap-2 flex-wrap items-center"></div>
     </div>
   </div>
 
   <!-- SERVICIOS -->
-  <div id="services-container" class="d-grid gap-3"></div>
+  <div id="services-container" class="grid gap-4"></div>
 
 </div>
 `;
@@ -632,9 +626,9 @@ async function updateDetailHeader(project) {
   const building = project.services.filter(s => s.status === "checking").length;
 
   statusContainer.innerHTML = `
-    <span><i class="bi bi-check-circle-fill text-success"></i> ${online}</span>
-    <span><i class="bi bi-x-circle-fill text-danger"></i> ${error}</span>
-    <span><i class="bi bi-arrow-repeat text-warning"></i> ${building}</span>
+    <span><i class="bi bi-check-circle-fill text-emerald-400"></i> ${online}</span>
+    <span><i class="bi bi-x-circle-fill text-red-400"></i> ${error}</span>
+    <span><i class="bi bi-arrow-repeat text-yellow-400"></i> ${building}</span>
   `;
 
   // =========================
@@ -652,8 +646,8 @@ async function updateDetailHeader(project) {
     if (!linkedClient || !linkedClient.clientes) {
 
       linkButton = `
-        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn badge-sm-action">
-          <i class="bi bi-link-45deg me-1"></i>
+        <span class="badge badge-status-info badge-client-btn badge-sm-action">
+          <i class="bi bi-link-45deg mr-1"></i>
           Vincular cliente
         </span>
       `;
@@ -661,8 +655,8 @@ async function updateDetailHeader(project) {
     } else {
 
       clientBadge = `
-        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 badge-client-btn">
-          <i class="bi bi-person-fill me-1"></i>
+        <span class="badge badge-status-info badge-client-btn">
+          <i class="bi bi-person-fill mr-1"></i>
           ${linkedClient.clientes.nombre}
         </span>
       `;
@@ -672,15 +666,15 @@ async function updateDetailHeader(project) {
 
       if (count > 0) {
         ticketsBadge = `
-          <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">
-            <i class="bi bi-ticket-perforated-fill me-1"></i>
+          <div class="badge badge-status-danger">
+            <i class="bi bi-ticket-perforated-fill mr-1"></i>
             ${count} Tickets
           </div>
         `;
       } else {
         ticketsBadge = `
-          <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
-            <i class="bi bi-check-circle-fill me-1"></i>
+          <div class="badge badge-status-success">
+            <i class="bi bi-check-circle-fill mr-1"></i>
             Sin pendientes
           </div>
         `;
@@ -703,15 +697,15 @@ async function updateDetailHeader(project) {
 
     if (wsStatus?.connected) {
       whatsappBadge = `
-        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 badge-sm">
-          <i class="bi bi-whatsapp me-1"></i>
+        <span class="badge badge-status-success badge-sm">
+          <i class="bi bi-whatsapp mr-1"></i>
           Conectado
         </span>
       `;
     } else {
       whatsappBadge = `
-        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 badge-sm">
-          <i class="bi bi-whatsapp me-1"></i>
+        <span class="badge badge-status-warning badge-sm">
+          <i class="bi bi-whatsapp mr-1"></i>
           Desconectado
         </span>
       `;
@@ -773,28 +767,28 @@ function renderServices(project) {
 function createServiceCard(service, project, staggerIndex = 0) {
 
   const div = document.createElement("div");
-  div.className = "service-card p-4 rounded anim-card-enter";
+  div.className = "service-card p-6 rounded anim-card-enter";
   div.style.setProperty("--si", staggerIndex);
   div.dataset.serviceId = service.id;
 
   div.innerHTML = `
   <!-- CARD HEADER -->
-  <div class="rw-svc-header px-4 py-3">
-    <div class="d-flex align-items-start gap-3">
+  <div class="rw-svc-header px-6 py-4">
+    <div class="flex items-start gap-4">
       <!-- Icono a la izquierda -->
-      <div class="rw-svc-icon flex-shrink-0 mt-1">
+      <div class="rw-svc-icon shrink-0 mt-1">
         <i class="bi bi-cpu-fill"></i>
       </div>
       <!-- Nombre + dominio -->
-      <div class="flex-grow-1 min-w-0">
-        <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
-          <span class="fw-bold service-name text-truncate">${service.name}</span>
-          <div class="d-flex align-items-center gap-2 flex-shrink-0">
+      <div class="grow min-w-0">
+        <div class="flex items-center justify-between gap-2 mb-1">
+          <span class="font-bold service-name truncate">${service.name}</span>
+          <div class="flex items-center gap-2 shrink-0">
             <span class="service-status-icon">${getStatusIcon(service.status)}</span>
             ${service.isUpdatable ? `
-              <button class="btn btn-warning btn-sm btn-update-mini d-flex align-items-center gap-1" title="Actualizar servicio">
+              <button class="btn btn-warning btn-sm btn-update-mini flex items-center gap-1" title="Actualizar servicio" data-bs-toggle="tooltip" data-bs-placement="bottom">
                 <i class="bi bi-info-circle-fill"></i>
-                <span class="d-none d-md-inline">Update available</span>
+                <span class="hidden md:inline">Update available</span>
               </button>` : ""}
             <button class="btn btn-sm btn-rename-service p-0 text-dim" title="Renombrar" style="line-height:1;">
               <i class="bi bi-pencil" style="font-size:0.75rem;"></i>
@@ -802,35 +796,35 @@ function createServiceCard(service, project, staggerIndex = 0) {
           </div>
         </div>
         <div class="x-small text-dim rw-svc-domain">
-          <i class="bi bi-globe2 me-1"></i><span class="svc-domain-val">—</span>
+          <i class="bi bi-globe2 mr-1"></i><span class="svc-domain-val">—</span>
         </div>
       </div>
     </div>
   </div>
 
   <!-- DEPLOY INFO -->
-  <div class="rw-svc-meta px-4 py-2 d-flex align-items-center justify-content-between">
+  <div class="rw-svc-meta px-6 py-2 flex items-center justify-between">
     <div class="x-small text-dim service-date">
-      <i class="bi bi-clock me-1"></i> Último deploy: ${formatDate(service.createdAt)}
+      <i class="bi bi-clock mr-1"></i> Último deploy: ${formatDate(service.createdAt)}
     </div>
   </div>
 
   <!-- ACTION TABS -->
-  <div class="rw-svc-actions d-flex">
-    <div class="service-menu-item btn-backoffice flex-fill text-center py-2">
-      <i class="bi bi-box-arrow-up-right me-1"></i> Backoffice
+  <div class="rw-svc-actions flex">
+    <div class="service-menu-item btn-backoffice flex-1 text-center py-2">
+      <i class="bi bi-box-arrow-up-right mr-1"></i> Backoffice
     </div>
     <div class="rw-sep"></div>
-    <div class="service-menu-item btn-logs flex-fill text-center py-2">
-      <i class="bi bi-terminal me-1"></i> Logs
+    <div class="service-menu-item btn-logs flex-1 text-center py-2">
+      <i class="bi bi-terminal mr-1"></i> Logs
     </div>
     <div class="rw-sep"></div>
-    <div class="service-menu-item btn-vars flex-fill text-center py-2">
-      <i class="bi bi-sliders me-1"></i> Variables
+    <div class="service-menu-item btn-vars flex-1 text-center py-2">
+      <i class="bi bi-sliders mr-1"></i> Variables
     </div>
     <div class="rw-sep"></div>
-    <div class="service-menu-item btn-redeploy flex-fill text-center py-2">
-      <i class="bi bi-arrow-repeat me-1"></i> Redeploy
+    <div class="service-menu-item btn-redeploy flex-1 text-center py-2">
+      <i class="bi bi-arrow-repeat mr-1"></i> Redeploy
     </div>
   </div>
 `;
@@ -891,15 +885,15 @@ function createServiceCard(service, project, staggerIndex = 0) {
       modal.setAttribute("tabindex", "-1");
       modal.innerHTML = `
         <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content glass-card shadow-lg">
-            <div class="modal-header border-secondary">
-              <h5 class="modal-title fw-bold">Renombrar servicio</h5>
+          <div class="modal-content glass-card">
+            <div class="modal-header">
+              <h5 class="modal-title font-bold">Renombrar servicio</h5>
               <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body p-6">
               <input type="text" class="form-control text-main" id="rename-svc-modal-input" value="${service.name.replace(/"/g, '&quot;')}">
             </div>
-            <div class="modal-footer border-secondary p-3">
+            <div class="modal-footer p-4">
               <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
               <button type="button" class="btn btn-sm btn-success" id="btn-svc-modal-save">Guardar</button>
             </div>
@@ -942,7 +936,7 @@ function createServiceCard(service, project, staggerIndex = 0) {
       const currentName = service.name;
 
       const inputWrapper = document.createElement("div");
-      inputWrapper.className = "d-flex align-items-center gap-1 flex-grow-1 min-w-0";
+      inputWrapper.className = "flex items-center gap-1 grow min-w-0";
       inputWrapper.innerHTML = `
         <input type="text" class="form-control form-control-sm svc-rename-input" style="max-width:160px;">
         <button class="btn btn-success btn-sm btn-svc-save px-2"><i class="bi bi-check-lg"></i></button>
@@ -952,7 +946,7 @@ function createServiceCard(service, project, staggerIndex = 0) {
 
       const restoreName = () => {
         const restored = document.createElement("span");
-        restored.className = "fw-bold service-name text-truncate";
+        restored.className = "font-bold service-name truncate";
         restored.textContent = service.name;
         inputWrapper.replaceWith(restored);
       };
@@ -1050,12 +1044,14 @@ function patchServices(project) {
     // Sync update button
     const updateBtn = existing.querySelector(".btn-update-mini");
     if (service.isUpdatable && !updateBtn) {
-      const iconsRow = existing.querySelector(".d-flex.align-items-center.gap-2.flex-shrink-0");
+      const iconsRow = existing.querySelector(".flex.items-center.gap-2.shrink-0");
       if (iconsRow) {
         const btn = document.createElement("button");
-        btn.className = "btn btn-warning btn-sm btn-update-mini d-flex align-items-center gap-1";
+        btn.className = "btn btn-warning btn-sm btn-update-mini flex items-center gap-1";
         btn.title = "Actualizar servicio";
-        btn.innerHTML = `<i class="bi bi-info-circle-fill"></i><span class="d-none d-md-inline">Update available</span>`;
+        btn.dataset.bsToggle = "tooltip";
+        btn.dataset.bsPlacement = "bottom";
+        btn.innerHTML = `<i class="bi bi-info-circle-fill"></i><span class="hidden md:inline">Update available</span>`;
         btn.addEventListener("click", () => {
           showToast("Abrí Railway para aplicar la actualización", "info");
           window.api.openExternal(project.railwayUrl);
@@ -1280,8 +1276,8 @@ async function openDashboard(projectId, environmentId, serviceId) {
     if (!domain) {
       // Clear skeleton so hasSideContent stays false and refresh can retry/show this state
       if (panel) panel.innerHTML = `
-        <div class="p-4 text-center text-secondary small">
-          <i class="bi bi-globe2 d-block mb-2 fs-4"></i>
+        <div class="p-6 text-center text-white/50 text-sm">
+          <i class="bi bi-globe2 block mb-2 text-2xl"></i>
           Este servicio no tiene dominio publico
         </div>`;
       return;
@@ -1334,35 +1330,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  function initTooltips() {
+  // --- Tooltip architecture --------------------------------------------------
+  // Single helper used by both the observer and the manual init below.
+  function _initTooltipEl(el) {
+    if (!window.bootstrap || bootstrap.Tooltip.getInstance(el)) return;
+    const placement = el.dataset.bsPlacement || el.classList.contains('sidebar-item') ? 'right' : 'bottom';
+    const tt = new bootstrap.Tooltip(el, {
+      placement,
+      trigger: 'hover',
+      delay: { show: 200, hide: 100 }
+    });
+    el._tooltipInstance = tt;
+    el.addEventListener('mouseleave', () => tt.hide());
+  }
 
-    // eliminar tooltips anteriores (evita duplicados/glitches)
-    document.querySelectorAll('.sidebar-item, .has-tooltip').forEach(el => {
-      if (el._tooltipInstance) {
-        el._tooltipInstance.dispose();
-        el._tooltipInstance = null;
+  // Auto-init any [data-bs-toggle="tooltip"] element added to the DOM.
+  new MutationObserver(mutations => {
+    for (const { addedNodes } of mutations) {
+      for (const node of addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.matches?.('[data-bs-toggle="tooltip"]')) _initTooltipEl(node);
+        node.querySelectorAll?.('[data-bs-toggle="tooltip"]').forEach(_initTooltipEl);
       }
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+
+  function initTooltips() {
+    // Sidebar items use placement:right and don't carry data-bs-toggle
+    document.querySelectorAll('.sidebar-item').forEach(el => {
+      el._tooltipInstance?.dispose();
+      el._tooltipInstance = null;
+      _initTooltipEl(el);
     });
-
-    // crear nuevos tooltips
-    document.querySelectorAll('.sidebar-item, .has-tooltip').forEach(el => {
-
-      const tooltip = new bootstrap.Tooltip(el, {
-        placement: 'right',
-        trigger: 'hover',
-        delay: { show: 200, hide: 100 }
-      });
-
-      // guardar instancia para controlarla después
-      el._tooltipInstance = tooltip;
-
-      // aseguramos que se cierre SIEMPRE al salir
-      el.addEventListener('mouseleave', () => {
-        tooltip.hide();
-      });
-
-    });
-
+    // Init any already-present tooltip elements
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(_initTooltipEl);
   }
 
   initTooltips();
@@ -1393,6 +1394,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 });
-
 
 

@@ -208,14 +208,15 @@ const _ch = {
           unseen.forEach(t => {
             this._seenIds.add(t.id);
             const clientName = t.clientes?.nombre || t.chat_id || 'cliente desconocido';
-            addNotification("ticket", "Nuevo ticket pendiente", `Nuevo ticket de: ${clientName} — ${t.titulo || 'Sin título'}`, `ticket-${t.id}`);
+            const phone = (t.clientes?.nombre && t.chat_id) ? ` (${t.chat_id})` : '';
+            addNotification("ticket", "Nuevo ticket pendiente", `Nuevo ticket de: ${clientName}${phone} — ${t.titulo || 'Sin título'}`, `ticket-${t.id}`);
           });
 
           const count = unseen.length;
           const isFirstLoad = !this._initialized;
           const toastMsg = isFirstLoad
-            ? `<i class="bi bi-ticket-perforated-fill me-2"></i>${count === 1 ? '1 ticket pendiente sin responder' : `${count} tickets pendientes sin responder`}`
-            : `<i class="bi bi-ticket-perforated-fill me-2"></i>${count === 1 ? 'Nuevo ticket pendiente' : `${count} nuevos tickets pendientes`}`;
+            ? `<i class="bi bi-ticket-perforated-fill mr-2"></i>${count === 1 ? '1 ticket pendiente sin responder' : `${count} tickets pendientes sin responder`}`
+            : `<i class="bi bi-ticket-perforated-fill mr-2"></i>${count === 1 ? 'Nuevo ticket pendiente' : `${count} nuevos tickets pendientes`}`;
           showToast(toastMsg, "danger");
 
           if (!isFirstLoad && localStorage.getItem("activeView") === "tickets" && !isUserInteracting()) {

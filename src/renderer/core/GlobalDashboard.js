@@ -43,7 +43,7 @@ function buildPlanBars(planCounts, total) {
   ];
   return plans.map(p => {
     const pct = Math.round((planCounts[p.key] || 0) / total * 100);
-    return `<div class="d-flex align-items-center gap-2 mb-1">
+    return `<div class="flex items-center gap-2 mb-1">
       <div class="bar-label bar-label-plan">${p.key}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${p.color};"></div></div>
       <div class="bar-count">${planCounts[p.key] || 0}</div>
@@ -60,7 +60,7 @@ function buildPrioBars(prioCounts, total) {
   ];
   return prios.map(p => {
     const pct = Math.round((prioCounts[p.key] || 0) / total * 100);
-    return `<div class="d-flex align-items-center gap-2 mb-1">
+    return `<div class="flex items-center gap-2 mb-1">
       <div class="bar-label bar-label-prio">${p.key}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${p.color};"></div></div>
       <div class="bar-count">${prioCounts[p.key] || 0}</div>
@@ -77,7 +77,7 @@ function buildServicesDist(online, error, total) {
     { label: 'Inactivo', count: offline, color: 'var(--text-dim)' },
   ].map(item => {
     const pct = Math.round(item.count / total * 100);
-    return `<div class="d-flex align-items-center gap-2 mb-2">
+    return `<div class="flex items-center gap-2 mb-2">
       <span class="indicator-dot" style="background:${item.color};"></span>
       <div class="svc-dist-label">${item.label}</div>
       <div class="svc-bar-track"><div class="bar-fill" style="width:${pct}%;background:${item.color};"></div></div>
@@ -87,14 +87,14 @@ function buildServicesDist(online, error, total) {
 }
 
 function renderRecentTickets(tickets) {
-  if (tickets.length === 0) return '<div class="text-center py-3 text-dim">Sin tickets pendientes</div>';
+  if (tickets.length === 0) return '<div class="text-center py-4 text-dim">Sin tickets pendientes</div>';
   return tickets.map((t, i) => {
     const dotColor = t.prioridad === 'Alta' ? 'var(--error)' : t.prioridad === 'Media' ? 'var(--warning)' : 'var(--text-dim)';
     const pillBg = t.prioridad === 'Alta' ? 'rgba(248,113,113,0.15)' : t.prioridad === 'Media' ? 'rgba(251,191,36,0.15)' : 'rgba(100,116,139,0.15)';
-    return `<div class="d-flex align-items-center gap-2 py-2 ${i < tickets.length - 1 ? 'border-bottom ticket-border' : ''}">
+    return `<div class="flex items-center gap-2 py-2 ${i < tickets.length - 1 ? 'border-bottom ticket-border' : ''}">
       <span class="indicator-dot" style="background:${dotColor};"></span>
-      <div class="flex-grow-1 overflow-hidden">
-        <div class="fw-semibold text-truncate ticket-list-name">${t.titulo}</div>
+      <div class="grow overflow-hidden">
+        <div class="font-semibold truncate ticket-list-name">${t.titulo}</div>
         <div class="ticket-list-client">${t.clientes ? t.clientes.nombre : (t.chat_id || 'Sin cliente')}</div>
       </div>
       <span class="prio-pill" style="background:${pillBg};color:${dotColor};">${t.prioridad || 'Baja'}</span>
@@ -136,14 +136,16 @@ function buildDashboard(dash, clients, tickets) {
 
   dash.innerHTML = `
     <div>
-      <div class="d-flex align-items-center justify-content-between mb-4">
-        <h2 class="fw-bold mb-0 dashboard-header-title">DASHBOARD</h2>
+      <div class="view-header">
+        <div class="view-header-left">
+          <h2 class="view-header-title">DASHBOARD</h2>
+        </div>
       </div>
 
-      <div class="row g-3 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
 
-        <div class="col-12 col-md-6">
-          <div class="glass-card p-3 h-100 rounded d-flex align-items-center gap-3 anim-card-enter" style="--si:0">
+        <div>
+          <div class="glass-card p-4 h-full rounded flex items-center gap-4 anim-card-enter" style="--si:0">
             <div class="donut-wrapper">
               <svg width="72" height="72" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border-soft)" stroke-width="12"/>
@@ -161,19 +163,19 @@ function buildDashboard(dash, clients, tickets) {
               </div>
             </div>
             <div>
-              <div class="fw-semibold kpi-project-name">Proyectos</div>
+              <div class="font-semibold kpi-project-name">Proyectos</div>
               <div class="kpi-stat-online"><span id="dash-online-count">${onlineServices}</span> online</div>
               <div class="kpi-stat-error"><span id="dash-error-count">${errorServices}</span> error</div>
             </div>
           </div>
         </div>
 
-        <div class="col-12 col-md-6">
-          <div class="glass-card p-3 h-100 rounded anim-card-enter" style="--si:1">
-            <div class="d-flex justify-content-between align-items-start mb-2">
+        <div>
+          <div class="glass-card p-4 h-full rounded anim-card-enter" style="--si:1">
+            <div class="flex justify-between items-start mb-2">
               <div>
                 <div class="kpi-label">Clientes Activos</div>
-                <div id="dash-clients-count" class="fw-bold kpi-number kpi-number-primary">${activeClients.length}</div>
+                <div id="dash-clients-count" class="font-bold kpi-number kpi-number-primary">${activeClients.length}</div>
               </div>
               <i class="bi bi-people-fill kpi-icon kpi-icon-primary"></i>
             </div>
@@ -181,12 +183,12 @@ function buildDashboard(dash, clients, tickets) {
           </div>
         </div>
 
-        <div class="col-12 col-md-6">
-          <div class="glass-card p-3 h-100 rounded anim-card-enter" style="--si:2">
-            <div class="d-flex justify-content-between align-items-start mb-2">
+        <div>
+          <div class="glass-card p-4 h-full rounded anim-card-enter" style="--si:2">
+            <div class="flex justify-between items-start mb-2">
               <div>
                 <div class="kpi-label">Tickets Pendientes</div>
-                <div id="dash-tickets-count" class="fw-bold kpi-number kpi-number-warning">${pendingTickets.length}</div>
+                <div id="dash-tickets-count" class="font-bold kpi-number kpi-number-warning">${pendingTickets.length}</div>
               </div>
               <i class="bi bi-ticket-perforated-fill kpi-icon kpi-icon-warning"></i>
             </div>
@@ -194,12 +196,12 @@ function buildDashboard(dash, clients, tickets) {
           </div>
         </div>
 
-        <div class="col-12 col-md-6">
-          <div class="glass-card p-3 h-100 rounded d-flex flex-column justify-content-between anim-card-enter" style="--si:3">
-            <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="glass-card p-4 h-full rounded flex flex-col justify-between anim-card-enter" style="--si:3">
+            <div class="flex justify-between items-start">
               <div>
                 <div class="kpi-label">Estado de Salud</div>
-                <div id="dash-health-status" class="fw-bold kpi-health-status" style="color:${healthOk ? 'var(--success)' : 'var(--error)'};">
+                <div id="dash-health-status" class="font-bold kpi-health-status" style="color:${healthOk ? 'var(--success)' : 'var(--error)'};">
                   ${healthOk ? 'OK' : 'ALERTA'}
                 </div>
               </div>
@@ -215,12 +217,12 @@ function buildDashboard(dash, clients, tickets) {
           </div>
         </div>
 
-        <div class="col-12">
-          <div class="glass-card p-3 rounded anim-card-enter" style="--si:4">
-            <div class="d-flex justify-content-between align-items-center">
+        <div class="md:col-span-2">
+          <div class="glass-card p-4 rounded anim-card-enter" style="--si:4">
+            <div class="flex justify-between items-center">
               <div>
                 <div class="kpi-label">Abonos Mensuales</div>
-                <div id="dash-abonos-total" class="fw-bold kpi-number" style="color:var(--success);">$${totalAbono.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div id="dash-abonos-total" class="font-bold kpi-number" style="color:var(--success);">$${totalAbono.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               </div>
               <i class="bi bi-cash-stack kpi-icon" style="color:var(--success);font-size:1.8rem;opacity:0.3;"></i>
             </div>
@@ -229,36 +231,22 @@ function buildDashboard(dash, clients, tickets) {
 
       </div>
 
-      <div class="row g-3">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        <div class="col-12 col-md-6">
-          <div class="glass-card p-3 rounded anim-card-enter h-100" style="--si:5">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h6 class="mb-0 fw-bold">Tickets Recientes</h6>
-              <span class="pending-pill">${pendingTickets.length} pendientes</span>
-            </div>
-            <div id="dash-recent-tickets">${renderRecentTickets(pendingTickets.slice(0, 5))}</div>
-          </div>
+        <div class="glass-card p-4 rounded anim-card-enter" style="--si:5">
+          <h6 class="mb-4 font-bold">Distribucion Servicios</h6>
+          <div id="dash-services-dist">${buildServicesDist(onlineServices, errorServices, totalServices)}</div>
         </div>
 
-        <div class="col-12 col-md-6 d-flex flex-column gap-3">
-
-          <div class="glass-card p-3 rounded anim-card-enter" style="--si:6">
-            <h6 class="mb-3 fw-bold">Distribucion Servicios</h6>
-            <div id="dash-services-dist">${buildServicesDist(onlineServices, errorServices, totalServices)}</div>
+        <div class="glass-card p-4 rounded anim-card-enter" style="--si:6">
+          <h6 class="mb-4 font-bold">Acciones Rapidas</h6>
+          <div class="grid gap-2">
+            <button class="btn btn-sm btn-outline-light text-left" onclick="navigate('clients')">
+              <i class="bi bi-people mr-2"></i>Gestionar Clientes
+            </button>
+            <button class="btn btn-sm btn-outline-light text-left" id="dashboard-refresh">
+              <i class="bi bi-arrow-clockwise mr-2"></i>Actualizar</button>
           </div>
-
-          <div class="glass-card p-3 rounded anim-card-enter" style="--si:7">
-            <h6 class="mb-3 fw-bold">Acciones Rapidas</h6>
-            <div class="d-grid gap-2">
-              <button class="btn btn-sm btn-outline-light text-start" onclick="navigate('clients')">
-                <i class="bi bi-people me-2"></i>Gestionar Clientes
-              </button>
-              <button class="btn btn-sm btn-outline-light text-start" id="dashboard-refresh">
-                <i class="bi bi-arrow-clockwise me-2"></i>Actualizar</button>
-            </div>
-          </div>
-
         </div>
 
       </div>
@@ -362,9 +350,6 @@ function patchDashboard() {
 
   const prioBarsEl = document.getElementById('dash-prio-bars');
   if (prioBarsEl) prioBarsEl.innerHTML = buildPrioBars(prioCounts, pendingTickets.length);
-
-  const recentEl = document.getElementById('dash-recent-tickets');
-  if (recentEl) recentEl.innerHTML = renderRecentTickets(pendingTickets.slice(0, 5));
 
   const svcDist = document.getElementById('dash-services-dist');
   if (svcDist) svcDist.innerHTML = buildServicesDist(onlineServices, errorServices, totalServices);

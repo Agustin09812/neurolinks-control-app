@@ -59,7 +59,7 @@ function showNotificationToast(notification) {
     notification.type === "update"       ? "bi-arrow-up-circle-fill" :
     "bi-bell";
 
-  showToast(`<i class="bi ${icon} me-2"></i>${_escHtml(notification.title)}`, "info");
+  showToast(`<i class="bi ${icon} mr-2"></i>${_escHtml(notification.title)}`, "info");
 }
 
 function getNotifications() {
@@ -112,6 +112,11 @@ function openNotificationsPanel() {
   const canvasEl = document.getElementById("notificationsCanvas");
   if (!canvasEl) return;
   renderNotificationsPanel();
+  document.body.classList.add("notif-panel-open");
+  canvasEl.addEventListener("hidden.bs.offcanvas", () => {
+    document.body.classList.remove("notif-panel-open");
+    updateNotificationsBadge();
+  }, { once: true });
   bootstrap.Offcanvas.getOrCreateInstance(canvasEl).show();
 }
 
@@ -145,12 +150,12 @@ function renderNotificationsPanel() {
       <div class="notification-item ${n.read ? 'notif-read' : 'notif-unread'} anim-card-enter"
            style="--si:${Math.min(i, 7)}" data-notif-id="${n.id}"
            onclick="markNotificationAsRead('${n.id}')">
-        <div class="d-flex align-items-start gap-3">
+        <div class="flex items-start gap-4">
           <div class="notif-icon-badge ${cfg.cls}">
             <i class="bi ${cfg.icon}"></i>
           </div>
-          <div class="flex-grow-1 min-w-0">
-            <div class="d-flex justify-content-between align-items-start gap-2">
+          <div class="grow min-w-0">
+            <div class="flex justify-between items-start gap-2">
               <div class="notif-title">${_escHtml(n.title)}</div>
               <div class="notif-time">${_relativeTime(n.date)}</div>
             </div>

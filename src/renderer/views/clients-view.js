@@ -19,43 +19,56 @@ async function renderClientsView() {
     const secondaryVar = document.getElementById("integrated-var-container");
     if (secondaryVar) secondaryVar.remove();
 
+    clientsPlanFilter = "";
+    clientsSearchQuery = "";
+
     const view = document.getElementById("clients-view");
     view.style.display = "block";
+    const isListView = localStorage.getItem("clientsView") === "list";
     view.innerHTML = `
         <div class="animate-fade" id="clients-main">
 
             <!-- GRID PANEL -->
             <div id="clients-grid-panel">
-                <div class="mb-4">
-                    <h2 class="fw-bold mb-0 clients-header-title">CLIENTES</h2>
-                </div>
 
-                <!-- Busqueda + filtro de plan + acciones -->
-                <div class="d-flex gap-2 mb-4 align-items-center flex-wrap">
-                    <div class="input-group input-group-sm search-input-group">
-                        <span class="input-group-text bg-dark border-secondary text-dim">
-                            <i class="bi bi-search"></i>
-                        </span>
-                        <input type="text" class="form-control text-main" id="clients-search-input"
-                            placeholder="Buscar cliente...">
+                <!-- Cabecera flotante -->
+                <div class="view-header">
+                    <div class="view-header-left">
+                        <h2 class="view-header-title">CLIENTES</h2>
                     </div>
-                    <select class="form-select form-select-sm" id="plan-filter-select" style="width:auto;">
-                        <option value="">Todos los planes</option>
-                        <option value="Standard">Standard</option>
-                        <option value="Premium">Premium</option>
-                        <option value="Enterprise">Enterprise</option>
-                        <option value="Baja">Baja</option>
-                    </select>
-                    <button class="btn btn-outline-light btn-sm" id="btn-new-client" title="Nuevo Cliente">
-                        <i class="bi bi-person-plus btn-clients-icon"></i><span class="btn-clients-label"> Nuevo Cliente</span>
-                    </button>
-                    <button class="btn btn-outline-light btn-sm" onclick="exportClientsToCSV()" title="Exportar CSV">
-                        <i class="bi bi-file-earmark-excel btn-clients-icon"></i><span class="btn-clients-label"> Exportar</span>
-                    </button>
+                    <div class="view-header-controls">
+                        <div class="input-group input-group-sm search-input-group">
+                            <span class="input-group-text text-dim">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control text-main" id="clients-search-input"
+                                placeholder="Buscar cliente...">
+                        </div>
+                        <select class="form-select form-select-sm clients-plan-select" id="plan-filter-select">
+                            <option value="">Todos los planes</option>
+                            <option value="Standard">Standard</option>
+                            <option value="Premium">Premium</option>
+                            <option value="Enterprise">Enterprise</option>
+                            <option value="Baja">Baja</option>
+                        </select>
+                        <div class="flex gap-2 clients-toolbar-btns">
+                            <button class="btn btn-outline-light btn-sm" id="btn-toggle-clients-view"
+                                title="${isListView ? 'Vista cuadrícula' : 'Vista lista'}"
+                                data-bs-toggle="tooltip" data-bs-placement="bottom">
+                                <i class="bi bi-${isListView ? 'grid' : 'list-ul'}"></i>
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" onclick="exportClientsToCSV()">
+                                <i class="bi bi-file-earmark-excel btn-clients-icon"></i><span class="btn-clients-label"> Exportar</span>
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" id="btn-new-client">
+                                <i class="bi bi-person-plus btn-clients-icon"></i><span class="btn-clients-label"> Nuevo Cliente</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Grid de cards -->
-                <div id="clients-cards-grid" class="row g-3"></div>
+                <div id="clients-cards-grid" class="${isListView ? 'flex flex-col gap-2' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'}"></div>
             </div>
 
             <!-- DETAIL PANEL -->
@@ -68,49 +81,53 @@ async function renderClientsView() {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content glass-card shadow-lg">
                     <div class="modal-header">
-                        <h5 class="modal-title fw-bold" id="clientModalTitle">Nuevo Cliente</h5>
+                        <h5 class="modal-title font-bold" id="clientModalTitle">Nuevo Cliente</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <form id="clientForm">
-                        <div class="modal-body p-4">
+                        <div class="modal-body p-6">
                             <input type="hidden" id="clientId">
-                            <div class="row g-3">
-                                <div class="col-md-12">
-                                    <label class="form-label text-dim small fw-bold required">NOMBRE COMPLETO</label>
+                            <div class="grid gap-4">
+                                <div class="">
+                                    <label class="form-label text-dim text-sm font-bold required">NOMBRE COMPLETO</label>
                                     <input type="text" class="form-control text-main" id="clientName" required>
                                 </div>
-                                <div class="col-md-12">
-                                    <label class="form-label text-dim small fw-bold">EMPRESA</label>
+                                <div class="">
+                                    <label class="form-label text-dim text-sm font-bold">EMPRESA</label>
                                     <input type="text" class="form-control text-main" id="clientCompany">
                                 </div>
-                                <div class="col-md-12">
-                                    <label class="form-label text-dim small fw-bold required">ABONO MENSUAL ($)</label>
+                                <div class="">
+                                    <label class="form-label text-dim text-sm font-bold required">ABONO MENSUAL ($)</label>
                                     <input type="number" step="0.01" min="0" class="form-control text-main" id="clientAbono" required>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-dim small fw-bold">EMAIL</label>
-                                    <input type="email" class="form-control text-main" id="clientEmail">
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="form-label text-dim text-sm font-bold">EMAIL</label>
+                                        <input type="email" class="form-control text-main" id="clientEmail">
+                                    </div>
+                                    <div>
+                                        <label class="form-label text-dim text-sm font-bold">TELEFONO</label>
+                                        <input type="text" class="form-control text-main" id="clientPhone">
+                                    </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-dim small fw-bold">TELEFONO</label>
-                                    <input type="text" class="form-control text-main" id="clientPhone">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-dim small fw-bold">PLAN CONTRATADO</label>
-                                    <select class="form-select" id="clientPlan">
-                                        <option value="Standard">Standard</option>
-                                        <option value="Premium">Premium</option>
-                                        <option value="Enterprise">Enterprise</option>
-                                        <option value="Baja">Baja</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label text-dim small fw-bold">PROX. VENCIMIENTO</label>
-                                    <input type="date" class="form-control text-main" id="clientVencimiento">
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="form-label text-dim text-sm font-bold">PLAN CONTRATADO</label>
+                                        <select class="form-select" id="clientPlan">
+                                            <option value="Standard">Standard</option>
+                                            <option value="Premium">Premium</option>
+                                            <option value="Enterprise">Enterprise</option>
+                                            <option value="Baja">Baja</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="form-label text-dim text-sm font-bold">PROX. VENCIMIENTO</label>
+                                        <input type="date" class="form-control text-main" id="clientVencimiento">
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="modal-footer p-3">
+                        <div class="modal-footer p-4">
                             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                             <button type="submit" class="btn btn-sm btn-success">Guardar Cliente</button>
                         </div>
@@ -134,21 +151,41 @@ async function renderClientsView() {
 
     document.getElementById("btn-new-client").addEventListener("click", openNewClientModal);
 
+    const toggleClientsBtn = document.getElementById("btn-toggle-clients-view");
+    toggleClientsBtn?.addEventListener("click", () => {
+        const newView = localStorage.getItem("clientsView") === "list" ? "grid" : "list";
+        localStorage.setItem("clientsView", newView);
+        const isNowList = newView === "list";
+        const grid = document.getElementById("clients-cards-grid");
+        if (grid) {
+            grid.className = isNowList ? "flex flex-col gap-2" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4";
+            grid.innerHTML = "";
+        }
+        toggleClientsBtn.querySelector("i").className = `bi bi-${isNowList ? 'grid' : 'list-ul'}`;
+        const tt = bootstrap.Tooltip.getInstance(toggleClientsBtn);
+        if (tt) tt.dispose();
+        toggleClientsBtn.setAttribute("title", isNowList ? 'Vista cuadrícula' : 'Vista lista');
+        new bootstrap.Tooltip(toggleClientsBtn, { placement: 'bottom', trigger: 'hover', delay: { show: 200, hide: 100 } });
+        renderClientCards();
+    });
+    if (toggleClientsBtn && window.bootstrap) {
+        new bootstrap.Tooltip(toggleClientsBtn, { placement: 'bottom', trigger: 'hover', delay: { show: 200, hide: 100 } });
+    }
+
     allClients = window.clientsData || [];
     if (allClients.length > 0) {
         renderClientCards();
     } else {
         const _sk = `
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="glass-card p-3 h-100">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="skeleton flex-shrink-0" style="width:52px;height:52px;border-radius:14px"></div>
-                        <div class="flex-grow-1 min-w-0">
+            <div class="">
+                <div class="glass-card p-4 h-full">
+                    <div class="flex items-center gap-4">
+                        <div class="skeleton shrink-0" style="width:52px;height:52px;border-radius:14px"></div>
+                        <div class="grow min-w-0">
                             <div class="skeleton mb-2" style="height:14px;width:70%"></div>
                             <div class="skeleton mb-2" style="height:12px;width:50%"></div>
                             <div class="skeleton" style="height:20px;width:55px;border-radius:10px"></div>
                         </div>
-                        <div class="skeleton flex-shrink-0" style="width:30px;height:30px;border-radius:6px"></div>
                     </div>
                 </div>
             </div>`;
@@ -180,45 +217,58 @@ function getFilteredClients() {
 
 function getPlanBadgeClass(plan) {
     return {
-        'Premium': 'bg-danger text-white',
-        'Enterprise': 'bg-warning text-dark',
-        'Baja': 'bg-secondary text-white',
-        'Standard': 'bg-info text-dark',
-    }[plan] || 'bg-secondary text-white';
+        'Premium': 'badge-plan-premium',
+        'Enterprise': 'badge-plan-enterprise',
+        'Baja': 'badge-plan-baja',
+        'Standard': 'badge-plan-standard',
+    }[plan] || 'badge-plan-standard';
 }
 
 function _buildClientCol(c, isNew, index) {
     const initials = c.nombre.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
     const col = document.createElement("div");
-    col.className = "col-12 col-sm-6 col-md-6 col-lg-4 col-xl-3";
-    col.innerHTML = `
-        <div class="glass-card p-3 h-100 hover-lift clickable client-card${isNew ? " anim-card-enter" : ""}"
-        ${isNew ? `style="--si:${index}"` : ""} data-id="${c.id}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="client-avatar-lg flex-shrink-0">${initials}</div>
-                <div class="flex-grow-1 min-w-0 overflow-hidden">
-                    <div class="fw-bold text-truncate client-name">${escapeHtml(c.nombre)}</div>
-                    <div class="small text-dim text-truncate client-empresa">${escapeHtml(c.empresa || 'Particular')}</div>
-                    <div class="small text-dim text-truncate client-abono">$${escapeHtml(String(c.abono ?? 0))}/mes</div>
-                    <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
-                        <span class="badge client-plan ${getPlanBadgeClass(c.plan)}">${escapeHtml(c.plan || 'Standard')}</span>
-                        <span class="small text-dim" id="ast-count-${c.id}"><i class="bi bi-robot"></i></span>
-                        <span class="small text-danger fw-semibold" id="ticket-count-${c.id}" style="display:none"><i class="bi bi-ticket-perforated-fill me-1"></i><span class="tc-val"></span></span>
+    col.className = "";
+    const isList = localStorage.getItem("clientsView") === "list";
+
+    if (isList) {
+        col.innerHTML = `
+            <div class="glass-card px-4 py-3 hover-lift clickable client-card flex items-center gap-3${isNew ? " anim-card-enter" : ""}"
+            ${isNew ? `style="--si:${index}"` : ""} data-id="${c.id}">
+                <div class="client-avatar shrink-0">${initials}</div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-bold truncate client-name text-sm">${escapeHtml(c.nombre)}</div>
+                    <div class="text-xs text-dim truncate client-empresa">${escapeHtml(c.empresa || 'Particular')}</div>
+                </div>
+                <span class="badge client-plan ${getPlanBadgeClass(c.plan)} shrink-0">${escapeHtml(c.plan || 'Standard')}</span>
+                <div class="flex items-center gap-2 shrink-0 text-xs text-dim">
+                    <span id="ast-count-${c.id}"><i class="bi bi-robot"></i></span>
+                    <span id="ticket-count-${c.id}" style="display:none" class="text-red-400 font-semibold"><i class="bi bi-ticket-perforated-fill mr-1"></i><span class="tc-val"></span></span>
+                </div>
+            </div>
+        `;
+    } else {
+        col.innerHTML = `
+            <div class="glass-card p-4 h-full hover-lift clickable client-card${isNew ? " anim-card-enter" : ""}"
+            ${isNew ? `style="--si:${index}"` : ""} data-id="${c.id}">
+                <div class="flex items-center gap-4">
+                    <div class="client-avatar-lg shrink-0">${initials}</div>
+                    <div class="grow min-w-0 overflow-hidden">
+                        <div class="font-bold truncate client-name">${escapeHtml(c.nombre)}</div>
+                        <div class="text-sm text-dim truncate client-empresa">${escapeHtml(c.empresa || 'Particular')}</div>
+                        <div class="text-sm text-dim truncate client-abono">$${escapeHtml(String(c.abono ?? 0))}/mes</div>
+                        <div class="flex items-center gap-2 mt-1 flex-wrap">
+                            <span class="badge client-plan ${getPlanBadgeClass(c.plan)}">${escapeHtml(c.plan || 'Standard')}</span>
+                            <span class="text-sm text-dim" id="ast-count-${c.id}"><i class="bi bi-robot"></i></span>
+                            <span class="text-sm text-red-400 font-semibold" id="ticket-count-${c.id}" style="display:none"><i class="bi bi-ticket-perforated-fill mr-1"></i><span class="tc-val"></span></span>
+                        </div>
                     </div>
                 </div>
-                <button class="btn btn-sm btn-outline-light flex-shrink-0 btn-edit-client" title="Editar">
-                    <i class="bi bi-pencil"></i>
-                </button>
             </div>
-        </div>
-    `;
-    col.querySelector(".client-card").addEventListener("click", (e) => {
-        if (e.target.closest(".btn-edit-client")) return;
+        `;
+    }
+
+    col.querySelector(".client-card").addEventListener("click", () => {
         openClientDetail(c.id);
-    });
-    col.querySelector(".btn-edit-client").addEventListener("click", (e) => {
-        e.stopPropagation();
-        openEditClient(c.id);
     });
     return col;
 }
@@ -231,7 +281,7 @@ function renderClientCards() {
 
     // Map of id -> card element currently in DOM
     const rendered = new Map(
-        [...grid.querySelectorAll(".client-card[data-id]")].map(el => [el.dataset.id, el.closest(".col-12")])
+        [...grid.querySelectorAll(".client-card[data-id]")].map(el => [el.dataset.id, el.parentElement])
     );
 
     // Clear skeleton placeholders before first real render
@@ -246,7 +296,7 @@ function renderClientCards() {
 
     if (filtered.length === 0) {
         if (!grid.querySelector(".no-clients-msg")) {
-            grid.innerHTML = `<div class="col-12 text-center text-secondary py-5 no-clients-msg">No se encontraron clientes</div>`;
+            grid.innerHTML = `<div class="text-center text-white/50 py-12 no-clients-msg">No se encontraron clientes</div>`;
         }
         return;
     }
@@ -324,9 +374,9 @@ function renderClientDetailStructure(client) {
     detailPanel.innerHTML = `
         <div class="anim-slide-right">
             <!-- HEADER -->
-            <div class="mb-4">
+            <div class="mb-6">
                 <button class="btn btn-outline-light btn-sm" id="btn-back-to-grid" title="Volver">
-                    <i class="bi bi-arrow-left me-2"></i>Volver
+                    <i class="bi bi-arrow-left mr-2"></i>Volver
                 </button>
             </div>
 
@@ -364,66 +414,66 @@ async function loadClientFullDetail(client) {
 
     body.innerHTML = `
         <!-- DATOS DEL CLIENTE -->
-        <div class="glass-card px-4 py-3 rounded mb-4">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="client-avatar flex-shrink-0">${initials}</div>
+        <div class="glass-card px-6 py-4 rounded mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <div class="flex items-center gap-2">
+                    <div class="client-avatar shrink-0">${initials}</div>
                     <div>
-                        <div class="fw-bold">${escapeHtml(client.nombre)}</div>
+                        <div class="font-bold">${escapeHtml(client.nombre)}</div>
                         <span class="badge ${getPlanBadgeClass(client.plan)}">${escapeHtml(client.plan || 'Standard')}</span>
                     </div>
                 </div>
-                <div class="d-flex gap-2 flex-wrap">
+                <div class="flex gap-2 flex-wrap">
                     <button class="btn btn-outline-light btn-sm" id="btn-ver-pagos">
-                        <i class="bi bi-credit-card me-1"></i>Pagos
+                        <i class="bi bi-credit-card mr-1"></i>Pagos
                     </button>
                     <button class="btn btn-outline-light btn-sm btn-edit-perfil">
-                        <i class="bi bi-pencil me-1"></i>Editar
+                        <i class="bi bi-pencil mr-1"></i>Editar
                     </button>
                     <button class="btn btn-outline-danger btn-sm btn-delete-perfil">
-                        <i class="bi bi-trash me-1"></i>Eliminar
+                        <i class="bi bi-trash mr-1"></i>Eliminar
                     </button>
                 </div>
             </div>
-            <div class="row g-2">
-                <div class="col-6 col-md-3">
-                    <div class="x-small text-dim fw-bold mb-1">EMPRESA</div>
-                    <div class="small">${escapeHtml(client.empresa || '-')}</div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div class="">
+                    <div class="x-small text-dim font-bold mb-1">EMPRESA</div>
+                    <div class="text-sm">${escapeHtml(client.empresa || '-')}</div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="x-small text-dim fw-bold mb-1">ABONO MENSUAL</div>
-                    <div class="small fw-bold">$${escapeHtml(String(client.abono ?? 0))}</div>
+                <div class="">
+                    <div class="x-small text-dim font-bold mb-1">ABONO MENSUAL</div>
+                    <div class="text-sm font-bold">$${escapeHtml(String(client.abono ?? 0))}</div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="x-small text-dim fw-bold mb-1">EMAIL</div>
-                    <div class="small text-truncate">${escapeHtml(client.email || '-')}</div>
+                <div class="">
+                    <div class="x-small text-dim font-bold mb-1">EMAIL</div>
+                    <div class="text-sm truncate">${escapeHtml(client.email || '-')}</div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="x-small text-dim fw-bold mb-1">TELEFONO</div>
-                    <div class="small">${escapeHtml(client.telefono || '-')}</div>
+                <div class="">
+                    <div class="x-small text-dim font-bold mb-1">TELEFONO</div>
+                    <div class="text-sm">${escapeHtml(client.telefono || '-')}</div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="x-small text-dim fw-bold mb-1">VENCIMIENTO</div>
-                    <div class="small ${isExpired ? 'text-danger fw-bold' : ''}">
+                <div class="">
+                    <div class="x-small text-dim font-bold mb-1">VENCIMIENTO</div>
+                    <div class="text-sm ${isExpired ? 'text-red-400 font-bold' : ''}">
                         ${vencimiento ? vencimiento.toLocaleDateString() : '-'}
-                        ${isExpired ? '<span class="badge bg-danger ms-1">VENCIDO</span>' : ''}
+                        ${isExpired ? '<span class="badge badge-status-danger ml-1">VENCIDO</span>' : ''}
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- ASISTENTES VINCULADOS -->
-        <div class="mb-4">
-            <h6 class="text-dim small fw-bold mb-3">ASISTENTES VINCULADOS</h6>
+        <div class="mb-6">
+            <h6 class="text-dim text-sm font-bold mb-4">ASISTENTES VINCULADOS</h6>
             <div id="detail-assistants-container">
-                <div class="text-center py-3">
+                <div class="text-center py-4">
                     <div class="spinner-border spinner-border-sm text-dim"></div>
                 </div>
             </div>
         </div>
 
         <!-- TICKETS -->
-        <div id="client-tickets-container" class="mb-4"></div>
+        <div id="client-tickets-container" class="mb-6"></div>
     `;
 
     body.querySelector(".btn-edit-perfil").onclick = () => openEditClient(client.id);
@@ -451,27 +501,27 @@ function openBillingModal(clientId) {
     modal.innerHTML = `
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content glass-card">
-                <div class="modal-header border-secondary">
+                <div class="modal-header">
                     <h5 class="modal-title">Facturación</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row g-4">
-                        <div class="col-md-4">
-                            <div class="glass-card p-4 rounded">
-                                <h6 class="text-dim small fw-bold mb-3">REGISTRAR PAGO</h6>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="">
+                            <div class="glass-card p-6 rounded">
+                                <h6 class="text-dim text-sm font-bold mb-4">REGISTRAR PAGO</h6>
                                 <form id="detail-payment-form">
                                     <input type="hidden" id="detail-pay-client-id" value="${clientId}">
-                                    <div class="mb-3">
-                                        <label class="form-label small text-dim">CONCEPTO</label>
-                                        <input type="text" class="form-control form-control-sm text-light" id="detail-pay-concept" required>
+                                    <div class="mb-4">
+                                        <label class="form-label text-sm text-dim">CONCEPTO</label>
+                                        <input type="text" class="form-control form-control-sm" id="detail-pay-concept" required>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small text-dim">MONTO ($)</label>
-                                        <input type="number" step="0.01" class="form-control form-control-sm text-light" id="detail-pay-amount" required>
+                                    <div class="mb-4">
+                                        <label class="form-label text-sm text-dim">MONTO ($)</label>
+                                        <input type="number" step="0.01" class="form-control form-control-sm" id="detail-pay-amount" required>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small text-dim">METODO</label>
+                                    <div class="mb-4">
+                                        <label class="form-label text-sm text-dim">METODO</label>
                                         <select class="form-select form-select-sm" id="detail-pay-method">
                                             <option value="Transferencia">Transferencia</option>
                                             <option value="Efectivo">Efectivo</option>
@@ -479,21 +529,21 @@ function openBillingModal(clientId) {
                                             <option value="Cripto">Cripto</option>
                                         </select>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small text-dim">FECHA</label>
-                                        <input type="date" class="form-control form-control-sm text-light" id="detail-pay-date" required>
+                                    <div class="mb-4">
+                                        <label class="form-label text-sm text-dim">FECHA</label>
+                                        <input type="date" class="form-control form-control-sm" id="detail-pay-date" required>
                                     </div>
-                                    <button type="submit" class="btn btn-outline-light btn-sm w-100">
-                                        <i class="bi bi-plus-circle me-2"></i>Agregar Pago
+                                    <button type="submit" class="btn btn-outline-light btn-sm w-full">
+                                        <i class="bi bi-plus-circle mr-2"></i>Agregar Pago
                                     </button>
                                 </form>
                             </div>
                         </div>
-                        <div class="col-md-8">
-                            <div class="glass-card p-4 rounded">
-                                <h6 class="text-dim small fw-bold mb-3">HISTORIAL DE PAGOS</h6>
+                        <div class="md:col-span-2">
+                            <div class="glass-card p-6 rounded">
+                                <h6 class="text-dim text-sm font-bold mb-4">HISTORIAL DE PAGOS</h6>
                                 <!-- Desktop: tabla -->
-                                <div class="table-responsive d-none d-md-block">
+                                <div class="overflow-x-auto hidden md:block">
                                     <table class="table table-sm table-hover mb-0">
                                         <thead>
                                             <tr>
@@ -508,7 +558,7 @@ function openBillingModal(clientId) {
                                     </table>
                                 </div>
                                 <!-- Mobile: cards -->
-                                <div id="detail-payments-cards" class="d-md-none d-flex flex-column gap-2"></div>
+                                <div id="detail-payments-cards" class="md:hidden flex flex-col gap-2"></div>
                             </div>
                         </div>
                     </div>
@@ -553,8 +603,8 @@ async function loadDetailPayments(clientId) {
     const tbody = document.getElementById("detail-payments-tbody");
     const cardsView = document.getElementById("detail-payments-cards");
 
-    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
-    if (cardsView) cardsView.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></div>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
+    if (cardsView) cardsView.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-dim"></div></div>';
 
     const deletePayment = async (id) => {
         if (!confirm("¿Eliminar este registro de pago?")) return;
@@ -574,8 +624,8 @@ async function loadDetailPayments(clientId) {
         if (cardsView) cardsView.innerHTML = "";
 
         if (payments.length === 0) {
-            if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-dim py-3">No hay pagos registrados</td></tr>';
-            if (cardsView) cardsView.innerHTML = '<div class="text-dim text-center py-3">No hay pagos registrados</div>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-dim py-4">No hay pagos registrados</td></tr>';
+            if (cardsView) cardsView.innerHTML = '<div class="text-dim text-center py-4">No hay pagos registrados</div>';
             return;
         }
 
@@ -585,10 +635,10 @@ async function loadDetailPayments(clientId) {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td>${new Date(p.fecha).toLocaleDateString()}</td>
-                    <td class="small">${escapeHtml(p.concepto)}</td>
-                    <td class="fw-bold">$${escapeHtml(String(p.monto))}</td>
-                    <td class="small text-dim">${escapeHtml(p.metodo)}</td>
-                    <td class="text-end">
+                    <td class="text-sm">${escapeHtml(p.concepto)}</td>
+                    <td class="font-bold">$${escapeHtml(String(p.monto))}</td>
+                    <td class="text-sm text-dim">${escapeHtml(p.metodo)}</td>
+                    <td class="text-right">
                         <button class="btn btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
                     </td>
                 `;
@@ -599,18 +649,18 @@ async function loadDetailPayments(clientId) {
             // Card (mobile)
             if (cardsView) {
                 const card = document.createElement("div");
-                card.className = "glass-card p-3 rounded";
+                card.className = "glass-card p-4 rounded";
                 card.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start gap-2">
-                        <div class="flex-grow-1 min-w-0">
-                            <div class="d-flex align-items-center justify-content-between mb-1">
-                                <span class="fw-bold">$${escapeHtml(String(p.monto))}</span>
-                                <span class="small text-dim">${new Date(p.fecha).toLocaleDateString()}</span>
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="grow min-w-0">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-bold">$${escapeHtml(String(p.monto))}</span>
+                                <span class="text-sm text-dim">${new Date(p.fecha).toLocaleDateString()}</span>
                             </div>
-                            <div class="small mb-1">${escapeHtml(p.concepto)}</div>
-                            <div class="small text-dim">${escapeHtml(p.metodo)}</div>
+                            <div class="text-sm mb-1">${escapeHtml(p.concepto)}</div>
+                            <div class="text-sm text-dim">${escapeHtml(p.metodo)}</div>
                         </div>
-                        <button class="btn btn-link text-danger p-0 flex-shrink-0 ms-2 btn-del-payment">
+                        <button class="btn btn-link text-red-400 p-0 shrink-0 ml-2 btn-del-payment">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -620,8 +670,8 @@ async function loadDetailPayments(clientId) {
             }
         });
     } catch {
-        if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Error al cargar pagos</td></tr>';
-        if (cardsView) cardsView.innerHTML = '<div class="text-danger text-center py-3">Error al cargar pagos</div>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-red-400 py-4">Error al cargar pagos</td></tr>';
+        if (cardsView) cardsView.innerHTML = '<div class="text-red-400 text-center py-4">Error al cargar pagos</div>';
     }
 }
 
@@ -649,69 +699,69 @@ async function loadClientAssistantSection(clientId) {
 
         if (linked.length === 0) {
             wrap.innerHTML = `
-                <div class="link-assistant-card d-flex flex-column align-items-center justify-content-center p-4 rounded" id="btn-show-link-assistant">
+                <div class="link-assistant-card flex flex-col items-center justify-center p-6 rounded" id="btn-show-link-assistant">
                     <i class="bi bi-plus-circle fs-3 mb-2 text-dim"></i>
-                    <div class="fw-semibold">Vincular asistente</div>
-                    <div class="small text-dim mt-1">Asociar un asistente a este cliente</div>
+                    <div class="font-semibold">Vincular asistente</div>
+                    <div class="text-sm text-dim mt-1">Asociar un asistente a este cliente</div>
                 </div>
             `;
             document.getElementById("btn-show-link-assistant").onclick = () => openLinkAssistantModal(clientId);
             return;
         }
 
-        wrap.innerHTML = '<div class="row g-3" id="assistant-cards-row"></div>';
+        wrap.innerHTML = '<div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="assistant-cards-row"></div>';
         const row = document.getElementById("assistant-cards-row");
 
         linked.forEach(p => {
             (p.services?.length ? p.services : [null]).forEach((svc) => {
                 const col = document.createElement("div");
-                col.className = "col-12 col-md-4";
+                col.className = "";
 
                 if (!svc) {
                     col.innerHTML = `
-                        <div class="service-card p-3 rounded h-100">
-                            <div class="fw-bold mb-1">${escapeHtml(p.name)}</div>
-                            <div class="small text-dim">Sin servicios</div>
+                        <div class="service-card p-4 rounded h-full">
+                            <div class="font-bold mb-1">${escapeHtml(p.name)}</div>
+                            <div class="text-sm text-dim">Sin servicios</div>
                         </div>`;
                     row.appendChild(col);
                     return;
                 }
 
                 const card = document.createElement("div");
-                card.className = "service-card p-3 rounded h-100";
+                card.className = "service-card p-4 rounded h-full";
                 card.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <div class="fw-bold">${escapeHtml(svc.name)}</div>
+                    <div class="flex justify-between items-start mb-1">
+                        <div class="font-bold">${escapeHtml(svc.name)}</div>
                         <span class="service-status-icon">${getStatusIcon(svc.status)}</span>
                     </div>
-                    <div class="x-small text-dim mb-3">Último deploy: ${formatDate(svc.createdAt)}</div>
-                    <div class="row g-2">
-                        <div class="col-4">
-                            <button class="btn btn-svc-tile btn-sm w-100 d-flex flex-column align-items-center py-2 btn-ca-backoffice">
+                    <div class="x-small text-dim mb-4">Último deploy: ${formatDate(svc.createdAt)}</div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div class="">
+                            <button class="btn btn-svc-tile btn-sm w-full flex flex-col items-center py-2 btn-ca-backoffice">
                                 <i class="bi bi-box-arrow-up-right mb-1"></i>
                                 <span style="font-size:0.65rem;">Backoffice</span>
                             </button>
                         </div>
-                        <div class="col-4">
-                            <button class="btn btn-svc-tile btn-sm w-100 d-flex flex-column align-items-center py-2 btn-ca-logs">
+                        <div class="">
+                            <button class="btn btn-svc-tile btn-sm w-full flex flex-col items-center py-2 btn-ca-logs">
                                 <i class="bi bi-terminal mb-1"></i>
                                 <span style="font-size:0.65rem;">Logs</span>
                             </button>
                         </div>
-                        <div class="col-4">
-                            <button class="btn btn-svc-tile btn-sm w-100 d-flex flex-column align-items-center py-2 btn-ca-vars">
+                        <div class="">
+                            <button class="btn btn-svc-tile btn-sm w-full flex flex-col items-center py-2 btn-ca-vars">
                                 <i class="bi bi-sliders mb-1"></i>
                                 <span style="font-size:0.65rem;">Variables</span>
                             </button>
                         </div>
-                        <div class="col-4">
-                            <button class="btn btn-svc-tile btn-sm w-100 d-flex flex-column align-items-center py-2 btn-ca-redeploy">
+                        <div class="">
+                            <button class="btn btn-svc-tile btn-sm w-full flex flex-col items-center py-2 btn-ca-redeploy">
                                 <i class="bi bi-arrow-repeat mb-1"></i>
                                 <span style="font-size:0.65rem;">Redeploy</span>
                             </button>
                         </div>
-                        <div class="col-4">
-                            <button class="btn btn-svc-tile btn-danger-tile btn-sm w-100 d-flex flex-column align-items-center py-2 btn-ca-unlink">
+                        <div class="">
+                            <button class="btn btn-svc-tile btn-danger-tile btn-sm w-full flex flex-col items-center py-2 btn-ca-unlink">
                                 <i class="bi bi-dash-circle mb-1"></i>
                                 <span style="font-size:0.65rem;">Desvincular</span>
                             </button>
@@ -767,17 +817,17 @@ async function loadClientAssistantSection(clientId) {
         });
 
         const addCol = document.createElement("div");
-        addCol.className = "col-12 col-md-4";
+        addCol.className = "";
         addCol.innerHTML = `
-            <div class="link-assistant-card d-flex flex-column align-items-center justify-content-center p-3 rounded btn-show-link-assistant" style="height:100%;">
+            <div class="link-assistant-card flex flex-col items-center justify-center p-4 rounded btn-show-link-assistant" style="height:100%;">
                 <i class="bi bi-plus-circle fs-4 mb-1 text-dim"></i>
-                <div class="fw-semibold small">Vincular asistente</div>
+                <div class="font-semibold text-sm">Vincular asistente</div>
             </div>
         `;
         addCol.querySelector(".btn-show-link-assistant").onclick = () => openLinkAssistantModal(clientId);
         row.appendChild(addCol);
     } catch {
-        wrap.innerHTML = '<div class="text-danger small">Error cargando asistentes</div>';
+        wrap.innerHTML = '<div class="text-red-400 text-sm">Error cargando asistentes</div>';
     }
 }
 
@@ -792,18 +842,18 @@ function openLinkAssistantModal(clientId) {
     modal.innerHTML = `
         <div class="modal-dialog">
             <div class="modal-content glass-card">
-                <div class="modal-header border-secondary">
+                <div class="modal-header">
                     <h5 class="modal-title">Vincular Asistente</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="input-group input-group-sm mb-3">
-                        <span class="input-group-text bg-dark border-secondary text-dim">
+                    <div class="input-group input-group-sm mb-4">
+                        <span class="input-group-text text-dim">
                             <i class="bi bi-search"></i>
                         </span>
-                        <input type="text" id="link-assistant-search" class="form-control text-main border-secondary" placeholder="Buscar asistente...">
+                        <input type="text" id="link-assistant-search" class="form-control text-main" placeholder="Buscar asistente...">
                     </div>
-                    <div id="link-assistant-list" class="d-flex flex-column gap-2 scrollable-list"></div>
+                    <div id="link-assistant-list" class="flex flex-col gap-2 scrollable-list"></div>
                 </div>
             </div>
         </div>
@@ -826,6 +876,8 @@ async function renderLinkAssistantList(clientId, bsModal, search = "") {
     const list = document.getElementById("link-assistant-list");
     if (!list) return;
 
+    const iconColors = { success: 'text-emerald-400', danger: 'text-red-400', warning: 'text-yellow-400', secondary: 'text-white/40' };
+
     try {
         const projectIds = await window.api.getClientProjects(clientId);
         const available = assistants.filter(p =>
@@ -834,7 +886,7 @@ async function renderLinkAssistantList(clientId, bsModal, search = "") {
         );
 
         if (available.length === 0) {
-            list.innerHTML = '<div class="text-dim small text-center py-3">No hay asistentes disponibles</div>';
+            list.innerHTML = '<div class="text-dim text-sm text-center py-4">No hay asistentes disponibles</div>';
             return;
         }
 
@@ -842,17 +894,17 @@ async function renderLinkAssistantList(clientId, bsModal, search = "") {
         available.forEach(p => {
             const statusColor = getStatusColor(p.status);
             const item = document.createElement("div");
-            item.className = "d-flex align-items-center justify-content-between p-2 glass-card rounded";
+            item.className = "flex items-center justify-between p-2 glass-card rounded";
             item.innerHTML = `
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-cpu text-${statusColor}"></i>
-                    <span class="fw-semibold small">${escapeHtml(p.name)}</span>
-                    <span class="badge bg-${statusColor} bg-opacity-10 text-${statusColor} border border-${statusColor} border-opacity-25">
+                <div class="flex items-center gap-2">
+                    <i class="bi bi-cpu ${iconColors[statusColor] || 'text-white/40'}"></i>
+                    <span class="font-semibold text-sm">${escapeHtml(p.name)}</span>
+                    <span class="badge badge-status-${statusColor}">
                         ${escapeHtml(p.status.toUpperCase())}
                     </span>
                 </div>
                 <button class="btn btn-outline-success btn-sm btn-link-assistant">
-                    <i class="bi bi-plus me-1"></i>Vincular
+                    <i class="bi bi-plus mr-1"></i>Vincular
                 </button>
             `;
             item.querySelector(".btn-link-assistant").onclick = async () => {
@@ -869,7 +921,7 @@ async function renderLinkAssistantList(clientId, bsModal, search = "") {
             list.appendChild(item);
         });
     } catch {
-        list.innerHTML = '<div class="text-danger small text-center py-3">Error al cargar asistentes</div>';
+        list.innerHTML = '<div class="text-red-400 text-sm text-center py-4">Error al cargar asistentes</div>';
     }
 }
 
@@ -879,7 +931,7 @@ function openClientAssistantDetail(project, clientId) {
     requestAnimationFrame(() => {
         const btn = document.getElementById("btnBackToGrid");
         if (!btn) return;
-        btn.innerHTML = '<i class="bi bi-arrow-left me-2"></i>Volver al cliente';
+        btn.innerHTML = '<i class="bi bi-arrow-left mr-2"></i>Volver al cliente';
         btn.onclick = () => {
             navigate("clients");
             requestAnimationFrame(() => openClientDetail(clientId));

@@ -14,19 +14,19 @@ function renderTemplates(templates) {
   if (!container) return;
 
   if (!templates || templates.length === 0) {
-    container.innerHTML = `<div class="col-12 text-center py-5 text-dim">No se encontraron templates.</div>`;
+    container.innerHTML = `<div class="text-center py-12 text-dim">No se encontraron templates.</div>`;
     return;
   }
 
   container.innerHTML = templates.map(template => `
-    <div class="col-md-6">
+    <div class="">
       <div class="template-card" onclick="selectTemplate('${template.id}')">
-        <div class="d-flex gap-3">
+        <div class="flex gap-4">
           <div class="template-icon">
             <i class="bi bi-box"></i>
           </div>
-          <div class="flex-grow-1 overflow-hidden">
-            <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+          <div class="grow overflow-hidden">
+            <div class="flex items-start justify-between gap-2 mb-1">
               <div class="template-name">${template.name}</div>
               <span class="template-badge">${template.category || 'General'}</span>
             </div>
@@ -60,14 +60,14 @@ async function loadAllTemplates() {
   const container = document.getElementById("templates-container");
   if (!container) return;
 
-  container.innerHTML = `<div class="col-12 text-center py-5"><div class="spinner-border text-success" role="status"></div><div class="mt-2 text-dim">Cargando templates...</div></div>`;
+  container.innerHTML = `<div class="text-center py-12"><div class="spinner-border text-success" role="status"></div><div class="mt-2 text-dim">Cargando templates...</div></div>`;
 
   try {
     allTemplates = await window.api.searchTemplates("") || [];
     filterTemplates(document.getElementById("template-search-input")?.value || "");
   } catch (error) {
     console.error("Error cargando templates:", error);
-    container.innerHTML = `<div class="col-12 text-center py-5 text-danger">Error al conectar con Railway.</div>`;
+    container.innerHTML = `<div class="text-center py-12 text-red-400">Error al conectar con Railway.</div>`;
   }
 }
 

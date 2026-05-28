@@ -30,18 +30,18 @@ async function renderTicketsView(filterClientId = "") {
     view.innerHTML = `
         <div class="animate-fade">
             <div id="tickets-content">
-                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-                    <h2 class="fw-bold mb-0">SISTEMA DE TICKETS</h2>
+                 <div class="flex flex-wrap justify-between items-center gap-2 mb-6">
+                    <h2 class="font-bold mb-0">SISTEMA DE TICKETS</h2>
                     <button class="btn btn-outline-light btn-sm" onclick="openNewTicketModal()">
-                        <i class="bi bi-plus-circle me-2"></i> Nuevo Ticket
+                        <i class="bi bi-plus-circle mr-2"></i> Nuevo Ticket
                     </button>
                 </div>
-    
-                <!-- FILTROS COMPACTOS -->
-                <div class="glass-card p-2 mb-3 rounded">
-                    <div class="row g-2 align-items-end">
 
-                        <div class="col-md-2">
+                <!-- FILTROS COMPACTOS -->
+                <div class="glass-card p-2 mb-4 rounded">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 items-end">
+
+                        <div class="">
                             <select class="form-select form-select-sm"
                                 id="view-filter-status"
                                 onchange="handleTicketFilter('status', this.value)">
@@ -51,7 +51,7 @@ async function renderTicketsView(filterClientId = "") {
                             </select>
                         </div>
 
-                        <div class="col-md-2">
+                        <div class="">
                             <select class="form-select form-select-sm"
                                 id="view-filter-priority"
                                 onchange="handleTicketFilter('priority', this.value)">
@@ -62,7 +62,7 @@ async function renderTicketsView(filterClientId = "") {
                             </select>
                         </div>
 
-                        <div class="col-md-3">
+                        <div class="">
                             <select class="form-select form-select-sm"
                                 id="view-filter-client"
                                 onchange="handleTicketFilter('client', this.value)">
@@ -70,22 +70,22 @@ async function renderTicketsView(filterClientId = "") {
                             </select>
                         </div>
 
-                        <div class="col-md-2">
+                        <div class="">
                             <input type="date"
-                                class="form-control form-control-sm text-light"
+                                class="form-control form-control-sm"
                                 id="view-filter-date-start"
                                 onchange="handleTicketFilter('dateStart', this.value)">
                         </div>
 
-                        <div class="col-md-2">
+                        <div class="">
                             <input type="date"
-                                class="form-control form-control-sm text-light"
+                                class="form-control form-control-sm"
                                 id="view-filter-date-end"
                                 onchange="handleTicketFilter('dateEnd', this.value)">
                         </div>
 
-                        <div class="col-md-1">
-                            <button class="btn btn-outline-custom btn-sm w-100"
+                        <div class="">
+                            <button class="btn btn-outline-custom btn-sm w-full"
                                 onclick="resetTicketFilters()"
                                 title="Limpiar filtros">
                                 <i class="bi bi-arrow-counterclockwise"></i>
@@ -94,26 +94,26 @@ async function renderTicketsView(filterClientId = "") {
 
                     </div>
                 </div>
-    
-                <div class="d-flex justify-content-end mb-3">
+
+                <div class="flex justify-end mb-4">
                     <button class="btn btn-outline-light btn-sm" onclick="exportTicketsToCSV()">
-                        <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel (CSV)
+                        <i class="bi bi-file-earmark-excel mr-2"></i>Exportar Excel (CSV)
                     </button>
                 </div>
-    
+
                 <!-- Desktop: tabla -->
-                <div class="glass-card overflow-hidden rounded d-none d-md-block">
+                <div class="glass-card overflow-hidden rounded hidden md:block">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead>
                                 <tr>
                                     <th>ID / Título</th>
                                     <th>Cliente</th>
-                                    <th>Tipo</th>
-                                    <th>Estado</th>
-                                    <th>Prioridad</th>
-                                    <th>Creado</th>
-                                    <th class="text-end">Acciones</th>
+                                    <th class="text-center">Tipo</th>
+                                    <th class="text-center">Estado</th>
+                                    <th class="text-center">Prioridad</th>
+                                    <th class="text-center">Creado</th>
+                                    <th class="text-right">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="tickets-table-body-view"></tbody>
@@ -122,12 +122,12 @@ async function renderTicketsView(filterClientId = "") {
                 </div>
 
                 <!-- Mobile: cards -->
-                <div id="tickets-cards-view" class="d-md-none d-flex flex-column gap-2"></div>
+                <div id="tickets-cards-view" class="md:hidden flex flex-col gap-2"></div>
 
                 <!-- Paginación (compartida) -->
-                <div class="d-flex justify-content-between align-items-center mt-3 glass-card p-3 rounded">
+                <div class="flex justify-between items-center mt-4 glass-card p-4 rounded">
                     <button class="btn btn-sm btn-outline-light" onclick="changePage(-1)">← Anterior</button>
-                    <span id="pagination-info" class="small text-dim"></span>
+                    <span id="pagination-info" class="text-sm text-dim"></span>
                     <button class="btn btn-sm btn-outline-light" onclick="changePage(1)">Siguiente →</button>
                 </div>
             </div>
@@ -137,32 +137,32 @@ async function renderTicketsView(filterClientId = "") {
                 <div class="modal-dialog modal-lg modal-dialog-centered">
                     <div class="modal-content glass-card shadow-lg">
                         <div class="modal-header">
-                            <h5 class="modal-title fw-bold" id="ticketModalTitleView">Nuevo Ticket</h5>
+                            <h5 class="modal-title font-bold" id="ticketModalTitleView">Nuevo Ticket</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
                         <form id="ticketFormView">
-                            <div class="modal-body p-4">
+                            <div class="modal-body p-6">
                                 <input type="hidden" id="ticketIdView">
 
-                                <div class="row g-2">
+                                <div class="grid md:grid-cols-2 gap-2">
 
                                     <!-- TÍTULO -->
-                                    <div class="col-md-6">
-                                        <label class="form-label text-dim small fw-bold required">TÍTULO DEL PROBLEMA</label>
+                                    <div class="">
+                                        <label class="form-label text-dim text-sm font-bold required">TÍTULO DEL PROBLEMA</label>
                                         <input type="text" class="form-control text-main" id="ticketTitleView" required>
                                     </div>
 
                                     <!-- CLIENTE -->
-                                    <div class="col-md-3">
-                                        <label class="form-label text-dim small fw-bold required">CLIENTE</label>
+                                    <div class="">
+                                        <label class="form-label text-dim text-sm font-bold required">CLIENTE</label>
                                         <select class="form-select" id="ticketClientView" required></select>
                                     </div>
 
                                     <input type="hidden" id="ticketTypeView" value="Asistencia Externa">
 
                                     <!-- ESTADO -->
-                                    <div class="col-md-3">
-                                        <label class="form-label text-dim small fw-bold">ESTADO</label>
+                                    <div class="">
+                                        <label class="form-label text-dim text-sm font-bold">ESTADO</label>
                                         <select class="form-select" id="ticketStatusView">
                                             <option value="Abierto">Abierto</option>
                                                         <option value="Cerrado">Cerrado</option>
@@ -170,8 +170,8 @@ async function renderTicketsView(filterClientId = "") {
                                     </div>
 
                                     <!-- PRIORIDAD -->
-                                    <div class="col-md-3">
-                                        <label class="form-label text-dim small fw-bold">PRIORIDAD</label>
+                                    <div class="">
+                                        <label class="form-label text-dim text-sm font-bold">PRIORIDAD</label>
                                         <select class="form-select" id="ticketPriorityView">
                                             <option value="Baja">Baja</option>
                                             <option value="Media">Media</option>
@@ -180,11 +180,11 @@ async function renderTicketsView(filterClientId = "") {
                                     </div>
 
                                     <!-- DESCRIPCIÓN (PROTAGONISTA) -->
-                                    <div class="col-md-12 mt-2">
-                                        <label class="form-label text-dim small fw-bold">DESCRIPCIÓN</label>
-                                        <textarea 
-                                            class="form-control text-main ticket-textarea" 
-                                            id="ticketDescView" 
+                                    <div class="md:col-span-2 mt-2">
+                                        <label class="form-label text-dim text-sm font-bold">DESCRIPCIÓN</label>
+                                        <textarea
+                                            class="form-control text-main ticket-textarea"
+                                            id="ticketDescView"
                                             rows="10">
                                         </textarea>
                                     </div>
@@ -192,7 +192,7 @@ async function renderTicketsView(filterClientId = "") {
                                 </div>
                             </div>
 
-                            <div class="modal-footer p-3">
+                            <div class="modal-footer p-4">
                                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                                 <button type="submit" class="btn btn-sm btn-success">Guardar Ticket</button>
                             </div>
@@ -208,6 +208,7 @@ async function renderTicketsView(filterClientId = "") {
     populateTicketFilters();
     loadTicketsData();
 }
+
 
 async function populateTicketFilters() {
     try {
@@ -230,6 +231,13 @@ async function populateTicketFilters() {
     }
 }
 
+function _clientDisplay(t) {
+    const name = t.clientes ? escapeHtml(t.clientes.nombre) : null;
+    const phone = t.chat_id ? escapeHtml(t.chat_id) : null;
+    if (name && phone) return `${name} <span class="text-dim">(${phone})</span>`;
+    return name || phone || 'Sin cliente';
+}
+
 function prependNewTickets(newTickets) {
     const tbody = document.getElementById("tickets-table-body-view");
     const cardsView = document.getElementById("tickets-cards-view");
@@ -242,18 +250,18 @@ function prependNewTickets(newTickets) {
             tr.className = "ticket-row ticket-new-row";
             tr.innerHTML = `
                 <td>
-                    <div class="fw-bold">#${t.id.substring(0, 8)}</div>
-                    <div class="small text-white">${escapeHtml(t.titulo)}</div>
+                    <div class="font-bold">#${t.id.substring(0, 8)}</div>
+                    <div class="text-sm text-white">${escapeHtml(t.titulo)}</div>
                 </td>
-                <td>${t.clientes ? escapeHtml(t.clientes.nombre) : (t.chat_id ? escapeHtml(t.chat_id) : 'Sin cliente')}</td>
-                <td><span class="small text-dim">${escapeHtml(t.tipo)}</span></td>
-                <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
-                <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
-                <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
-                <td class="text-end">
-                    <div class="d-flex gap-2 justify-content-end">
+                <td>${_clientDisplay(t)}</td>
+                <td class="text-center"><span class="text-sm text-dim">${escapeHtml(t.tipo)}</span></td>
+                <td class="text-center"><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
+                <td class="text-center"><span class="font-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
+                <td class="text-center"><div class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
+                <td class="text-right">
+                    <div class="flex gap-2 justify-end">
                         <button class="btn btn-sm btn-outline-light" onclick="openEditTicket('${t.id}')"><i class="bi bi-eye"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="handleDeleteTicket('${t.id}')"><i class="bi bi-trash"></i></button>
+                        ${t.estado === 'Cerrado' ? `<button class="btn btn-sm btn-outline-danger" onclick="handleDeleteTicket('${t.id}')"><i class="bi bi-trash"></i></button>` : ''}
                     </div>
                 </td>
             `;
@@ -261,31 +269,8 @@ function prependNewTickets(newTickets) {
         }
 
         if (cardsView) {
-            const card = document.createElement("div");
-            card.className = "glass-card p-3 rounded ticket-new-row";
-            card.innerHTML = `
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                    <div class="flex-grow-1 min-w-0">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <span class="text-dim small">#${t.id.substring(0, 8)}</span>
-                            <span class="small text-dim">${escapeHtml(t.tipo)}</span>
-                        </div>
-                        <div class="fw-bold mb-1">${escapeHtml(t.titulo)}</div>
-                        <div class="small text-dim mb-2">${t.clientes ? escapeHtml(t.clientes.nombre) : (t.chat_id ? escapeHtml(t.chat_id) : 'Sin cliente')}</div>
-                        <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
-                            <span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span>
-                            <span class="fw-bold small priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span>
-                            <span class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</span>
-                        </div>
-                    </div>
-                    <div class="d-flex gap-2 flex-shrink-0">
-                        <button class="btn btn-sm btn-outline-light btn-card-view"><i class="bi bi-eye"></i></button>
-                        <button class="btn btn-sm btn-outline-danger btn-card-del"><i class="bi bi-trash"></i></button>
-                    </div>
-                </div>
-            `;
-            card.querySelector(".btn-card-view").onclick = () => openEditTicket(t.id);
-            card.querySelector(".btn-card-del").onclick = () => handleDeleteTicket(t.id);
+            const card = _buildTicketCard(t, openEditTicket, handleDeleteTicket);
+            card.classList.add('ticket-new-row');
             cardsView.insertBefore(card, cardsView.firstChild);
         }
     });
@@ -306,15 +291,16 @@ async function loadTicketsData() {
             const newTickets = allTicketsView.slice(0, allTicketsView.length - previousCount);
             newTickets.forEach(t => {
                 const clientName = t.clientes?.nombre || t.chat_id || 'cliente desconocido';
+                const phone = (t.clientes?.nombre && t.chat_id) ? ` (${t.chat_id})` : '';
                 addNotification(
                     "ticket",
                     "Nuevo ticket pendiente",
-                    `Nuevo ticket de: ${clientName} — ${t.titulo || 'Sin título'}`,
+                    `Nuevo ticket de: ${clientName}${phone} — ${t.titulo || 'Sin título'}`,
                     `ticket-${t.id}`
                 );
             });
             const count = newTickets.length;
-            showToast(`<i class="bi bi-ticket-perforated-fill me-2"></i>${count === 1 ? 'Nuevo ticket pendiente' : `${count} nuevos tickets pendientes`}`, "danger");
+            showToast(`<i class="bi bi-ticket-perforated-fill mr-2"></i>${count === 1 ? 'Nuevo ticket pendiente' : `${count} nuevos tickets pendientes`}`, "danger");
         }
 
         lastTicketsCount = allTicketsView.length;
@@ -357,6 +343,51 @@ function getFilteredTickets() {
     });
 }
 
+function _buildTicketCard(t, onOpen, onDelete) {
+    const card = document.createElement("div");
+    card.className = "glass-card no-hover p-4 rounded";
+    card.style.cursor = "pointer";
+
+    const phone = t.chat_id ? escapeHtml(t.chat_id) : null;
+    const clientName = t.clientes ? escapeHtml(t.clientes.nombre) : null;
+    const clientLine = clientName
+        ? `${clientName}${phone ? ` <span class="text-dim">(${phone})</span>` : ''}`
+        : (phone || 'Sin cliente');
+
+    const clamp = 'overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;';
+
+    card.innerHTML = `
+        <div class="flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+                <span class="text-dim text-sm">#${t.id.substring(0, 8)}</span>
+                <span class="text-sm text-dim">${escapeHtml(t.tipo)}</span>
+            </div>
+            <div class="text-sm text-dim text-center">${clientLine}</div>
+            <div class="font-bold text-center" style="${clamp}">${escapeHtml(t.titulo)}</div>
+            ${t.descripcion ? `<div class="text-sm text-dim text-center" style="${clamp}">${escapeHtml(t.descripcion)}</div>` : ''}
+            <div class="text-center">
+                <span class="status-badge status-${t.estado.toLowerCase().replace(' ', '')}">${escapeHtml(t.estado)}</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="font-bold text-sm priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span>
+                <span class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</span>
+            </div>
+            ${t.estado === 'Cerrado' ? `<div class="text-center"><button class="btn btn-sm btn-outline-danger btn-card-del"><i class="bi bi-trash"></i></button></div>` : ''}
+        </div>
+    `;
+
+    card.onclick = (e) => {
+        if (!e.target.closest('.btn-card-del')) onOpen(t.id);
+    };
+    if (t.estado === 'Cerrado') {
+        card.querySelector('.btn-card-del').onclick = (e) => {
+            e.stopPropagation();
+            onDelete(t.id);
+        };
+    }
+    return card;
+}
+
 function renderTicketsList() {
     const tbody = document.getElementById("tickets-table-body-view");
     const cardsView = document.getElementById("tickets-cards-view");
@@ -365,8 +396,8 @@ function renderTicketsList() {
     const filtered = getFilteredTickets();
 
     if (filtered.length === 0) {
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-dim py-5">No se encontraron tickets</td></tr>';
-        if (cardsView) cardsView.innerHTML = '<div class="text-dim text-center py-5">No se encontraron tickets</div>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-dim py-12">No se encontraron tickets</td></tr>';
+        if (cardsView) cardsView.innerHTML = '<div class="text-dim text-center py-12">No se encontraron tickets</div>';
         if (info) info.textContent = '';
         return;
     }
@@ -383,18 +414,18 @@ function renderTicketsList() {
             tr.className = "ticket-row";
             tr.innerHTML = `
                 <td>
-                    <div class="fw-bold">#${t.id.substring(0, 8)}</div>
-                    <div class="small text-white">${escapeHtml(t.titulo)}</div>
+                    <div class="font-bold">#${t.id.substring(0, 8)}</div>
+                    <div class="text-sm text-white">${escapeHtml(t.titulo)}</div>
                 </td>
-                <td>${t.clientes ? escapeHtml(t.clientes.nombre) : (t.chat_id ? escapeHtml(t.chat_id) : 'Sin cliente')}</td>
-                <td><span class="small text-dim">${escapeHtml(t.tipo)}</span></td>
-                <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
-                <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
-                <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
-                <td class="text-end">
-                    <div class="d-flex gap-2 justify-content-end">
+                <td>${_clientDisplay(t)}</td>
+                <td class="text-center"><span class="text-sm text-dim">${escapeHtml(t.tipo)}</span></td>
+                <td class="text-center"><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
+                <td class="text-center"><span class="font-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
+                <td class="text-center"><div class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
+                <td class="text-right">
+                    <div class="flex gap-2 justify-end">
                         <button class="btn btn-sm btn-outline-light" onclick="openEditTicket('${t.id}')"><i class="bi bi-eye"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="handleDeleteTicket('${t.id}')"><i class="bi bi-trash"></i></button>
+                        ${t.estado === 'Cerrado' ? `<button class="btn btn-sm btn-outline-danger" onclick="handleDeleteTicket('${t.id}')"><i class="bi bi-trash"></i></button>` : ''}
                     </div>
                 </td>
             `;
@@ -402,37 +433,11 @@ function renderTicketsList() {
         });
     }
 
-    // Cards (mobile)
+    // Cards (mobile/tablet)
     if (cardsView) {
         cardsView.innerHTML = "";
         paginated.forEach(t => {
-            const card = document.createElement("div");
-            card.className = "glass-card p-3 rounded";
-            card.innerHTML = `
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                    <div class="flex-grow-1 min-w-0">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <span class="text-dim small">#${t.id.substring(0, 8)}</span>
-                            <span class="small text-dim">${escapeHtml(t.tipo)}</span>
-                        </div>
-                        <div class="fw-bold mb-1">${escapeHtml(t.titulo)}</div>
-                        <div class="small text-dim mb-2">${t.clientes ? escapeHtml(t.clientes.nombre) : (t.chat_id ? escapeHtml(t.chat_id) : 'Sin cliente')}</div>
-                        ${t.descripcion ? `<div class="small text-dim mb-2" style="opacity:0.7;white-space:pre-wrap;word-break:break-word;">${escapeHtml(t.descripcion.substring(0, 120))}${t.descripcion.length > 120 ? '…' : ''}</div>` : ''}
-                        <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
-                            <span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span>
-                            <span class="fw-bold small priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span>
-                            <span class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</span>
-                        </div>
-                    </div>
-                    <div class="d-flex gap-2 flex-shrink-0">
-                        <button class="btn btn-sm btn-outline-light btn-card-view"><i class="bi bi-eye"></i></button>
-                        <button class="btn btn-sm btn-outline-danger btn-card-del"><i class="bi bi-trash"></i></button>
-                    </div>
-                </div>
-            `;
-            card.querySelector(".btn-card-view").onclick = () => openEditTicket(t.id);
-            card.querySelector(".btn-card-del").onclick = () => handleDeleteTicket(t.id);
-            cardsView.appendChild(card);
+            cardsView.appendChild(_buildTicketCard(t, openEditTicket, handleDeleteTicket));
         });
     }
 
@@ -525,7 +530,7 @@ function exportTicketsToCSV() {
         escapeCSV(new Date(t.created_at).toLocaleDateString())
     ]);
 
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"
+    let csvContent = "data:text/csv;charset=utf-8,﻿"
         + headers.join(",") + "\n"
         + rows.map(e => e.join(",")).join("\n");
 
@@ -559,24 +564,24 @@ function changePage(direction) {
 async function renderClientTicketsTab(clientId, container, clientTelefono = null) {
     container.innerHTML = `
         <div>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="text-dim small fw-bold mb-0" id="client-tickets-header">TICKETS DEL CLIENTE</h6>
+            <div class="flex justify-between items-center mb-4">
+                <h6 class="text-dim text-sm font-bold mb-0" id="client-tickets-header">TICKETS DEL CLIENTE</h6>
                 <button class="btn btn-outline-light btn-sm" id="btn-new-client-ticket">
-                    <i class="bi bi-plus-circle me-2"></i>Nuevo Ticket
+                    <i class="bi bi-plus-circle mr-2"></i>Nuevo Ticket
                 </button>
             </div>
             <!-- Desktop: tabla -->
-            <div class="glass-card overflow-hidden rounded d-none d-md-block">
+            <div class="glass-card overflow-hidden rounded hidden md:block">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
                                 <th>Titulo</th>
-                                <th>Tipo</th>
-                                <th>Estado</th>
-                                <th>Prioridad</th>
-                                <th>Fecha</th>
-                                <th class="text-end">Acciones</th>
+                                <th class="text-center">Tipo</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center">Prioridad</th>
+                                <th class="text-center">Fecha</th>
+                                <th class="text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="client-tickets-tbody"></tbody>
@@ -584,7 +589,7 @@ async function renderClientTicketsTab(clientId, container, clientTelefono = null
                 </div>
             </div>
             <!-- Mobile: cards -->
-            <div id="client-tickets-cards" class="d-md-none d-flex flex-column gap-2"></div>
+            <div id="client-tickets-cards" class="md:hidden flex flex-col gap-2"></div>
         </div>
     `;
 
@@ -602,41 +607,41 @@ async function renderClientTicketsTab(clientId, container, clientTelefono = null
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content glass-card shadow-lg">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="clientTicketModalTitle">Nuevo Ticket</h5>
+                    <h5 class="modal-title font-bold" id="clientTicketModalTitle">Nuevo Ticket</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="clientTicketForm">
-                    <div class="modal-body p-4">
+                    <div class="modal-body p-6">
                         <input type="hidden" id="clientTicketId">
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <label class="form-label text-dim small fw-bold required">TITULO</label>
+                        <div class="grid md:grid-cols-2 gap-2">
+                            <div class="">
+                                <label class="form-label text-dim text-sm font-bold required">TITULO</label>
                                 <input type="text" class="form-control text-main" id="clientTicketTitle" required>
                             </div>
                             <input type="hidden" id="clientTicketType" value="Asistencia Externa">
-                            <div class="col-md-3">
-                                <label class="form-label text-dim small fw-bold">ESTADO</label>
+                            <div class="">
+                                <label class="form-label text-dim text-sm font-bold">ESTADO</label>
                                 <select class="form-select" id="clientTicketStatus">
                                     <option value="Abierto">Abierto</option>
                                         <option value="Cerrado">Cerrado</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label text-dim small fw-bold">PRIORIDAD</label>
+                            <div class="">
+                                <label class="form-label text-dim text-sm font-bold">PRIORIDAD</label>
                                 <select class="form-select" id="clientTicketPriority">
                                     <option value="Baja">Baja</option>
                                     <option value="Media">Media</option>
                                     <option value="Alta">Alta</option>
                                 </select>
                             </div>
-                            <div class="col-md-12 mt-2">
-                                <label class="form-label text-dim small fw-bold">DESCRIPCION</label>
+                            <div class="md:col-span-2 mt-2">
+                                <label class="form-label text-dim text-sm font-bold">DESCRIPCION</label>
                                 <textarea class="form-control text-main ticket-textarea"
                                     id="clientTicketDesc" rows="6"></textarea>
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer p-3">
+                    <div class="modal-footer p-4">
                         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-sm btn-success">Guardar Ticket</button>
                     </div>
@@ -686,8 +691,8 @@ async function loadClientTickets(clientId, clientTelefono = null) {
     const tbody = document.getElementById("client-tickets-tbody");
     const cardsView = document.getElementById("client-tickets-cards");
 
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
-    if (cardsView) cardsView.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-dim"></div></div>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
+    if (cardsView) cardsView.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-dim"></div></div>';
 
     const openTicketModal = (t) => {
         document.getElementById("clientTicketId").value = t.id;
@@ -728,12 +733,12 @@ async function loadClientTickets(clientId, clientTelefono = null) {
         const headerEl = document.getElementById("client-tickets-header");
         if (headerEl) {
             const pending = tickets.filter(t => t.estado !== 'Cerrado').length;
-            headerEl.innerHTML = `TICKETS DEL CLIENTE${pending > 0 ? ` <span class="badge bg-danger text-white fw-normal ms-1">${pending} pendiente${pending !== 1 ? 's' : ''}</span>` : ''}`;
+            headerEl.innerHTML = `TICKETS DEL CLIENTE${pending > 0 ? ` <span class="badge badge-status-danger ml-1">${pending} pendiente${pending !== 1 ? 's' : ''}</span>` : ''}`;
         }
 
         if (tickets.length === 0) {
-            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-dim py-5">No hay tickets para este cliente</td></tr>';
-            if (cardsView) cardsView.innerHTML = '<div class="text-dim text-center py-4">No hay tickets para este cliente</div>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-dim py-12">No hay tickets para este cliente</td></tr>';
+            if (cardsView) cardsView.innerHTML = '<div class="text-dim text-center py-6">No hay tickets para este cliente</div>';
             return;
         }
 
@@ -744,57 +749,65 @@ async function loadClientTickets(clientId, clientTelefono = null) {
                 tr.className = "ticket-row";
                 tr.innerHTML = `
                     <td>
-                        <div class="fw-bold small">#${t.id.substring(0, 8)}</div>
-                        <div class="small text-white">${escapeHtml(t.titulo)}</div>
+                        <div class="font-bold text-sm">#${t.id.substring(0, 8)}</div>
+                        <div class="text-sm text-white">${escapeHtml(t.titulo)}</div>
                     </td>
-                    <td><span class="small text-dim">${escapeHtml(t.tipo)}</span></td>
-                    <td><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
-                    <td><span class="fw-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
-                    <td><div class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
-                    <td class="text-end">
-                        <div class="d-flex gap-2 justify-content-end">
+                    <td class="text-center"><span class="text-sm text-dim">${escapeHtml(t.tipo)}</span></td>
+                    <td class="text-center"><span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span></td>
+                    <td class="text-center"><span class="font-bold priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span></td>
+                    <td class="text-center"><div class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
+                    <td class="text-right">
+                        <div class="flex gap-2 justify-end">
                             <button class="btn btn-sm btn-outline-light btn-edit-ct"><i class="bi bi-eye"></i></button>
-                            <button class="btn btn-sm btn-outline-danger btn-delete-ct"><i class="bi bi-trash"></i></button>
+                            ${t.estado === 'Cerrado' ? `<button class="btn btn-sm btn-outline-danger btn-delete-ct"><i class="bi bi-trash"></i></button>` : ''}
                         </div>
                     </td>
                 `;
                 tr.querySelector(".btn-edit-ct").onclick = () => openTicketModal(t);
-                tr.querySelector(".btn-delete-ct").onclick = () => deleteTicket(t.id);
+                if (t.estado === 'Cerrado') {
+                    tr.querySelector(".btn-delete-ct").onclick = () => deleteTicket(t.id);
+                }
                 tbody.appendChild(tr);
             }
 
-            // Card (mobile)
+            // Card (mobile/tablet)
             if (cardsView) {
                 const card = document.createElement("div");
-                card.className = "glass-card p-3 rounded";
+                card.className = "glass-card no-hover p-4 rounded";
+                card.style.cursor = "pointer";
+                const clamp = 'overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;';
                 card.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start gap-2">
-                        <div class="flex-grow-1 min-w-0">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <span class="text-dim small">#${t.id.substring(0, 8)}</span>
-                                <span class="small text-dim">${escapeHtml(t.tipo)}</span>
-                            </div>
-                            <div class="fw-bold mb-1">${escapeHtml(t.titulo)}</div>
-                            ${t.descripcion ? `<div class="small text-dim mb-2" style="opacity:0.75;white-space:pre-wrap;word-break:break-word;">${escapeHtml(t.descripcion.substring(0, 120))}${t.descripcion.length > 120 ? '…' : ''}</div>` : ''}
-                            <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
-                                <span class="status-badge status-${t.estado.toLowerCase().replace(" ", "")}">${escapeHtml(t.estado)}</span>
-                                <span class="fw-bold small priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span>
-                                <span class="small text-dim">${new Date(t.created_at).toLocaleDateString()}</span>
-                            </div>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-dim text-sm">#${t.id.substring(0, 8)}</span>
+                            <span class="text-sm text-dim">${escapeHtml(t.tipo)}</span>
                         </div>
-                        <div class="d-flex gap-2 flex-shrink-0">
-                            <button class="btn btn-sm btn-outline-light btn-card-edit-ct"><i class="bi bi-eye"></i></button>
-                            <button class="btn btn-sm btn-outline-danger btn-card-del-ct"><i class="bi bi-trash"></i></button>
+                        <div class="font-bold text-center" style="${clamp}">${escapeHtml(t.titulo)}</div>
+                        ${t.descripcion ? `<div class="text-sm text-dim text-center" style="${clamp}">${escapeHtml(t.descripcion)}</div>` : ''}
+                        <div class="text-center">
+                            <span class="status-badge status-${t.estado.toLowerCase().replace(' ', '')}">${escapeHtml(t.estado)}</span>
                         </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-sm priority-${t.prioridad ? t.prioridad.toLowerCase() : 'baja'}">${escapeHtml(t.prioridad || 'Baja')}</span>
+                            <span class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</span>
+                        </div>
+                        ${t.estado === 'Cerrado' ? `<div class="text-center"><button class="btn btn-sm btn-outline-danger btn-card-del-ct"><i class="bi bi-trash"></i></button></div>` : ''}
                     </div>
                 `;
-                card.querySelector(".btn-card-edit-ct").onclick = () => openTicketModal(t);
-                card.querySelector(".btn-card-del-ct").onclick = () => deleteTicket(t.id);
+                card.onclick = (e) => {
+                    if (!e.target.closest('.btn-card-del-ct')) openTicketModal(t);
+                };
+                if (t.estado === 'Cerrado') {
+                    card.querySelector('.btn-card-del-ct').onclick = (e) => {
+                        e.stopPropagation();
+                        deleteTicket(t.id);
+                    };
+                }
                 cardsView.appendChild(card);
             }
         });
     } catch {
-        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-3">Error al cargar tickets</td></tr>';
-        if (cardsView) cardsView.innerHTML = '<div class="text-danger text-center py-3">Error al cargar tickets</div>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-red-400 py-4">Error al cargar tickets</td></tr>';
+        if (cardsView) cardsView.innerHTML = '<div class="text-red-400 text-center py-4">Error al cargar tickets</div>';
     }
 }

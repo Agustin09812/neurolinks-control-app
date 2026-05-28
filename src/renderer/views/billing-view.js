@@ -20,17 +20,17 @@ async function renderBillingView() {
     view.style.display = "block";
     view.innerHTML = `
         <div class="animate-fade">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+            <div class="flex flex-wrap justify-between items-center gap-2 mb-6">
                 <div>
-                    <h2 class="fw-bold mb-0">CONTROL DE PAGOS</h2>
-                    <p class="small mb-0 text-dim">Gestión financiera y facturación histórica</p>
+                    <h2 class="font-bold mb-0">CONTROL DE PAGOS</h2>
+                    <p class="text-sm mb-0 text-dim">Gestión financiera y facturación histórica</p>
                 </div>
-                <div class="d-flex gap-2 flex-wrap">
+                <div class="flex gap-2 flex-wrap">
                     <button class="btn btn-outline-light btn-sm" onclick="openNewPaymentModal()">
-                        <i class="bi bi-plus-lg me-2"></i>Nueva Factura
+                        <i class="bi bi-plus-lg mr-2"></i>Nueva Factura
                     </button>
                     <button class="btn btn-outline-light btn-sm" onclick="refreshBilling()">
-                        <i class="bi bi-arrow-clockwise"></i> Actualizar
+                        <i class="bi bi-arrow-clockwise btn-refresh-icon mr-2"></i><span class="btn-refresh-label">Actualizar</span>
                     </button>
                     <button class="btn btn-outline-light btn-sm" onclick="exportBillingToCSV()">
                         <i class="bi bi-download"></i> Descargar
@@ -39,23 +39,23 @@ async function renderBillingView() {
             </div>
 
             <!-- FILTROS COMPACTOS -->
-            <div class="glass-card p-2 mb-3 rounded">
-                <div class="row g-2 align-items-end">
+            <div class="glass-card p-2 mb-4 rounded">
+                <div class="grid md:grid-cols-4 gap-2 items-end">
 
-                    <div class="col-md-3">
+                    <div class="">
                         <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-dark border-secondary text-dim">
-                                <i class="bi bi-search text-secondary"></i>
+                            <span class="input-group-text text-dim">
+                                <i class="bi bi-search text-white/50"></i>
                             </span>
                             <input type="text"
-                                class="form-control form-control-sm text-light"
+                                class="form-control form-control-sm"
                                 placeholder="Cliente..."
                                 id="bill-filter-client"
                                 onkeyup="handleBillingFilter('client', this.value)">
                         </div>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="">
                         <select class="form-select form-select-sm"
                             id="bill-filter-method"
                             onchange="handleBillingFilter('method', this.value)">
@@ -68,16 +68,16 @@ async function renderBillingView() {
                         </select>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="">
                         <input type="date"
-                            class="form-control form-control-sm text-light"
+                            class="form-control form-control-sm"
                             id="bill-filter-start"
                             onchange="handleBillingFilter('dateStart', this.value)">
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="">
                         <input type="date"
-                            class="form-control form-control-sm text-light"
+                            class="form-control form-control-sm"
                             id="bill-filter-end"
                             onchange="handleBillingFilter('dateEnd', this.value)">
                     </div>
@@ -85,7 +85,7 @@ async function renderBillingView() {
                 </div>
             </div>
 
-            <div class="glass-card p-0 overflow-hidden border-secondary rounded">
+            <div class="glass-card p-0 overflow-hidden rounded">
                 <div class="table-responsive">
                     <table class="table align-middle">
                         <thead>
@@ -107,34 +107,36 @@ async function renderBillingView() {
         <!-- MODAL NUEVO PAGO GLOBAL -->
         <div class="modal fade" id="globalPaymentModal" tabindex="-1">
             <div class="modal-dialog">
-                <div class="modal-content bg-dark text-light border-secondary">
-                    <div class="modal-header border-secondary">
+                <div class="modal-content glass-card">
+                    <div class="modal-header">
                         <h5 class="modal-title">Registrar Nuevo Pago</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <form id="globalPaymentForm">
                         <div class="modal-body">
-                            <div class="row g-3">
-                                <div class="col-md-12">
-                                    <label class="form-label small fw-bold">CLIENTE</label>
+                            <div class="grid gap-4">
+                                <div class="">
+                                    <label class="form-label text-sm font-bold">CLIENTE</label>
                                     <select class="form-select" id="payClientGlobal" required>
                                         <option value="">Seleccionar cliente...</option>
                                     </select>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold">FECHA</label>
-                                    <input type="date" class="form-control text-main" id="payDateGlobal" required>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="form-label text-sm font-bold">FECHA</label>
+                                        <input type="date" class="form-control text-main" id="payDateGlobal" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label text-sm font-bold">MONTO ($)</label>
+                                        <input type="number" class="form-control text-main" id="payAmountGlobal" required>
+                                    </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold">MONTO ($)</label>
-                                    <input type="number" class="form-control text-main" id="payAmountGlobal" required>
-                                </div>
-                                <div class="col-md-12">
-                                    <label class="form-label small fw-bold">CONCEPTO</label>
+                                <div class="">
+                                    <label class="form-label text-sm font-bold">CONCEPTO</label>
                                     <input type="text" class="form-control text-main" id="payConceptGlobal" placeholder="Ej: Abono Mensual Febrero" required>
                                 </div>
-                                <div class="col-md-12">
-                                    <label class="form-label small fw-bold">MÉTODO DE PAGO</label>
+                                <div class="">
+                                    <label class="form-label text-sm font-bold">MÉTODO DE PAGO</label>
                                     <select class="form-select" id="payMethodGlobal">
                                         <option value="Transferencia">Transferencia</option>
                                         <option value="Efectivo">Efectivo</option>
@@ -145,7 +147,7 @@ async function renderBillingView() {
                                 </div>
                             </div>
                         </div>
-                        <div class="modal-footer border-secondary">
+                        <div class="modal-footer">
                             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                             <button type="submit" class="btn btn-success btn-sm">Guardar Pago</button>
                         </div>
@@ -200,20 +202,19 @@ function applyBillingFilters() {
     const filtered = getFilteredPayments();
 
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-secondary">No se encontraron pagos con estos filtros</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-white/50">No se encontraron pagos con estos filtros</td></tr>';
         return;
     }
 
     filtered.forEach(p => {
         const tr = document.createElement("tr");
-        tr.className = "border-secondary";
         tr.innerHTML = `
-            <td class="ps-4 text-secondary">${new Date(p.fecha).toLocaleDateString()}</td>
-            <td><span class="fw-bold text-accent-clients">${p.clientes ? escapeHtml(p.clientes.nombre) : 'Sin Cliente'}</span></td>
-            <td class="small opacity-75">${escapeHtml(p.concepto)}</td>
-            <td><span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 font-monospace">$${escapeHtml(String(p.monto))}</span></td>
+            <td class="ps-4 text-white/50">${new Date(p.fecha).toLocaleDateString()}</td>
+            <td><span class="font-bold text-accent-clients">${p.clientes ? escapeHtml(p.clientes.nombre) : 'Sin Cliente'}</span></td>
+            <td class="text-sm opacity-75">${escapeHtml(p.concepto)}</td>
+            <td><span class="badge badge-status-success font-monospace">$${escapeHtml(String(p.monto))}</span></td>
             <td class="text-center">
-                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2 py-1 rounded-pill x-small">
+                <span class="badge badge-status-secondary rounded-full x-small px-2 py-1">
                     ${escapeHtml(p.metodo)}
                 </span>
             </td>
@@ -298,7 +299,7 @@ function exportBillingToCSV() {
         escapeCSV(p.metodo)
     ]);
 
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"
+    let csvContent = "data:text/csv;charset=utf-8,﻿"
         + headers.join(",") + "\n"
         + rows.map(e => e.join(",")).join("\n");
 

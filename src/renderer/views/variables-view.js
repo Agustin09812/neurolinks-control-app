@@ -14,25 +14,25 @@ async function renderVariablesView(projectId, environmentId, serviceId, serviceN
         <div class="variables-panel animate-fade-up">
 
             <!-- HEADER -->
-            <div class="rw-topbar mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="rw-topbar mb-6">
+                <div class="flex justify-between items-center mb-4">
                     <button class="btn btn-outline-light" id="btnBackVars" title="Volver">
                         <i class="bi bi-arrow-left"></i>
                     </button>
                     <button class="btn btn-outline-light btn-sm" id="btnAddSetting">
-                        <i class="bi bi-plus-lg me-1"></i>Añadir variable
+                        <i class="bi bi-plus-lg mr-1"></i>Añadir variable
                     </button>
                 </div>
                 <div class="text-center mb-2">
-                    <h4 class="fw-bold mb-0">
-                        <i class="bi bi-sliders me-2 icon-service"></i>${serviceName}
+                    <h4 class="font-bold mb-0">
+                        <i class="bi bi-sliders mr-2 icon-service"></i>${serviceName}
                     </h4>
                     <small class="text-dim">Configuración del servicio</small>
                 </div>
             </div>
 
             <!-- SEARCH -->
-            <div class="mb-3">
+            <div class="mb-4">
                 <input
                     type="text"
                     id="vars-search"
@@ -84,7 +84,7 @@ async function loadVariables(projectId, environmentId, serviceId) {
         const settings = await window.api.getSettings(projectId);
 
         if (!settings || settings.length === 0) {
-            grid.innerHTML = `<div class="text-secondary">No hay variables.</div>`;
+            grid.innerHTML = `<div class="text-white/50">No hay variables.</div>`;
             return;
         }
 
@@ -145,7 +145,7 @@ async function loadVariables(projectId, environmentId, serviceId) {
     } catch (err) {
 
         grid.innerHTML = `
-            <div class="text-danger">
+            <div class="text-red-400">
                 Error: ${err.message}
             </div>
         `;
