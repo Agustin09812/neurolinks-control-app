@@ -148,6 +148,45 @@ const supabaseService = {
         return data.map(item => item.railway_project_id);
     },
 
+    async autoLinkClientProjects() {
+        // Read clients that have railway_project_ids populated
+        const { data: clients, error } = await supabase2
+            .from('clientes')
+            .select('id, railway_project_ids')
+            .not('railway_project_ids', 'is', null);
+        if (error) throw error;
+
+        // Read existing links
+        const { data: existing, error: err2 } = await supabase2
+            .from('proyectos_railway')
+            .select('railway_project_id, cliente_id');
+        if (err2) throw err2;
+
+        const linkedSet = new Set(existing.map(r => `${r.railway_project_id}:${r.cliente_id}`));
+
+        const toInsert = [];
+        for (const client of clients) {
+            const ids = client.railway_project_ids;
+            if (!Array.isArray(ids) || ids.length === 0) continue;
+            for (const projectId of ids) {
+                if (!projectId) continue;
+                const key = `${projectId}:${client.id}`;
+                if (!linkedSet.has(key)) {
+                    toInsert.push({ railway_project_id: projectId, cliente_id: client.id });
+                }
+            }
+        }
+
+        if (toInsert.length === 0) return 0;
+
+        const { error: err3 } = await supabase2
+            .from('proyectos_railway')
+            .upsert(toInsert, { onConflict: 'railway_project_id' });
+        if (err3) throw err3;
+
+        return toInsert.length;
+    },
+
     async unlinkProjectClient(railwayProjectId) {
         const { error } = await supabase2
             .from('proyectos_railway')
@@ -407,6 +446,24 @@ const supabaseService = {
             .eq('project_id', projectId);
         if (error) throw error;
         return data;
+    },
+
+    async updateSetting(projectId, key, value) {
+        const { data: updated, error: updateError } = await supabase2
+            .from('settings')
+            .update({ value })
+            .eq('project_id', projectId)
+            .eq('key', key)
+            .select();
+        if (updateError) throw updateError;
+
+        if (!updated || updated.length === 0) {
+            const { error: insertError } = await supabase2
+                .from('settings')
+                .insert({ project_id: projectId, key, value });
+            if (insertError) throw insertError;
+        }
+        return true;
     }
 };
 

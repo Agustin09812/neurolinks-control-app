@@ -58,10 +58,14 @@ window.api = {
   redeployService: (serviceId, environmentId) =>
     _post(`/api/services/${serviceId}/redeploy`, { environmentId }),
 
+  updateService: (projectId, environmentId, serviceId) =>
+    _post(`/api/projects/${projectId}/update`, { environmentId, serviceId }),
+
   // --------------------------------------------------
   // SETTINGS (Supabase)
   // --------------------------------------------------
   getSettings: (projectId) => _fetch(`/api/settings/${projectId}`),
+  updateSetting: (projectId, key, value) => _fetch(`/api/settings/${projectId}`, { method: 'PUT', body: JSON.stringify({ key, value }) }),
 
   // --------------------------------------------------
   // VARIABLES

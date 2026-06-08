@@ -2172,6 +2172,46 @@ body.notif-panel-open .sidebar-badge {
 body.notif-panel-open .toast-container {
   z-index: 1000 !important;
 }
+.sysconfig-toggle {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  background: #4b5563;
+  transition: background 0.2s;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sysconfig-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.sysconfig-toggle .sysconfig-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  transition: left 0.2s;
+  color: #374151;
+}
+.sysconfig-toggle:has(input:checked) {
+  background: #22c55e;
+}
+.sysconfig-toggle:has(input:checked) .sysconfig-thumb {
+  left: 28px;
+}
+.sysconfig-thumb .icon-off { display: block; }
+.sysconfig-thumb .icon-on  { display: none; }
+.sysconfig-toggle:has(input:checked) .sysconfig-thumb .icon-off { display: none; }
+.sysconfig-toggle:has(input:checked) .sysconfig-thumb .icon-on  { display: block; }
 #notificationsCanvas {
   width: 380px;
   z-index: 1055;

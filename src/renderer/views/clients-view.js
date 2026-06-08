@@ -767,6 +767,16 @@ async function loadClientAssistantSection(clientId) {
                             </button>
                         </div>
                     </div>
+                    <div class="flex justify-between items-center mt-3 pt-2" style="border-top: 1px solid var(--border-soft);">
+                        <span class="text-sm text-dim"><i class="bi bi-eye mr-2"></i>system-config visible</span>
+                        <label class="sysconfig-toggle" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="btn-ca-sysconfig">
+                            <span class="sysconfig-thumb">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="12" height="12" class="icon-off"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="12" height="12" class="icon-on"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                            </span>
+                        </label>
+                    </div>
                 `;
 
                 card.querySelector(".btn-ca-backoffice").onclick = async () => {
@@ -800,6 +810,30 @@ async function loadClientAssistantSection(clientId) {
                 };
 
                 card.querySelector(".btn-ca-redeploy").onclick = () => handleRedeploy(svc.id, svc.environmentId);
+
+                // Load SYSTEM_CONFIG_VISIBLE state
+                window.api.getSettings(svc.projectId).then(settings => {
+                    const val = settings?.find(s => s.key === "SYSTEM_CONFIG_VISIBLE")?.value;
+                    const cb = card.querySelector(".btn-ca-sysconfig");
+                    if (cb) cb.checked = val === "true" || val === true;
+                }).catch(() => {});
+
+                card.querySelector(".btn-ca-sysconfig").addEventListener("change", async (e) => {
+                    const newVal = e.target.checked ? "true" : "false";
+                    const label = e.target.closest(".sysconfig-toggle");
+                    e.target.disabled = true;
+                    if (label) label.style.opacity = "0.5";
+                    try {
+                        await window.api.updateSetting(svc.projectId, "SYSTEM_CONFIG_VISIBLE", newVal);
+                        showToast(`system-config ${e.target.checked ? "activado" : "desactivado"} - guardado en Supabase`, "success");
+                    } catch {
+                        showToast("Error al actualizar configuración", "danger");
+                        e.target.checked = !e.target.checked;
+                    } finally {
+                        e.target.disabled = false;
+                        if (label) label.style.opacity = "";
+                    }
+                });
 
                 card.querySelector(".btn-ca-unlink").onclick = async () => {
                     if (!confirm("¿Desvincular este asistente?")) return;

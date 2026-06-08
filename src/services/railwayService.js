@@ -56,14 +56,6 @@ const railwayService = {
                         }
                       }
                     }
-                    serviceInstances {
-                      edges {
-                        node {
-                          environmentId
-                          isUpdatable
-                        }
-                      }
-                    }
                   }
                 }
               }
@@ -82,6 +74,14 @@ const railwayService = {
 
     const projects = result.data.projects.edges.map(edge => edge.node);
 
+    // Fetch isUpdatable separately so a failure doesn't break the main load
+    let updatableMap = {};
+    try {
+      updatableMap = await this._getUpdatableMap();
+    } catch (e) {
+      console.warn("No se pudo obtener isUpdatable:", e.message);
+    }
+
     return projects.map(project => {
       const services = (project.services?.edges || []).map(serviceEdge => {
         const service = serviceEdge.node;
@@ -91,10 +91,7 @@ const railwayService = {
         const defaultEnvironmentIdx = project.environments?.edges.findIndex(e => e.node.name === "production") || 0;
         const defaultEnvironment = project.environments?.edges[defaultEnvironmentIdx > -1 ? defaultEnvironmentIdx : 0]?.node?.id || null;
 
-        // Find if this service has an update available in the default environment
-        const instances = service.serviceInstances?.edges || [];
-        const currentInstance = instances.find(edge => edge.node.environmentId === defaultEnvironment);
-        const isUpdatable = currentInstance?.node?.isUpdatable || false;
+        const isUpdatable = updatableMap[`${service.id}:${defaultEnvironment}`] || false;
 
         let status = "offline";
         if (deployStatus === "SUCCESS") status = "online";
@@ -135,6 +132,48 @@ const railwayService = {
     });
   },
 
+  async _getUpdatableMap() {
+    const query = `
+      query {
+        projects {
+          edges {
+            node {
+              services {
+                edges {
+                  node {
+                    id
+                    serviceInstances {
+                      edges {
+                        node {
+                          environmentId
+                          isUpdatable
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+    const result = await railwayQuery(query);
+    if (!result.data?.projects) return {};
+
+    const map = {};
+    for (const projEdge of result.data.projects.edges) {
+      for (const svcEdge of projEdge.node.services?.edges || []) {
+        const svc = svcEdge.node;
+        for (const instEdge of svc.serviceInstances?.edges || []) {
+          const inst = instEdge.node;
+          map[`${svc.id}:${inst.environmentId}`] = inst.isUpdatable || false;
+        }
+      }
+    }
+    return map;
+  },
+
   async redeployService(serviceId, environmentId) {
     const query = `
       mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) {
@@ -144,28 +183,17 @@ const railwayService = {
     return await railwayQuery(query, { serviceId, environmentId });
   },
 
-  async deployServiceUpdate(serviceId, environmentId) {
-
+  async deployServiceUpdate(projectId, environmentId, serviceId) {
     const query = `
-    mutation serviceInstanceDeployV2($input: ServiceInstanceDeployV2Input!) {
-      serviceInstanceDeployV2(input: $input)
-    }
-  `;
-
-    const variables = {
-      input: {
-        serviceId,
-        environmentId
+      mutation githubRepoUpdate($input: GitHubRepoUpdateInput!) {
+        githubRepoUpdate(input: $input)
       }
-    };
-
-    const res = await railwayQuery(query, variables);
-
+    `;
+    const res = await railwayQuery(query, { input: { projectId, environmentId, serviceId } });
     if (res.errors) {
-      console.error(res.errors);
+      console.error("githubRepoUpdate error:", res.errors);
       throw new Error(res.errors[0].message);
     }
-
     return res.data;
   },
 

@@ -266,6 +266,9 @@ function renderAssistantsGrid() {
         <button class="btn btn-outline-light btn-sm" id="btnToggleView" title="${isListView ? 'Vista cuadrícula' : 'Vista lista'}" data-bs-toggle="tooltip" data-bs-placement="bottom">
           <i class="bi bi-${isListView ? 'grid' : 'list-ul'}"></i>
         </button>
+        <button class="btn btn-warning btn-sm" id="btnUpdateAll" style="display:none">
+          <i class="bi bi-arrow-up-circle mr-2"></i>Update All
+        </button>
         <button class="btn btn-outline-light btn-sm" id="btnRefreshAssistants">
           <i class="bi bi-arrow-clockwise btn-refresh-icon mr-2"></i>
           <span class="btn-refresh-label">Actualizar</span>
@@ -291,6 +294,13 @@ function renderAssistantsGrid() {
     await loadAssistants(false);
     renderAssistantsGrid();
   });
+
+  document.getElementById("btnUpdateAll")?.addEventListener("click", () => handleUpdateAll());
+
+  // Show "Update All" only when at least one service has updates
+  const anyUpdatable = assistants?.some(p => p.services.some(s => s.isUpdatable));
+  const updateAllBtn = document.getElementById("btnUpdateAll");
+  if (updateAllBtn) updateAllBtn.style.display = anyUpdatable ? "" : "none";
 
   if (!assistants.length) {
     grid.innerHTML = `
@@ -394,6 +404,11 @@ function patchAssistantsGrid() {
 
   const grid = document.getElementById("assistants-grid");
   if (!grid) return;
+
+  const updateAllBtn = document.getElementById("btnUpdateAll");
+  if (updateAllBtn) {
+    updateAllBtn.style.display = assistants?.some(p => p.services.some(s => s.isUpdatable)) ? "" : "none";
+  }
 
   assistants.forEach(project => {
 
@@ -526,6 +541,18 @@ function renderDetailStructure(project) {
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
             <li><button class="dropdown-item btn-rename"><i class="bi bi-pencil mr-2"></i>Cambiar nombre</button></li>
             <li><button class="dropdown-item btn-railway"><i class="bi bi-box-arrow-up-right mr-2"></i>Abrir Railway</button></li>
+            <li>
+              <div class="dropdown-item d-flex justify-content-between align-items-center gap-3" style="cursor:default" onclick="event.stopPropagation()">
+                <span class="text-sm"><i class="bi bi-eye mr-2"></i>system-config visible</span>
+                <label class="sysconfig-toggle" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="btn-sysconfig-toggle">
+                  <span class="sysconfig-thumb">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="12" height="12" class="icon-off"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="12" height="12" class="icon-on"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                  </span>
+                </label>
+              </div>
+            </li>
             <li><hr class="dropdown-divider"></li>
             <li><button class="dropdown-item text-danger btn-delete-project"><i class="bi bi-trash mr-2"></i>Eliminar proyecto</button></li>
           </ul>
@@ -597,6 +624,33 @@ function renderDetailStructure(project) {
 
   detail.querySelector(".btn-delete-project").addEventListener("click", () => {
     handleDeleteProject(project.id);
+  });
+
+  // Load SYSTEM_CONFIG_VISIBLE when dropdown opens
+  detail.querySelector(".dropdown").addEventListener("show.bs.dropdown", async () => {
+    try {
+      const settings = await window.api.getSettings(project.id);
+      const val = settings?.find(s => s.key === "SYSTEM_CONFIG_VISIBLE")?.value;
+      const cb = detail.querySelector(".btn-sysconfig-toggle");
+      if (cb) cb.checked = val === "true" || val === true;
+    } catch {}
+  });
+
+  detail.querySelector(".btn-sysconfig-toggle").addEventListener("change", async (e) => {
+    const newVal = e.target.checked ? "true" : "false";
+    const label = e.target.closest(".sysconfig-toggle");
+    e.target.disabled = true;
+    if (label) label.style.opacity = "0.5";
+    try {
+      await window.api.updateSetting(project.id, "SYSTEM_CONFIG_VISIBLE", newVal);
+      showToast(`system-config ${e.target.checked ? "activado" : "desactivado"} - guardado en Supabase`, "success");
+    } catch {
+      showToast("Error al actualizar configuración", "danger");
+      e.target.checked = !e.target.checked;
+    } finally {
+      e.target.disabled = false;
+      if (label) label.style.opacity = "";
+    }
   });
 
 }
@@ -1003,8 +1057,7 @@ function createServiceCard(service, project, staggerIndex = 0) {
   });
 
   div.querySelector(".btn-update-mini")?.addEventListener("click", () => {
-    showToast("Abrí Railway para aplicar la actualización", "info");
-    window.api.openExternal(project.railwayUrl);
+    handleServiceUpdate(service.projectId, service.environmentId, service.id);
   });
 
   return div;
@@ -1052,10 +1105,7 @@ function patchServices(project) {
         btn.dataset.bsToggle = "tooltip";
         btn.dataset.bsPlacement = "bottom";
         btn.innerHTML = `<i class="bi bi-info-circle-fill"></i><span class="hidden md:inline">Update available</span>`;
-        btn.addEventListener("click", () => {
-          showToast("Abrí Railway para aplicar la actualización", "info");
-          window.api.openExternal(project.railwayUrl);
-        });
+        btn.addEventListener("click", () => handleServiceUpdate(service.projectId, service.environmentId, service.id));
         iconsRow.insertBefore(btn, iconsRow.querySelector(".service-status-icon").nextSibling);
       }
     } else if (!service.isUpdatable && updateBtn) {
@@ -1065,6 +1115,48 @@ function patchServices(project) {
   });
 }
 
+
+// --------------------------------------------------
+// UPDATE SERVICE (latest commit / template version)
+// --------------------------------------------------
+
+async function handleServiceUpdate(projectId, environmentId, serviceId) {
+  if (!confirm("¿Actualizar este servicio a la última versión disponible?")) return;
+
+  addNotification("deploy", "Actualización solicitada", `Se solicitó actualización del servicio`, `update-${serviceId}`);
+  window.showActionSpinner("Aplicando actualización...");
+  try {
+    await window.api.updateService(projectId, environmentId, serviceId);
+    showToast("Actualización iniciada correctamente", "success");
+    await window.waitForNextChannelRun("services");
+  } catch (error) {
+    console.error("Error update:", error);
+    addNotification("deploy-error", "Error al actualizar servicio", `No se pudo actualizar el servicio`, `update-error-${serviceId}`);
+    showToast("Error al aplicar la actualización", "danger");
+  } finally {
+    window.hideActionSpinner();
+  }
+}
+
+async function handleUpdateAll() {
+  const updatable = assistants?.flatMap(p => p.services.filter(s => s.isUpdatable)) || [];
+  if (updatable.length === 0) { showToast("No hay actualizaciones disponibles", "info"); return; }
+  if (!confirm(`¿Actualizar ${updatable.length} servicio${updatable.length > 1 ? 's' : ''} a la última versión?`)) return;
+
+  window.showActionSpinner(`Actualizando ${updatable.length} servicio${updatable.length > 1 ? 's' : ''}...`);
+  const results = await Promise.allSettled(
+    updatable.map(s => window.api.updateService(s.projectId, s.environmentId, s.id))
+  );
+  window.hideActionSpinner();
+
+  const failed = results.filter(r => r.status === "rejected").length;
+  if (failed === 0) {
+    showToast(`${updatable.length} servicio${updatable.length > 1 ? 's actualizados' : ' actualizado'} correctamente`, "success");
+  } else {
+    showToast(`${updatable.length - failed} actualizados, ${failed} con error`, "warning");
+  }
+  await window.waitForNextChannelRun("services");
+}
 
 // --------------------------------------------------
 // REDEPLOY

@@ -177,6 +177,15 @@ router.post('/services/:id/redeploy', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.post('/projects/:id/update', async (req, res) => {
+  const { environmentId, serviceId } = req.body;
+  try {
+    const result = await railwayService.deployServiceUpdate(req.params.id, environmentId, serviceId);
+    await supabaseService.logAction('Actualizar Proyecto', `Actualización de proyecto ID: ${req.params.id}`, 'proyectos', req.params.id);
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 
 // Variables
 router.get('/variables', async (req, res) => {
@@ -215,6 +224,14 @@ router.get('/settings/:projectId', async (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.put('/settings/:projectId', async (req, res) => {
+  try {
+    const { key, value } = req.body;
+    res.json(await supabaseService.updateSetting(req.params.projectId, key, value));
+  }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // Domains
 router.get('/domains', async (req, res) => {
   const { projectId, environmentId, serviceId } = req.query;
@@ -235,7 +252,12 @@ router.post('/clients/link', async (req, res) => {
 });
 
 router.get('/clients', async (req, res) => {
-  try { res.json(await supabaseService.getClients()); }
+  try {
+    const clients = await supabaseService.getClients();
+    // Auto-link silently — errors don't block the response
+    supabaseService.autoLinkClientProjects().catch(e => console.warn('autoLink:', e.message));
+    res.json(clients);
+  }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
