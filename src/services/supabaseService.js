@@ -204,8 +204,7 @@ const supabaseService = {
     async getTickets(filters = {}) {
         let query = supabase2
             .from('tickets')
-            .select('*, clientes(nombre)')
-            .eq('tipo', 'Asistencia Externa');
+            .select('*, clientes(nombre)');
 
         if (filters.estado) query = query.eq('estado', filters.estado);
         if (filters.cliente_id) query = query.eq('cliente_id', filters.cliente_id);
@@ -216,33 +215,15 @@ const supabaseService = {
     },
 
     async createTicket(ticketData) {
-
-        // Normalizar ESTADO para evitar violar constraint
-        const estadoMap = {
-            "abierto": "Abierto",
-            "cerrado": "Cerrado"
-        };
-
+        const estadoMap = { "abierto": "Abierto", "cerrado": "Cerrado" };
         if (ticketData.estado) {
-            const normalized = ticketData.estado.toLowerCase().trim();
-            ticketData.estado = estadoMap[normalized] || "Abierto";
+            ticketData.estado = estadoMap[ticketData.estado.toLowerCase().trim()] || "Abierto";
         } else {
             ticketData.estado = "Abierto";
         }
-
-        // Normalizar PRIORIDAD también (por seguridad)
-        const prioridadMap = {
-            "baja": "Baja",
-            "media": "Media",
-            "alta": "Alta"
-        };
-
-        if (ticketData.prioridad) {
-            const normalized = ticketData.prioridad.toLowerCase().trim();
-            ticketData.prioridad = prioridadMap[normalized] || "Media";
-        } else {
-            ticketData.prioridad = "Media";
-        }
+        delete ticketData.tipo;
+        delete ticketData.prioridad;
+        delete ticketData.chat_id;
 
         const { data, error } = await supabase2
             .from('tickets')
@@ -340,7 +321,6 @@ const supabaseService = {
         let query = supabase2
             .from('tickets')
             .select('*', { count: 'exact', head: true })
-            .eq('tipo', 'Asistencia Externa')
             .neq('estado', 'Cerrado');
 
         if (projectIds.length > 0) {

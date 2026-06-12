@@ -26,9 +26,7 @@ function isValidDate(dateStr) {
 }
 
 const VALID_PLANS = ['Standard', 'Premium', 'Enterprise', 'Baja'];
-const VALID_TICKET_TIPOS = ['Soporte', 'Mejora', 'Bugs', 'Asistencia Externa', 'Ventas', 'Técnico', 'Otro'];
-const VALID_TICKET_ESTADOS = ['Abierto', 'Cerrado'];
-const VALID_TICKET_PRIORIDADES = ['Baja', 'Media', 'Alta'];
+const VALID_TICKET_ESTADOS = ['Abierto', 'En progreso', 'Cerrado'];
 const VALID_PAYMENT_METODOS = ['Transferencia', 'Efectivo', 'Mercado Pago', 'Crypto', 'Cripto', 'Otro'];
 
 const app = express();
@@ -102,6 +100,38 @@ app.use('/views', express.static(path.join(__dirname, 'src/renderer/views')));
 
 const router = express.Router();
 router.use((req, res, next) => requireAuth(req, res, next));
+
+// --------------------------------------------------
+// SSE - TICKETS REALTIME
+// --------------------------------------------------
+
+const _sseClients = new Set();
+
+function _broadcastTicketEvent(payload) {
+  const data = `data: ${JSON.stringify(payload)}\n\n`;
+  for (const res of _sseClients) {
+    try { res.write(data); } catch (_) { _sseClients.delete(res); }
+  }
+}
+
+router.get('/tickets/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  res.write(': connected\n\n');
+
+  _sseClients.add(res);
+
+  const keepAlive = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch (_) { clearInterval(keepAlive); }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    _sseClients.delete(res);
+  });
+});
 
 // Assistants
 router.get('/assistants', async (req, res) => {
@@ -253,10 +283,7 @@ router.post('/clients/link', async (req, res) => {
 
 router.get('/clients', async (req, res) => {
   try {
-    const clients = await supabaseService.getClients();
-    // Auto-link silently — errors don't block the response
-    supabaseService.autoLinkClientProjects().catch(e => console.warn('autoLink:', e.message));
-    res.json(clients);
+    res.json(await supabaseService.getClients());
   }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -334,7 +361,6 @@ router.get('/clients/:id/payments', async (req, res) => {
 router.get('/tickets', async (req, res) => {
   const filters = {
     estado: sanitizeStr(req.query.estado, 50) || undefined,
-    tipo: sanitizeStr(req.query.tipo, 50) || undefined,
     cliente_id: sanitizeStr(req.query.cliente_id, 200) || undefined,
   };
   Object.keys(filters).forEach(k => filters[k] === undefined && delete filters[k]);
@@ -352,9 +378,7 @@ router.post('/tickets', async (req, res) => {
     titulo,
     cliente_id,
     descripcion: sanitizeStr(req.body.descripcion, 5000) || null,
-    tipo: VALID_TICKET_TIPOS.includes(req.body.tipo) ? req.body.tipo : 'Soporte',
-    estado: VALID_TICKET_ESTADOS.includes(req.body.estado) ? req.body.estado : 'Abierto',
-    prioridad: VALID_TICKET_PRIORIDADES.includes(req.body.prioridad) ? req.body.prioridad : 'Media',
+    estado: 'Abierto',
   };
   try {
     const result = await supabaseService.createTicket(ticketData);
@@ -371,14 +395,11 @@ router.patch('/tickets/:id', async (req, res) => {
   }
   if (req.body.descripcion !== undefined) ticketData.descripcion = sanitizeStr(req.body.descripcion, 5000) || null;
   if (req.body.cliente_id !== undefined) ticketData.cliente_id = sanitizeStr(req.body.cliente_id, 200);
-  if (req.body.tipo !== undefined) ticketData.tipo = VALID_TICKET_TIPOS.includes(req.body.tipo) ? req.body.tipo : 'Soporte';
-  if (req.body.estado !== undefined) ticketData.estado = VALID_TICKET_ESTADOS.includes(req.body.estado) ? req.body.estado : 'Abierto';
-  if (req.body.prioridad !== undefined) ticketData.prioridad = VALID_TICKET_PRIORIDADES.includes(req.body.prioridad) ? req.body.prioridad : 'Media';
+  if (req.body.estado !== undefined && VALID_TICKET_ESTADOS.includes(req.body.estado)) ticketData.estado = req.body.estado;
 
   try {
     const result = await supabaseService.updateTicket(req.params.id, ticketData);
-    const statusMsg = ticketData.estado ? ` (Estado: ${ticketData.estado})` : "";
-    await supabaseService.logAction('Actualizar Ticket', `Ticket #${req.params.id} actualizado${statusMsg}`, 'tickets', req.params.id);
+    await supabaseService.logAction('Actualizar Ticket', `Ticket #${req.params.id} actualizado`, 'tickets', req.params.id);
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -434,6 +455,22 @@ app.use('/api', router);
 let lastAssistantsState = new Map();
 
 async function startBackgroundMonitoring() {
+  // Supabase Realtime: push INSERT events on tickets to SSE clients
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const realtimeClient = createClient(process.env.SUPABASE2_URL, process.env.SUPABASE2_KEY);
+    realtimeClient
+      .channel('tickets-inserts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tickets' }, payload => {
+        _broadcastTicketEvent({ type: 'INSERT', ticket: payload.new });
+      })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') console.log('[Realtime] tickets channel activo');
+      });
+  } catch (e) {
+    console.error('[Realtime] Error iniciando suscripcion tickets:', e.message);
+  }
+
   try {
     const assistants = await railwayService.getAssistants();
     assistants.forEach(a => {

@@ -51,22 +51,6 @@ function buildPlanBars(planCounts, total) {
   }).join('');
 }
 
-function buildPrioBars(prioCounts, total) {
-  if (total === 0) return '<div class="kpi-label">Sin tickets</div>';
-  const prios = [
-    { key: 'Alta', color: 'var(--error)' },
-    { key: 'Media', color: 'var(--warning)' },
-    { key: 'Baja', color: 'var(--text-dim)' },
-  ];
-  return prios.map(p => {
-    const pct = Math.round((prioCounts[p.key] || 0) / total * 100);
-    return `<div class="flex items-center gap-2 mb-1">
-      <div class="bar-label bar-label-prio">${p.key}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${p.color};"></div></div>
-      <div class="bar-count">${prioCounts[p.key] || 0}</div>
-    </div>`;
-  }).join('');
-}
 
 function buildServicesDist(online, error, total) {
   if (total === 0) return '<div class="kpi-label">Sin servicios registrados</div>';
@@ -86,21 +70,6 @@ function buildServicesDist(online, error, total) {
   }).join('');
 }
 
-function renderRecentTickets(tickets) {
-  if (tickets.length === 0) return '<div class="text-center py-4 text-dim">Sin tickets pendientes</div>';
-  return tickets.map((t, i) => {
-    const dotColor = t.prioridad === 'Alta' ? 'var(--error)' : t.prioridad === 'Media' ? 'var(--warning)' : 'var(--text-dim)';
-    const pillBg = t.prioridad === 'Alta' ? 'rgba(248,113,113,0.15)' : t.prioridad === 'Media' ? 'rgba(251,191,36,0.15)' : 'rgba(100,116,139,0.15)';
-    return `<div class="flex items-center gap-2 py-2 ${i < tickets.length - 1 ? 'border-bottom ticket-border' : ''}">
-      <span class="indicator-dot" style="background:${dotColor};"></span>
-      <div class="grow overflow-hidden">
-        <div class="font-semibold truncate ticket-list-name">${t.titulo}</div>
-        <div class="ticket-list-client">${t.clientes ? t.clientes.nombre : (t.chat_id || 'Sin cliente')}</div>
-      </div>
-      <span class="prio-pill" style="background:${pillBg};color:${dotColor};">${t.prioridad || 'Baja'}</span>
-    </div>`;
-  }).join('');
-}
 
 function buildDashboard(dash, clients, tickets) {
   const activeClients = clients.filter(c => c.plan !== 'Baja');
@@ -118,12 +87,6 @@ function buildDashboard(dash, clients, tickets) {
   activeClients.forEach(c => {
     if (planCounts[c.plan] !== undefined) planCounts[c.plan]++;
     else planCounts.Standard++;
-  });
-
-  const prioCounts = { Alta: 0, Media: 0, Baja: 0 };
-  pendingTickets.forEach(t => {
-    if (prioCounts[t.prioridad] !== undefined) prioCounts[t.prioridad]++;
-    else prioCounts.Baja++;
   });
 
   const circ = 251.33;
@@ -192,7 +155,7 @@ function buildDashboard(dash, clients, tickets) {
               </div>
               <i class="bi bi-ticket-perforated-fill kpi-icon kpi-icon-warning"></i>
             </div>
-            <div id="dash-prio-bars">${buildPrioBars(prioCounts, pendingTickets.length)}</div>
+            <div id="dash-prio-bars" class="kpi-label">${pendingTickets.length === 0 ? 'Sin tickets pendientes' : 'tickets sin cerrar'}</div>
           </div>
         </div>
 
@@ -297,12 +260,6 @@ function patchDashboard() {
     else planCounts.Standard++;
   });
 
-  const prioCounts = { Alta: 0, Media: 0, Baja: 0 };
-  pendingTickets.forEach(t => {
-    if (prioCounts[t.prioridad] !== undefined) prioCounts[t.prioridad]++;
-    else prioCounts.Baja++;
-  });
-
   const circ = 251.33;
   const onlineRatio = totalServices > 0 ? onlineServices / totalServices : 0;
   const errorRatio = totalServices > 0 ? errorServices / totalServices : 0;
@@ -349,7 +306,7 @@ function patchDashboard() {
   if (planBarsEl) planBarsEl.innerHTML = buildPlanBars(planCounts, activeClients.length);
 
   const prioBarsEl = document.getElementById('dash-prio-bars');
-  if (prioBarsEl) prioBarsEl.innerHTML = buildPrioBars(prioCounts, pendingTickets.length);
+  if (prioBarsEl) prioBarsEl.textContent = pendingTickets.length === 0 ? 'Sin tickets pendientes' : 'tickets sin cerrar';
 
   const svcDist = document.getElementById('dash-services-dist');
   if (svcDist) svcDist.innerHTML = buildServicesDist(onlineServices, errorServices, totalServices);

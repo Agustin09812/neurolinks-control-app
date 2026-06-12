@@ -26,7 +26,7 @@ function _pruneMemory() {
   }
 }
 
-function addNotification(type, title, message, key = null) {
+function addNotification(type, title, message, key = null, silent = false) {
   const notificationKey = key || `${type}-${message}`;
 
   _pruneMemory();
@@ -43,7 +43,7 @@ function addNotification(type, title, message, key = null) {
   if (notifications.length > NOTIFICATIONS_CAP) notifications.length = NOTIFICATIONS_CAP;
 
   updateNotificationsBadge();
-  showNotificationToast(notification);
+  if (!silent) showNotificationToast(notification);
 
   if (document.getElementById("notificationsCanvas")?.classList.contains("show")) {
     renderNotificationsPanel();

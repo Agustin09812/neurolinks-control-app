@@ -207,24 +207,32 @@ const _ch = {
         if (unseen.length > 0) {
           unseen.forEach(t => {
             this._seenIds.add(t.id);
-            const clientName = t.clientes?.nombre || t.chat_id || 'cliente desconocido';
-            const phone = (t.clientes?.nombre && t.chat_id) ? ` (${t.chat_id})` : '';
-            addNotification("ticket", "Nuevo ticket pendiente", `Nuevo ticket de: ${clientName}${phone} — ${t.titulo || 'Sin título'}`, `ticket-${t.id}`);
+            const clientName = t.clientes?.nombre || 'cliente desconocido';
+            addNotification("ticket", "Nuevo ticket pendiente", `Nuevo ticket de: ${clientName} — ${t.titulo || 'Sin título'}`, `ticket-${t.id}`, true);
           });
 
           const count = unseen.length;
           const isFirstLoad = !this._initialized;
-          const toastMsg = isFirstLoad
-            ? `<i class="bi bi-ticket-perforated-fill mr-2"></i>${count === 1 ? '1 ticket pendiente sin responder' : `${count} tickets pendientes sin responder`}`
-            : `<i class="bi bi-ticket-perforated-fill mr-2"></i>${count === 1 ? 'Nuevo ticket pendiente' : `${count} nuevos tickets pendientes`}`;
-          showToast(toastMsg, "danger");
+          const clientNames = [...new Set(unseen.map(t => t.clientes?.nombre).filter(Boolean))];
+          const clientLabel = clientNames.length === 1 ? clientNames[0] : clientNames.length > 1 ? 'múltiples clientes' : 'cliente desconocido';
+          const label = isFirstLoad
+            ? (count === 1 ? `1 ticket pendiente de ${clientLabel}` : `${count} tickets pendientes de ${clientLabel}`)
+            : (count === 1 ? `Nuevo ticket de ${clientLabel}` : `${count} nuevos tickets de ${clientLabel}`);
+          const toastMsg = `<i class="bi bi-ticket-perforated-fill mr-2"></i>${label}`;
+
+          const existing = document.getElementById('toast-ticket-summary');
+          if (existing) {
+            const body = existing.querySelector('.toast-body');
+            if (body) body.innerHTML = toastMsg;
+          } else {
+            showToast(toastMsg, "danger", 'toast-ticket-summary');
+          }
 
           if (!isFirstLoad && localStorage.getItem("activeView") === "tickets" && !isUserInteracting()) {
             prependNewTickets?.(unseen);
           }
         }
 
-        // Remove closed tickets from seen set so they don't block re-notification if reopened
         const pendingIds = new Set(pending.map(t => t.id));
         for (const id of this._seenIds) {
           if (!pendingIds.has(id)) this._seenIds.delete(id);
@@ -284,11 +292,40 @@ function _tick() {
   }
 }
 
+// ---- Tickets Realtime (SSE) ----
+
+function _initTicketsRealtime() {
+  let es;
+  let reconnectTimer = null;
+
+  function connect() {
+    if (es) { try { es.close(); } catch (_) {} }
+    es = new EventSource('/api/tickets/stream');
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        if (payload.type === 'INSERT') _ch.tickets._t = 0;
+      } catch (_) {}
+    };
+    es.onerror = () => {
+      es.close();
+      if (reconnectTimer) return;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+      }, 5000);
+    };
+  }
+
+  connect();
+}
+
 // ---- Public API ----
 
 function startAutoRefresh() {
   if (_ticker) clearInterval(_ticker);
   _ticker = setInterval(_tick, 1000);
+  _initTicketsRealtime();
 }
 
 // Reset timer to 0 so the channel fires on the next tick (~1s)

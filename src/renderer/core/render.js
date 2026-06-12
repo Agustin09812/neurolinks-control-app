@@ -154,18 +154,23 @@ function clearActiveServiceMenu() {
 // --------------------------------------------------
 // TOAST NOTIFICATIONS (UNIFICADO)
 // --------------------------------------------------
-function showToast(message, type = "success") {
+function showToast(message, type = "success", id = null) {
   const container = document.querySelector(".toast-container");
-  if (!container) {
-    // Fallback por si no existe el contenedor
-    alert(message);
-    return;
-  }
+  if (!container) { alert(message); return; }
 
-  const toastId = "toast-" + Date.now();
+  const toastId = id || ("toast-" + Date.now());
   const icon = type === "success" ? "bi-check-circle-fill" : (type === "warning" ? "bi-exclamation-triangle-fill" : "bi-exclamation-circle-fill");
-
   const bgClass = type === 'danger' ? 'toast-danger' : (type === 'warning' ? 'toast-warning' : 'toast-themed');
+
+  // If a toast with this id already exists and is visible, update it in place
+  if (id) {
+    const existing = document.getElementById(toastId);
+    if (existing) {
+      const body = existing.querySelector('.toast-body');
+      if (body) body.innerHTML = `<i class="bi ${icon}"></i><div>${message}</div>`;
+      return;
+    }
+  }
 
   const toastHtml = `
     <div id="${toastId}" class="toast ${bgClass}" role="alert" aria-live="assertive" aria-atomic="true">
@@ -184,12 +189,10 @@ function showToast(message, type = "success") {
   const toastEl = wrapper.firstElementChild;
   container.appendChild(toastEl);
 
-  const bsToast = new bootstrap.Toast(toastEl, { delay: 4000 });
+  const bsToast = new bootstrap.Toast(toastEl, { delay: 5000 });
   bsToast.show();
 
-  toastEl.addEventListener("hidden.bs.toast", () => {
-    toastEl.remove();
-  });
+  toastEl.addEventListener("hidden.bs.toast", () => toastEl.remove());
 }
 
 // --------------------------------------------------
