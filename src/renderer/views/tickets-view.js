@@ -218,7 +218,9 @@ function prependNewTickets(newTickets) {
     const tbody = document.getElementById("tickets-table-body-view");
     const cardsView = document.getElementById("tickets-cards-view");
 
-    newTickets.forEach(t => {
+    const filteredTickets = newTickets.filter(t => t.tipo === 'Soporte');
+
+    filteredTickets.forEach(t => {
         allTicketsView.unshift(t);
 
         if (tbody) {
@@ -258,7 +260,8 @@ async function loadTicketsData() {
 
         const previousCount = lastTicketsCount;
 
-        allTicketsView = await window.api.getTickets() || [];
+        const rawTickets = await window.api.getTickets() || [];
+        allTicketsView = rawTickets.filter(t => t.tipo === 'Soporte');
         window.ticketsData = allTicketsView;
 
         if (previousCount !== 0 && allTicketsView.length > previousCount) {
@@ -665,8 +668,9 @@ async function loadClientTickets(clientId, clientTelefono = null) {
             window.api.getClientProjects(clientId)
         ]);
         const tickets = (allTickets || []).filter(t =>
-            t.cliente_id === clientId ||
-            (t.project_id && (clientProjects || []).includes(t.project_id))
+            (t.cliente_id === clientId ||
+            (t.project_id && (clientProjects || []).includes(t.project_id))) &&
+            t.tipo === 'Soporte'
         );
 
         if (tbody) tbody.innerHTML = "";

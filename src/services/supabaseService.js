@@ -204,7 +204,8 @@ const supabaseService = {
     async getTickets(filters = {}) {
         let query = supabase2
             .from('tickets')
-            .select('*, clientes(nombre)');
+            .select('*, clientes(nombre)')
+            .eq('tipo', 'Soporte');
 
         if (filters.estado) query = query.eq('estado', filters.estado);
         if (filters.cliente_id) query = query.eq('cliente_id', filters.cliente_id);
@@ -305,7 +306,8 @@ const supabaseService = {
         const { count, error } = await supabase2
             .from('tickets')
             .select('*', { count: 'exact', head: true })
-            .neq('estado', 'Cerrado');
+            .eq('estado', 'Abierto')
+            .eq('tipo', 'Soporte');
         if (error) throw error;
         return count;
     },
@@ -321,7 +323,8 @@ const supabaseService = {
         let query = supabase2
             .from('tickets')
             .select('*', { count: 'exact', head: true })
-            .neq('estado', 'Cerrado');
+            .eq('estado', 'Abierto')
+            .eq('tipo', 'Soporte');
 
         if (projectIds.length > 0) {
             query = query.or(`cliente_id.eq.${clientId},project_id.in.(${projectIds.join(',')})`);
