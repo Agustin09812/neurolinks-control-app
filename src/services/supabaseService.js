@@ -210,7 +210,7 @@ const supabaseService = {
         if (filters.estado) query = query.eq('estado', filters.estado);
         if (filters.cliente_id) query = query.eq('cliente_id', filters.cliente_id);
 
-        const { data, error } = await query.order('created_at', { ascending: false });
+        const { data, error } = await query.order('created_at', { ascending: false }).limit(100000);
         if (error) throw error;
         return data;
     },
@@ -222,7 +222,7 @@ const supabaseService = {
         } else {
             ticketData.estado = "Abierto";
         }
-        delete ticketData.tipo;
+        ticketData.tipo = "Soporte";
         delete ticketData.prioridad;
         delete ticketData.chat_id;
 
