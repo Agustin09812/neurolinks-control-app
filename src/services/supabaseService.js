@@ -41,10 +41,17 @@ const supabaseService = {
     async getClients() {
         const { data, error } = await supabase2
             .from('clientes')
-            .select('*')
-            .order('nombre', { ascending: true });
+            .select('*, proyectos_railway(railway_project_id)')
+            .order('created_at', { ascending: false });
         if (error) throw error;
-        return data;
+        
+        return data.map(c => {
+            if (c.proyectos_railway) {
+                c.railway_project_ids = c.proyectos_railway.map(p => p.railway_project_id);
+                delete c.proyectos_railway;
+            }
+            return c;
+        });
     },
 
     async createClient(clientData) {
@@ -201,19 +208,53 @@ const supabaseService = {
     /**
      * Gestión de Tickets
      */
+
+    // Lista ligera para SmartRefresh y vistas de listado: SIN chats_adjuntos
     async getTickets(filters = {}) {
+        const page  = parseInt(filters.page)  || 1;
+        const limit = parseInt(filters.limit) || 25;
+        const from  = (page - 1) * limit;
+        const to    = from + limit - 1;
+
         let query = supabase2
             .from('tickets')
-            .select('*, clientes(nombre)')
+            .select('id, cliente_id, titulo, descripcion, estado, tipo, created_at, updated_at, read_admin_count, chat_id, clientes(nombre)', { count: 'exact' })
             .eq('tipo', 'Soporte');
 
-        if (filters.estado) query = query.eq('estado', filters.estado);
+        if (filters.estado)     query = query.eq('estado', filters.estado);
         if (filters.cliente_id) query = query.eq('cliente_id', filters.cliente_id);
 
-        const { data, error } = await query.order('created_at', { ascending: false }).limit(100000);
+        const { data, error, count } = await query
+            .order('updated_at', { ascending: false })
+            .range(from, to);
+
+        if (error) throw error;
+        return { data, total: count, page, limit };
+    },
+
+    // Solo metadatos: para SmartRefresh (sin chats, sin descripcion pesada)
+    async getTicketsMeta() {
+        const { data, error } = await supabase2
+            .from('tickets')
+            .select('id, cliente_id, estado, updated_at, read_admin_count, chats_adjuntos, clientes(nombre)')
+            .eq('tipo', 'Soporte')
+            .neq('estado', 'Cerrado')
+            .order('updated_at', { ascending: false });
         if (error) throw error;
         return data;
     },
+
+    // Ticket completo con chats_adjuntos: solo se llama al abrir el chat
+    async getTicketById(id) {
+        const { data, error } = await supabase2
+            .from('tickets')
+            .select('*, clientes(nombre)')
+            .eq('id', id)
+            .single();
+        if (error) throw error;
+        return data;
+    },
+
 
     async createTicket(ticketData) {
         const estadoMap = { "abierto": "Abierto", "cerrado": "Cerrado" };
@@ -249,6 +290,45 @@ const supabaseService = {
             .single();
         if (error) throw error;
         return data;
+    },
+
+    async addTicketMessage(id, messageObj) {
+        const { data: ticket, error: errFetch } = await supabase2
+            .from('tickets')
+            .select('chats_adjuntos')
+            .eq('id', id)
+            .single();
+        if (errFetch) throw errFetch;
+
+        let chats = [];
+        if (ticket.chats_adjuntos) {
+            if (typeof ticket.chats_adjuntos === 'string') {
+                try { chats = JSON.parse(ticket.chats_adjuntos); } catch(e) {}
+            } else if (Array.isArray(ticket.chats_adjuntos)) {
+                chats = ticket.chats_adjuntos;
+            }
+        }
+
+        chats.push(messageObj);
+
+        const { data, error } = await supabase2
+            .from('tickets')
+            .update({ chats_adjuntos: chats })
+            .eq('id', id)
+            .select()
+            .single();
+        if (error) throw error;
+
+        return data;
+    },
+
+    async deleteTicket(id) {
+        const { error } = await supabase2
+            .from('tickets')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        return true;
     },
 
     async getWhatsAppSessionStatus(railwayProjectId) {
@@ -447,6 +527,19 @@ const supabaseService = {
             if (insertError) throw insertError;
         }
         return true;
+    },
+
+    /**
+     * System Logs
+     */
+    async getSystemLogs(limit = 100) {
+        const { data, error } = await supabase2
+            .from('system_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+        if (error) throw error;
+        return data;
     }
 };
 

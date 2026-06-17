@@ -26,6 +26,31 @@ async function renderClientsView() {
     view.style.display = "block";
     const isListView = localStorage.getItem("clientsView") === "list";
     view.innerHTML = `
+        <style>
+            @media (max-width: 1023px) {
+                .btn-clients-label {
+                    display: none !important;
+                }
+            }
+            .grid-clients-cols {
+                grid-template-columns: repeat(1, minmax(0, 1fr));
+            }
+            @media (min-width: 640px) {
+                .grid-clients-cols {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+            }
+            @media (min-width: 1024px) {
+                .grid-clients-cols {
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                }
+            }
+            @media (min-width: 1280px) {
+                .grid-clients-cols {
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                }
+            }
+        </style>
         <div class="animate-fade" id="clients-main">
 
             <!-- GRID PANEL -->
@@ -58,10 +83,10 @@ async function renderClientsView() {
                                 <i class="bi bi-${isListView ? 'grid' : 'list-ul'}"></i>
                             </button>
                             <button class="btn btn-outline-light btn-sm" onclick="exportClientsToCSV()">
-                                <i class="bi bi-file-earmark-excel btn-clients-icon"></i><span class="btn-clients-label"> Exportar</span>
+                                <i class="bi bi-file-earmark-excel"></i><span class="btn-clients-label ml-1">Exportar</span>
                             </button>
                             <button class="btn btn-outline-light btn-sm" id="btn-new-client">
-                                <i class="bi bi-person-plus btn-clients-icon"></i><span class="btn-clients-label"> Nuevo Cliente</span>
+                                <i class="bi bi-person-plus"></i><span class="btn-clients-label ml-1">Nuevo</span>
                             </button>
                         </div>
                     </div>
@@ -230,6 +255,16 @@ function _buildClientCol(c, isNew, index) {
     col.className = "";
     const isList = localStorage.getItem("clientsView") === "list";
 
+    let astCount = 0;
+    if (c.railway_project_ids && Array.isArray(c.railway_project_ids) && window.assistants) {
+        const projIds = c.railway_project_ids.map(String);
+        astCount = window.assistants.filter(p => projIds.includes(String(p.id))).length;
+    }
+    let ticketCount = 0;
+    if (window.ticketsData) {
+        ticketCount = window.ticketsData.filter(t => String(t.cliente_id) === String(c.id)).length;
+    }
+
     if (isList) {
         col.innerHTML = `
             <div class="glass-card px-4 py-3 hover-lift clickable client-card flex items-center gap-3${isNew ? " anim-card-enter" : ""}"
@@ -237,12 +272,15 @@ function _buildClientCol(c, isNew, index) {
                 <div class="client-avatar shrink-0">${initials}</div>
                 <div class="flex-1 min-w-0">
                     <div class="font-bold truncate client-name text-sm">${escapeHtml(c.nombre)}</div>
-                    <div class="text-xs text-dim truncate client-empresa">${escapeHtml(c.empresa || 'Particular')}</div>
+                    <div class="text-xs text-dim truncate client-empresa mb-1">${escapeHtml(c.empresa || 'Particular')}</div>
+                    <div class="flex items-center gap-1">
+                        <span class="badge client-plan ${getPlanBadgeClass(c.plan)} shrink-0 hidden md:inline-block">${escapeHtml(c.plan || 'Standard')}</span>
+                        <span class="w-3 h-3 rounded-full ${getPlanBadgeClass(c.plan)} shrink-0 md:hidden" title="${escapeHtml(c.plan || 'Standard')}"></span>
+                    </div>
                 </div>
-                <span class="badge client-plan ${getPlanBadgeClass(c.plan)} shrink-0">${escapeHtml(c.plan || 'Standard')}</span>
-                <div class="flex items-center gap-2 shrink-0 text-xs text-dim">
-                    <span id="ast-count-${c.id}"><i class="bi bi-robot"></i></span>
-                    <span id="ticket-count-${c.id}" style="display:none" class="text-red-400 font-semibold"><i class="bi bi-ticket-perforated-fill mr-1"></i><span class="tc-val"></span></span>
+                <div class="flex items-center gap-3 shrink-0 text-xs text-dim">
+                    <span id="ast-count-${c.id}"><i class="bi bi-robot mr-1"></i>${astCount}</span>
+                    <span id="ticket-count-${c.id}" class="${ticketCount > 0 ? 'text-red-400 font-semibold' : 'text-dim'}"><i class="bi bi-ticket-perforated-fill mr-1"></i><span class="tc-val">${ticketCount}</span></span>
                 </div>
             </div>
         `;
@@ -256,10 +294,10 @@ function _buildClientCol(c, isNew, index) {
                         <div class="font-bold truncate client-name">${escapeHtml(c.nombre)}</div>
                         <div class="text-sm text-dim truncate client-empresa">${escapeHtml(c.empresa || 'Particular')}</div>
                         <div class="text-sm text-dim truncate client-abono">$${escapeHtml(String(c.abono ?? 0))}/mes</div>
-                        <div class="flex items-center gap-2 mt-1 flex-wrap">
+                        <div class="flex items-center gap-3 mt-1 flex-wrap">
                             <span class="badge client-plan ${getPlanBadgeClass(c.plan)}">${escapeHtml(c.plan || 'Standard')}</span>
-                            <span class="text-sm text-dim" id="ast-count-${c.id}"><i class="bi bi-robot"></i></span>
-                            <span class="text-sm text-red-400 font-semibold" id="ticket-count-${c.id}" style="display:none"><i class="bi bi-ticket-perforated-fill mr-1"></i><span class="tc-val"></span></span>
+                            <span class="text-sm text-dim" id="ast-count-${c.id}"><i class="bi bi-robot mr-1"></i>${astCount}</span>
+                            <span class="text-sm ${ticketCount > 0 ? 'text-red-400 font-semibold' : 'text-dim'}" id="ticket-count-${c.id}"><i class="bi bi-ticket-perforated-fill mr-1"></i><span class="tc-val">${ticketCount}</span></span>
                         </div>
                     </div>
                 </div>
@@ -319,35 +357,52 @@ function renderClientCards() {
             if (empresaEl) empresaEl.textContent = c.empresa || 'Particular';
             if (abonoEl) abonoEl.textContent = `$${c.abono ?? 0}/mes`;
             if (planEl) {
-                planEl.className = `badge client-plan ${getPlanBadgeClass(c.plan)}`;
+                planEl.className = `badge client-plan ${getPlanBadgeClass(c.plan)} shrink-0 hidden md:inline-block`;
                 planEl.textContent = c.plan || 'Standard';
             }
+            
+            // Si existe un dot, lo actualizamos también
+            const dotEl = card.querySelector('.rounded-full.md\\:hidden');
+            if (dotEl) {
+                dotEl.className = `w-3 h-3 rounded-full ${getPlanBadgeClass(c.plan)} shrink-0 md:hidden`;
+                dotEl.title = c.plan || 'Standard';
+            }
+
+            let astCount = 0;
+            if (c.railway_project_ids && Array.isArray(c.railway_project_ids) && window.assistants) {
+                const projIds = c.railway_project_ids.map(String);
+                astCount = window.assistants.filter(p => projIds.includes(String(p.id))).length;
+            }
+            let ticketCount = 0;
+            if (window.ticketsData) {
+                ticketCount = window.ticketsData.filter(t => String(t.cliente_id) === String(c.id)).length;
+            }
+            
+            const astEl = card.querySelector(`#ast-count-${c.id}`);
+            if (astEl) astEl.innerHTML = `<i class="bi bi-robot mr-1"></i>${astCount}`;
+
+            const ticketEl = card.querySelector(`#ticket-count-${c.id}`);
+            if (ticketEl) {
+                ticketEl.className = ticketCount > 0 ? 'text-sm text-red-400 font-semibold' : 'text-sm text-dim';
+                ticketEl.innerHTML = `<i class="bi bi-ticket-perforated-fill mr-1"></i><span class="tc-val">${ticketCount}</span>`;
+            }
+
+            if (ticketCount > 0) _clientsWithTickets.add(c.id);
+            else _clientsWithTickets.delete(c.id);
         } else {
             const col = _buildClientCol(c, true, index);
             grid.appendChild(col);
-            window.api.getClientProjects(c.id).then(ids => {
-                const el = document.getElementById(`ast-count-${c.id}`);
-                if (el) {
-                    const activeCount = assistants.filter(p => ids.includes(p.id)).length;
-                    el.innerHTML = `<i class="bi bi-robot"></i> ${activeCount}`;
-                }
-            }).catch(() => {});
-            window.api.getClientPendingTickets(c.id).then(count => {
-                const el = document.getElementById(`ticket-count-${c.id}`);
-                if (el) {
-                    if (count > 0) {
-                        el.querySelector('.tc-val').textContent = count;
-                        el.style.display = '';
-                    } else {
-                        el.style.display = 'none';
-                    }
-                }
-                if (count > 0) _clientsWithTickets.add(c.id);
-                else _clientsWithTickets.delete(c.id);
-                _updateClientsSidebarDot();
-            }).catch(() => {});
+
+            let ticketCount = 0;
+            if (window.ticketsData) {
+                ticketCount = window.ticketsData.filter(t => String(t.cliente_id) === String(c.id)).length;
+            }
+            if (ticketCount > 0) _clientsWithTickets.add(c.id);
+            else _clientsWithTickets.delete(c.id);
         }
     });
+
+    _updateClientsSidebarDot();
 }
 
 // -----------------------------------------------

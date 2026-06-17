@@ -166,3 +166,46 @@ function renderNotificationsPanel() {
     `;
   }).join("");
 }
+
+// --------------------------------------------------
+// SSE REALTIME NOTIFICATIONS (FASE 3)
+// --------------------------------------------------
+function initRealtimeLogs() {
+  try {
+    const logsEventSource = new EventSource('/api/logs/stream');
+
+    logsEventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'INSERT' && payload.log) {
+          const log = payload.log;
+
+          if (log.level === 'ERROR') {
+            const msg = `[${log.service}] ${log.message} - Proy: ${log.project_id || 'Sistema'}`;
+            
+            if(typeof window.showToast === 'function') {
+                window.showToast(msg, 'error', 8000); 
+            }
+            
+            const btnRefresh = document.getElementById('btn-refresh-logs');
+            if(btnRefresh && document.getElementById('logs-view').style.display !== 'none') {
+                btnRefresh.click();
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error parseando evento de logs:', err);
+      }
+    };
+
+    logsEventSource.onerror = (err) => {
+      console.error('Logs SSE Connection Error:', err);
+    };
+
+  } catch (err) {
+    console.error('Error inicializando SSE para logs:', err);
+  }
+}
+
+// Inicializar al cargar el panel
+initRealtimeLogs();

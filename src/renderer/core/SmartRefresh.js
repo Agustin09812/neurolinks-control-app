@@ -196,28 +196,59 @@ const _ch = {
       this._t = Date.now();
       const v = ++this._ver;
       try {
-        const tickets = await window.api.getTickets().catch(() => null);
+        // Usa getTicketsMeta: solo trae tickets abiertos sin chats_adjuntos
+        // Mucho más liviano: ~200 bytes por ticket vs varios KB con chats
+        const tickets = await window.api.getTicketsMeta().catch(() => null);
         if (v !== this._ver || !tickets) return;
 
+        // Actualiza ticketsData solo con los campos que tenemos (sin chats)
+        // allTicketsView sigue siendo el array completo, pero se actualiza
+        // por separado cuando el usuario visita la vista de lista
         window.ticketsData = tickets;
 
-        const pending = tickets.filter(t => t.estado !== 'Cerrado');
-        const unseen = pending.filter(t => !this._seenIds.has(t.id));
+        const pending = tickets; // getTicketsMeta ya filtra solo los no-cerrados
+        const unseenTickets = [];
 
-        if (unseen.length > 0) {
-          unseen.forEach(t => {
-            this._seenIds.add(t.id);
-            const clientName = t.clientes?.nombre || 'cliente desconocido';
-            addNotification("ticket", "Nuevo ticket pendiente", `Nuevo ticket de: ${clientName} — ${t.titulo || 'Sin título'}`, `ticket-${t.id}`, true);
-          });
+        pending.forEach(t => {
+            let chats = [];
+            if (t.chats_adjuntos) {
+                if (typeof t.chats_adjuntos === "string") {
+                    try { chats = JSON.parse(t.chats_adjuntos); } catch(e){}
+                } else if (Array.isArray(t.chats_adjuntos)) {
+                    chats = t.chats_adjuntos;
+                }
+            }
 
-          const count = unseen.length;
+            // Lógica de notificación: ¿necesita respuesta del admin?
+            // - Sin mensajes en el chat → admin nunca respondió → necesita respuesta.
+            // - Hay mensajes y el último es del cliente → necesita respuesta.
+            // No depende de t.descripcion porque getTicketsMeta no la selecciona.
+            const lastMsg = chats.length > 0 ? chats[chats.length - 1] : null;
+            const needsResponse = lastMsg ? lastMsg.rol !== 'admin' : true;
+            // Key estable basada en totalMsg: cambia cuando el cliente manda un mensaje nuevo.
+            const totalMsg = (t.descripcion ? 1 : 0) + chats.length;
+            const notificationKey = `ticket-nr-${t.id}-${totalMsg}`;
+
+            if (needsResponse) {
+                const isActiveChat = localStorage.getItem("activeView") === "ticket-chat" && String(window.currentChatTicketId) === String(t.id);
+                if (!isActiveChat && !this._seenIds.has(notificationKey)) {
+                    this._seenIds.add(notificationKey);
+                    unseenTickets.push(t);
+                    const clientName = t.clientes?.nombre || 'cliente desconocido';
+                    addNotification("ticket", "Ticket sin responder", `${clientName} está esperando respuesta`, notificationKey, true);
+                }
+            }
+        });
+
+
+        if (unseenTickets.length > 0) {
+          const count = unseenTickets.length;
           const isFirstLoad = !this._initialized;
-          const clientNames = [...new Set(unseen.map(t => t.clientes?.nombre).filter(Boolean))];
+          const clientNames = [...new Set(unseenTickets.map(t => t.clientes?.nombre).filter(Boolean))];
           const clientLabel = clientNames.length === 1 ? clientNames[0] : clientNames.length > 1 ? 'múltiples clientes' : 'cliente desconocido';
           const label = isFirstLoad
-            ? (count === 1 ? `1 ticket pendiente de ${clientLabel}` : `${count} tickets pendientes de ${clientLabel}`)
-            : (count === 1 ? `Nuevo ticket de ${clientLabel}` : `${count} nuevos tickets de ${clientLabel}`);
+            ? (count === 1 ? `1 ticket con mensajes sin leer de ${clientLabel}` : `${count} tickets con mensajes sin leer de ${clientLabel}`)
+            : (count === 1 ? `Nuevo mensaje de ${clientLabel}` : `Nuevos mensajes de ${clientLabel}`);
           const toastMsg = `<i class="bi bi-ticket-perforated-fill mr-2"></i>${label}`;
 
           const existing = document.getElementById('toast-ticket-summary');
@@ -227,16 +258,41 @@ const _ch = {
           } else {
             showToast(toastMsg, "danger", 'toast-ticket-summary');
           }
+        }
 
-          if (!isFirstLoad && localStorage.getItem("activeView") === "tickets" && !isUserInteracting()) {
-            prependNewTickets?.(unseen);
+        // Hash ligero: solo id|updated_at — ~50x más rápido que JSON.stringify completo
+        const ticketsHash = tickets.map(t => `${t.id}|${t.updated_at}`).join(',');
+        const hasChanged = this._hash && this._hash !== ticketsHash;
+        this._hash = ticketsHash;
+
+        if (hasChanged && this._initialized) {
+           const active = localStorage.getItem("activeView");
+
+           if (active === "ticket-chat") {
+               // El chat se actualiza solo al detectar su propio ticket cambiado
+               const activeTicketChanged = tickets.some(t => String(t.id) === String(window.currentChatTicketId));
+               if (activeTicketChanged && typeof renderTicketChatView === "function") renderTicketChatView();
+           } else if (!isUserInteracting()) {
+               if (active === "tickets") {
+                   if (typeof loadTicketsData === "function") loadTicketsData();
+               } else if (active === "clients" && typeof currentClientDetailId !== "undefined" && currentClientDetailId) {
+                   if (typeof loadClientTickets === "function") loadClientTickets(currentClientDetailId);
+               }
+           }
+        }
+
+        // Limpiar _seenIds de tickets ya cerrados o inexistentes
+        const pendingIds = new Set(pending.map(t => t.id));
+        for (const key of this._seenIds) {
+          if (key.startsWith('ticket-nr-')) {
+            // formato: ticket-nr-{uuid}-{count}  → extraer uuid (puede contener guiones)
+            const withoutPrefix = key.slice('ticket-nr-'.length); // "{uuid}-{count}"
+            const lastDash = withoutPrefix.lastIndexOf('-');
+            const ticketId = withoutPrefix.slice(0, lastDash);
+            if (!pendingIds.has(ticketId)) this._seenIds.delete(key);
           }
         }
 
-        const pendingIds = new Set(pending.map(t => t.id));
-        for (const id of this._seenIds) {
-          if (!pendingIds.has(id)) this._seenIds.delete(id);
-        }
 
         this._initialized = true;
       } finally {
@@ -244,6 +300,7 @@ const _ch = {
         this._callbacks.splice(0).forEach(cb => cb());
       }
     }
+
   },
 
   variables: {
@@ -304,7 +361,40 @@ function _initTicketsRealtime() {
     es.onmessage = (e) => {
       try {
         const payload = JSON.parse(e.data);
-        if (payload.type === 'INSERT') _ch.tickets._t = 0;
+        if (payload.type === 'INSERT' || payload.type === 'UPDATE' || payload.type === 'DELETE') {
+          _ch.tickets._t = 0;
+          _ch.clients._t = 0;
+        }
+      } catch (_) {}
+    };
+    es.onerror = () => {
+      es.close();
+      if (reconnectTimer) return;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+      }, 5000);
+    };
+  }
+
+  connect();
+}
+
+// ---- Clients Realtime (SSE) ----
+
+function _initClientsRealtime() {
+  let es;
+  let reconnectTimer = null;
+
+  function connect() {
+    if (es) { try { es.close(); } catch (_) {} }
+    es = new EventSource('/api/clients/stream');
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        if (payload.type === 'INSERT' || payload.type === 'UPDATE' || payload.type === 'DELETE') {
+          _ch.clients._t = 0; // Trigger client reload
+        }
       } catch (_) {}
     };
     es.onerror = () => {
@@ -326,6 +416,7 @@ function startAutoRefresh() {
   if (_ticker) clearInterval(_ticker);
   _ticker = setInterval(_tick, 1000);
   _initTicketsRealtime();
+  _initClientsRealtime();
 }
 
 // Reset timer to 0 so the channel fires on the next tick (~1s)

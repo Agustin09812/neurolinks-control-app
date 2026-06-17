@@ -113,6 +113,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   min-height: 100dvh;
+  color-scheme: dark;
 }
 
 /* Fixed deep gradient background */
@@ -143,6 +144,7 @@ input, select, textarea, button {
 body[data-theme="light"] {
   background-color: #eef2f7;
   color: #0D1B2A;
+  color-scheme: light;
 
   /* Override CSS variables */
   --bg-deep:    #eef2f7;
@@ -800,6 +802,17 @@ select option:hover {
   cursor: pointer;
   flex-shrink: 0;
 }
+
+/* --- Sysconfig Toggle --- */
+.sysconfig-toggle { position: relative; display: inline-flex; cursor: pointer; align-items: center; justify-content: center; width: 36px; height: 20px; background: rgba(0, 153, 255, 0.1); border-radius: 20px; transition: 0.3s; }
+.sysconfig-toggle input { display: none; }
+.sysconfig-thumb { position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: rgba(255,255,255,0.7); border-radius: 50%; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+.sysconfig-toggle input:checked + .sysconfig-thumb { left: 18px; background: var(--success); }
+.sysconfig-thumb .icon-off { display: block; color: #102a43; width: 10px; height: 10px; }
+.sysconfig-thumb .icon-on { display: none; color: #fff; width: 10px; height: 10px; }
+.sysconfig-toggle input:checked + .sysconfig-thumb .icon-off { display: none; }
+.sysconfig-toggle input:checked + .sysconfig-thumb .icon-on { display: block; }
+
 .form-check-input:checked {
   background-color: var(--accent);
   border-color: var(--accent);

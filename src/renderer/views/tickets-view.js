@@ -28,7 +28,7 @@ async function renderTicketsView(filterClientId = "") {
     const view = document.getElementById("tickets-view");
     view.style.display = "block";
     view.innerHTML = `
-        <div class="animate-fade">
+        <div class="animate-fade" style="height: 100%;">
             <div id="tickets-content">
                  <div class="flex flex-wrap justify-between items-center gap-2 mb-6">
                     <h2 class="font-bold mb-0">SISTEMA DE TICKETS</h2>
@@ -47,7 +47,6 @@ async function renderTicketsView(filterClientId = "") {
                                 onchange="handleTicketFilter('status', this.value)">
                                 <option value="">Estado</option>
                                 <option value="Abierto">Abierto</option>
-                                <option value="En progreso">En progreso</option>
                                 <option value="Cerrado">Cerrado</option>
                             </select>
                         </div>
@@ -120,7 +119,7 @@ async function renderTicketsView(filterClientId = "") {
                 </div>
             </div>
         </div>
-        <!-- MODAL TICKET -->
+        <!-- MODAL TICKET (SOLO CREAR) -->
             <div class="modal fade" id="ticketModalView" tabindex="-1">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
                     <div class="modal-content glass-card shadow-lg">
@@ -155,16 +154,15 @@ async function renderTicketsView(filterClientId = "") {
                                         </select>
                                     </div>
 
-                                    <!-- DESCRIPCIÓN (PROTAGONISTA) -->
-                                    <div class="md:col-span-2 mt-2">
-                                        <label class="form-label text-dim text-sm font-bold">DESCRIPCIÓN</label>
+                                    <!-- DESCRIPCIÓN -->
+                                    <div class="md:col-span-2 mt-2" id="ticketDescContainerView">
+                                        <label class="form-label text-dim text-sm font-bold">DESCRIPCIÓN INICIAL</label>
                                         <textarea
                                             class="form-control text-main ticket-textarea"
                                             id="ticketDescView"
-                                            rows="10">
+                                            rows="5">
                                         </textarea>
                                     </div>
-
                                 </div>
                             </div>
 
@@ -232,7 +230,7 @@ function prependNewTickets(newTickets) {
                     <div class="text-sm text-white">${escapeHtml(t.titulo)}</div>
                 </td>
                 <td>${_clientDisplay(t)}</td>
-                <td class="text-center"><span class="status-badge status-${(t.estado||'').toLowerCase().replace(' ','')}">${escapeHtml(t.estado||'')}</span></td>
+                <td class="text-center"><span class="status-badge status-${(t.estado || '').toLowerCase().replace(' ', '')}">${escapeHtml(t.estado || '')}</span></td>
                 <td class="text-center"><div class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
                 <td class="text-right">
                     <div class="flex gap-2 justify-end">
@@ -255,34 +253,23 @@ function prependNewTickets(newTickets) {
     window.ticketsData = allTicketsView;
 }
 
+// Total de tickets en el servidor (para paginación)
+let _serverTotalTickets = 0;
+
 async function loadTicketsData() {
     try {
-
-        const previousCount = lastTicketsCount;
-
-        const rawTickets = await window.api.getTickets() || [];
-        allTicketsView = rawTickets.filter(t => t.tipo === 'Soporte');
-        window.ticketsData = allTicketsView;
-
-        if (previousCount !== 0 && allTicketsView.length > previousCount) {
-            const newTickets = allTicketsView.slice(0, allTicketsView.length - previousCount);
-            newTickets.forEach(t => {
-                const clientName = t.clientes?.nombre || t.chat_id || 'cliente desconocido';
-                const phone = (t.clientes?.nombre && t.chat_id) ? ` (${t.chat_id})` : '';
-                addNotification(
-                    "ticket",
-                    "Nuevo ticket pendiente",
-                    `Nuevo ticket de: ${clientName}${phone} — ${t.titulo || 'Sin título'}`,
-                    `ticket-${t.id}`
-                );
-            });
-            const count = newTickets.length;
-            showToast(`<i class="bi bi-ticket-perforated-fill mr-2"></i>${count === 1 ? 'Nuevo ticket pendiente' : `${count} nuevos tickets pendientes`}`, "danger");
-        }
-
-        lastTicketsCount = allTicketsView.length;
+        const res = await window.api.getTickets({
+            page: currentPage,
+            limit: ITEMS_PER_PAGE,
+            ...(ticketFilters.status    ? { estado: ticketFilters.status }         : {}),
+            ...(ticketFilters.client    ? { cliente_id: ticketFilters.client }     : {}),
+        });
+        // El backend ahora devuelve { data, total, page, limit }
+        const tickets = res?.data || [];
+        _serverTotalTickets = res?.total || 0;
+        allTicketsView = tickets; // solo la página actual
+        window.ticketsData = tickets;
         renderTicketsList();
-
     } catch (err) {
         console.error("Error loading tickets:", err);
         showToast("Error al conectar con el servidor de tickets", "danger");
@@ -292,7 +279,7 @@ async function loadTicketsData() {
 function handleTicketFilter(key, val) {
     ticketFilters[key] = val;
     currentPage = 1;
-    renderTicketsList();
+    loadTicketsData(); // recarga desde el servidor con el filtro
 }
 
 function resetTicketFilters() {
@@ -302,17 +289,16 @@ function resetTicketFilters() {
     if (document.getElementById("view-filter-date-start")) document.getElementById("view-filter-date-start").value = "";
     if (document.getElementById("view-filter-date-end")) document.getElementById("view-filter-date-end").value = "";
     currentPage = 1;
-    renderTicketsList();
+    loadTicketsData(); // recarga desde el servidor
 }
 
+// getFilteredTickets solo filtra por fecha (los demás filtros ya vienen del servidor)
 function getFilteredTickets() {
     return allTicketsView.filter(t => {
-        if (ticketFilters.status && t.estado !== ticketFilters.status) return false;
-        if (ticketFilters.client && t.cliente_id !== ticketFilters.client) return false;
         if (ticketFilters.dateStart || ticketFilters.dateEnd) {
             const d = new Date(t.created_at).toISOString().split('T')[0];
             if (ticketFilters.dateStart && d < ticketFilters.dateStart) return false;
-            if (ticketFilters.dateEnd && d > ticketFilters.dateEnd) return false;
+            if (ticketFilters.dateEnd   && d > ticketFilters.dateEnd)   return false;
         }
         return true;
     });
@@ -337,7 +323,7 @@ function _buildTicketCard(t, onOpen, onDelete) {
                 <span class="text-dim text-sm">#${t.id.substring(0, 8)}</span>
                 <span class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</span>
             </div>
-            <div class="text-center"><span class="status-badge status-${(t.estado||'').toLowerCase().replace(' ','')}">${escapeHtml(t.estado||'')}</span></div>
+            <div class="text-center"><span class="status-badge status-${(t.estado || '').toLowerCase().replace(' ', '')}">${escapeHtml(t.estado || '')}</span></div>
             <div class="text-sm text-dim text-center">${clientLine}</div>
             <div class="font-bold text-center" style="${clamp}">${escapeHtml(t.titulo)}</div>
             ${t.descripcion ? `<div class="text-sm text-dim text-center" style="${clamp}">${escapeHtml(t.descripcion)}</div>` : ''}
@@ -361,23 +347,20 @@ function renderTicketsList() {
     const cardsView = document.getElementById("tickets-cards-view");
     const info = document.getElementById("pagination-info");
 
-    const filtered = getFilteredTickets();
+    const filtered = getFilteredTickets(); // fecha local, resto ya viene del servidor
+    const totalPages = Math.max(1, Math.ceil(_serverTotalTickets / ITEMS_PER_PAGE));
 
     if (filtered.length === 0) {
         if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-dim py-12">No se encontraron tickets</td></tr>';
         if (cardsView) cardsView.innerHTML = '<div class="text-dim text-center py-12">No se encontraron tickets</div>';
-        if (info) info.textContent = '';
+        if (info) info.textContent = _serverTotalTickets > 0 ? `Página ${currentPage} de ${totalPages}` : '';
         return;
     }
-
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    const paginated = filtered.slice(start, start + ITEMS_PER_PAGE);
-    const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
 
     // Tabla (desktop)
     if (tbody) {
         tbody.innerHTML = "";
-        paginated.forEach(t => {
+        filtered.forEach(t => {
             const tr = document.createElement("tr");
             tr.className = "ticket-row";
             tr.innerHTML = `
@@ -386,7 +369,7 @@ function renderTicketsList() {
                     <div class="text-sm text-white">${escapeHtml(t.titulo)}</div>
                 </td>
                 <td>${_clientDisplay(t)}</td>
-                <td class="text-center"><span class="status-badge status-${(t.estado||'').toLowerCase().replace(' ','')}">${escapeHtml(t.estado||'')}</span></td>
+                <td class="text-center"><span class="status-badge status-${(t.estado || '').toLowerCase().replace(' ', '')}">${escapeHtml(t.estado || '')}</span></td>
                 <td class="text-center"><div class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
                 <td class="text-right">
                     <div class="flex gap-2 justify-end">
@@ -402,7 +385,7 @@ function renderTicketsList() {
     // Cards (mobile/tablet)
     if (cardsView) {
         cardsView.innerHTML = "";
-        paginated.forEach(t => {
+        filtered.forEach(t => {
             cardsView.appendChild(_buildTicketCard(t, openEditTicket, handleDeleteTicket));
         });
     }
@@ -414,6 +397,7 @@ function openNewTicketModal() {
     document.getElementById("ticketFormView").reset();
     document.getElementById("ticketIdView").value = "";
     document.getElementById("ticketModalTitleView").innerText = "Nuevo Ticket";
+    document.getElementById("ticketDescContainerView").style.display = "block";
     if (ticketFilters.client) {
         document.getElementById("ticketClientView").value = ticketFilters.client;
     }
@@ -421,18 +405,15 @@ function openNewTicketModal() {
 }
 
 function openEditTicket(id) {
-    const tick = allTicketsView.find(t => t.id === id);
-    if (!tick) return;
-
-    document.getElementById("ticketIdView").value = tick.id;
-    document.getElementById("ticketTitleView").value = tick.titulo;
-    document.getElementById("ticketClientView").value = tick.cliente_id;
-    document.getElementById("ticketDescView").value = tick.descripcion || "";
-    document.getElementById("ticketEstadoView").value = tick.estado || 'Abierto';
-
-    document.getElementById("ticketModalTitleView").innerText = "Editar Ticket";
-    bootstrap.Modal.getOrCreateInstance(document.getElementById("ticketModalView")).show();
+    window.currentChatTicketId = id;
+    window.currentChatTicketBackView = 'tickets';
+    localStorage.setItem('currentChatTicketId', id);
+    localStorage.setItem('currentChatTicketBackView', 'tickets');
+    navigate('ticket-chat');
 }
+
+// NOTE: renderTicketChatView is called directly by SmartRefresh when active view is 'ticket-chat'.
+// No wrapper override needed here.
 
 async function handleTicketSubmit(e) {
     e.preventDefault();
@@ -506,15 +487,9 @@ function exportTicketsToCSV() {
 }
 
 function changePage(direction) {
-    const filtered = getFilteredTickets();
-    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-
-    currentPage += direction;
-
-    if (currentPage < 1) currentPage = 1;
-    if (currentPage > totalPages) currentPage = totalPages;
-
-    renderTicketsList();
+    const totalPages = Math.max(1, Math.ceil(_serverTotalTickets / ITEMS_PER_PAGE));
+    currentPage = Math.max(1, Math.min(currentPage + direction, totalPages));
+    loadTicketsData(); // carga la nueva página desde el servidor
 }
 
 // -----------------------------------------------
@@ -551,84 +526,13 @@ async function renderClientTicketsTab(clientId, container, clientTelefono = null
         </div>
     `;
 
-    // Modal must live on <body> — rendering it inside a glass-card/animate-fade
-    // container creates a CSS stacking context (backdrop-filter) that traps the
-    // modal, making it appear "behind" the page and non-interactable.
-    const existing = document.getElementById("clientTicketModal");
-    if (existing) existing.remove();
-
-    const modalEl = document.createElement("div");
-    modalEl.className = "modal fade";
-    modalEl.id = "clientTicketModal";
-    modalEl.setAttribute("tabindex", "-1");
-    modalEl.innerHTML = `
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content glass-card shadow-lg">
-                <div class="modal-header">
-                    <h5 class="modal-title font-bold" id="clientTicketModalTitle">Nuevo Ticket</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="clientTicketForm">
-                    <div class="modal-body p-6">
-                        <input type="hidden" id="clientTicketId">
-                        <div class="grid md:grid-cols-2 gap-2">
-                            <div class="">
-                                <label class="form-label text-dim text-sm font-bold required">TITULO</label>
-                                <input type="text" class="form-control text-main" id="clientTicketTitle" required>
-                            </div>
-                            <div class="">
-                                <label class="form-label text-dim text-sm font-bold">ESTADO</label>
-                                <select class="form-select text-main" id="clientTicketStatus">
-                                    <option value="Abierto">Abierto</option>
-                                    <option value="Cerrado">Cerrado</option>
-                                </select>
-                            </div>
-                                <div class="md:col-span-2 mt-2">
-                                <label class="form-label text-dim text-sm font-bold">DESCRIPCION</label>
-                                <textarea class="form-control text-main ticket-textarea"
-                                    id="clientTicketDesc" rows="6"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer p-4">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-sm btn-success">Guardar Ticket</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modalEl);
-
     document.getElementById("btn-new-client-ticket").onclick = () => {
-        document.getElementById("clientTicketForm").reset();
-        document.getElementById("clientTicketId").value = "";
-        document.getElementById("clientTicketModalTitle").innerText = "Nuevo Ticket";
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
-    };
-
-    document.getElementById("clientTicketForm").onsubmit = async (e) => {
-        e.preventDefault();
-        const id = document.getElementById("clientTicketId").value;
-        const data = {
-            titulo: document.getElementById("clientTicketTitle").value,
-            cliente_id: clientId,
-            descripcion: document.getElementById("clientTicketDesc").value,
-            estado: document.getElementById("clientTicketStatus").value
-        };
-        try {
-            if (id) {
-                await window.api.updateTicket(id, data);
-                showToast("Ticket actualizado", "success");
-            } else {
-                await window.api.createTicket(data);
-                showToast("Ticket creado correctamente", "success");
-            }
-            bootstrap.Modal.getInstance(modalEl).hide();
-            loadClientTickets(clientId, clientTelefono);
-        } catch {
-            showToast("Error al guardar ticket", "danger");
-        }
+        document.getElementById("ticketFormView").reset();
+        document.getElementById("ticketIdView").value = "";
+        document.getElementById("ticketModalTitleView").innerText = "Nuevo Ticket";
+        document.getElementById("ticketDescContainerView").style.display = "block";
+        document.getElementById("ticketClientView").value = clientId;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("ticketModalView")).show();
     };
 
     loadClientTickets(clientId, clientTelefono);
@@ -641,14 +545,12 @@ async function loadClientTickets(clientId, clientTelefono = null) {
     if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm text-dim"></div></td></tr>';
     if (cardsView) cardsView.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-dim"></div></div>';
 
-    const openTicketModal = (t) => {
-        document.getElementById("clientTicketId").value = t.id;
-        document.getElementById("clientTicketTitle").value = t.titulo;
-        document.getElementById("clientTicketDesc").value = t.descripcion || "";
-        const statusSelect = document.getElementById("clientTicketStatus");
-        if (statusSelect) statusSelect.value = t.estado || 'Abierto';
-        document.getElementById("clientTicketModalTitle").innerText = "Editar Ticket";
-        bootstrap.Modal.getOrCreateInstance(document.getElementById("clientTicketModal")).show();
+    window.openTicketModal = (t) => {
+        window.currentChatTicketId = t.id;
+        window.currentChatTicketBackView = 'clients';
+        localStorage.setItem('currentChatTicketId', t.id);
+        localStorage.setItem('currentChatTicketBackView', 'clients');
+        navigate('ticket-chat');
     };
 
     const deleteTicket = async (id) => {
@@ -663,15 +565,17 @@ async function loadClientTickets(clientId, clientTelefono = null) {
     };
 
     try {
-        const [allTickets, clientProjects] = await Promise.all([
-            window.api.getTickets(),
+        const [ticketsRes, clientProjects] = await Promise.all([
+            window.api.getTickets({ cliente_id: clientId, limit: 500 }),
             window.api.getClientProjects(clientId)
         ]);
-        const tickets = (allTickets || []).filter(t =>
+        const allTickets = ticketsRes?.data || [];
+        const tickets = allTickets.filter(t =>
             (t.cliente_id === clientId ||
-            (t.project_id && (clientProjects || []).includes(t.project_id))) &&
+                (t.project_id && (clientProjects || []).includes(t.project_id))) &&
             t.tipo === 'Soporte'
         );
+        window.clientTicketsData = tickets;
 
         if (tbody) tbody.innerHTML = "";
         if (cardsView) cardsView.innerHTML = "";
@@ -698,7 +602,7 @@ async function loadClientTickets(clientId, clientTelefono = null) {
                         <div class="font-bold text-sm">#${t.id.substring(0, 8)}</div>
                         <div class="text-sm text-white">${escapeHtml(t.titulo)}</div>
                     </td>
-                    <td class="text-center"><span class="status-badge status-${(t.estado||'').toLowerCase().replace(' ','')}">${escapeHtml(t.estado||'')}</span></td>
+                    <td class="text-center"><span class="status-badge status-${(t.estado || '').toLowerCase().replace(' ', '')}">${escapeHtml(t.estado || '')}</span></td>
                     <td class="text-center"><div class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
                     <td class="text-right">
                         <div class="flex gap-2 justify-end">
@@ -725,7 +629,7 @@ async function loadClientTickets(clientId, clientTelefono = null) {
                             <span class="text-dim text-sm">#${t.id.substring(0, 8)}</span>
                             <span class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</span>
                         </div>
-                        <div class="text-center"><span class="status-badge status-${(t.estado||'').toLowerCase().replace(' ','')}">${escapeHtml(t.estado||'')}</span></div>
+                        <div class="text-center"><span class="status-badge status-${(t.estado || '').toLowerCase().replace(' ', '')}">${escapeHtml(t.estado || '')}</span></div>
                         <div class="font-bold text-center" style="${clamp}">${escapeHtml(t.titulo)}</div>
                         ${t.descripcion ? `<div class="text-sm text-dim text-center" style="${clamp}">${escapeHtml(t.descripcion)}</div>` : ''}
                         ${t.estado === 'Cerrado' ? '<div class="text-center"><button class="btn btn-sm btn-outline-danger btn-card-del-ct"><i class="bi bi-trash"></i></button></div>' : ''}
@@ -742,8 +646,334 @@ async function loadClientTickets(clientId, clientTelefono = null) {
                 cardsView.appendChild(card);
             }
         });
-    } catch {
-        if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-center text-red-400 py-4">Error al cargar tickets</td></tr>';
-        if (cardsView) cardsView.innerHTML = '<div class="text-red-400 text-center py-4">Error al cargar tickets</div>';
+
+
+
+    } catch (err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-center text-red-400 py-4">Error cargando tickets</td></tr>';
+        if (cardsView) cardsView.innerHTML = '<div class="text-center text-red-400 py-4">Error cargando tickets</div>';
     }
+}
+
+
+// ticket-chat.view.js
+// Nueva vista dinámica para la conversación de un ticket individual
+
+async function renderTicketChatView() {
+    const container = document.getElementById("ticket-chat-view");
+    if (!container) return;
+
+    const tickId = window.currentChatTicketId;
+    if (!tickId) {
+        navigate(window.currentChatTicketBackView || 'dashboard');
+        return;
+    }
+
+    // Guard: definir goBack inmediatamente para que el botón nunca falle
+    // aunque el usuario lo presione antes de que la carga async termine.
+    if (!window.goBackFromTicketChat) {
+        window.goBackFromTicketChat = function() {
+            navigate(window.currentChatTicketBackView || 'tickets').then(() => {
+                localStorage.removeItem('currentChatTicketId');
+                localStorage.removeItem('currentChatTicketBackView');
+            });
+        };
+    }
+
+
+    // Buscar el ticket completo desde la API (trae chats_adjuntos frescos)
+    let tick;
+    try {
+        tick = await window.api.getTicketById(tickId);
+    } catch(e) {
+        // fallback a caché local si la API falla
+        tick = allTicketsView?.find(t => String(t.id) === String(tickId));
+        if (!tick && window.clientTicketsData) {
+            tick = window.clientTicketsData.find(t => String(t.id) === String(tickId));
+        }
+    }
+
+    if (!tick) {
+        container.innerHTML = '<div class="p-6 text-center text-dim">Ticket no encontrado</div>';
+        return;
+    }
+
+    // Definir goBackFromTicketChat DESPUÉS de cargar tick, para usar tick.cliente_id directamente
+    window.goBackFromTicketChat = function() {
+        const backView = window.currentChatTicketBackView || 'tickets';
+        navigate(backView).then(() => {
+            localStorage.removeItem('currentChatTicketId');
+            localStorage.removeItem('currentChatTicketBackView');
+            if (backView === 'clients' && tick && tick.cliente_id && typeof openClientDetail === 'function') {
+                setTimeout(() => { openClientDetail(tick.cliente_id); }, 50);
+            }
+        });
+    };
+
+    // --- ACTUALIZACIÓN DE LECTURA AUTOMÁTICA ---
+    let currentChatsTemp = [];
+    if (tick.chats_adjuntos) {
+        if (typeof tick.chats_adjuntos === "string") {
+            try { currentChatsTemp = JSON.parse(tick.chats_adjuntos); } catch(e){}
+        } else if (Array.isArray(tick.chats_adjuntos)) {
+            currentChatsTemp = tick.chats_adjuntos;
+        }
+    }
+    const totalMsgCount = (tick.descripcion ? 1 : 0) + currentChatsTemp.length;
+    const currentReadCount = tick.read_admin_count || 0;
+    if (totalMsgCount > currentReadCount) {
+        tick.read_admin_count = totalMsgCount;
+        window.api.updateTicket(tick.id, { read_admin_count: totalMsgCount }).catch(() => {});
+    }
+    // -------------------------------------------
+
+    const isSameTicketAndRendered = container.getAttribute('data-ticket-id') === String(tickId) && document.getElementById("tchat-messages");
+
+    // Preservar scroll
+    let isAtBottom = true;
+    let oldScrollTop = 0;
+    const oldMessagesContainer = document.getElementById("tchat-messages");
+    if (oldMessagesContainer) {
+        isAtBottom = Math.abs(oldMessagesContainer.scrollHeight - oldMessagesContainer.scrollTop - oldMessagesContainer.clientHeight) < 15;
+        oldScrollTop = oldMessagesContainer.scrollTop;
+    }
+
+    const renderMessagesHtml = (ticket) => {
+        let chats = [];
+        if (ticket.chats_adjuntos) {
+            if (typeof ticket.chats_adjuntos === "string") {
+                try { chats = JSON.parse(ticket.chats_adjuntos); } catch(e){}
+            } else if (Array.isArray(ticket.chats_adjuntos)) {
+                chats = ticket.chats_adjuntos;
+            }
+        }
+
+        let html = "";
+        if (ticket.descripcion) {
+            html += `
+                <div class="wa-chat-msg cliente">
+                    <span>${escapeHtml(ticket.descripcion)}</span>
+                    <span class="wa-chat-time">Ticket inicial</span>
+                </div>
+            `;
+        }
+
+        if (chats.length === 0 && !ticket.descripcion) {
+            html = '<div class="text-center mt-6 p-4 glass-card mx-auto" style="max-width: 300px;"><div class="text-dim text-sm"><i class="bi bi-chat-left-dots mb-2 fs-3 block"></i><br>No hay mensajes aún.</div></div>';
+        } else {
+            chats.forEach(msg => {
+                const isMe = msg.rol === 'admin';
+                const dateStr = new Date(msg.timestamp || msg.fecha || Date.now()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                html += `
+                    <div class="wa-chat-msg ${isMe ? 'admin' : 'cliente'}">
+                        ${msg.mensaje ? `<span>${escapeHtml(msg.mensaje)}</span>` : ''}
+                        <span class="wa-chat-time">${dateStr}</span>
+                    </div>
+                `;
+            });
+        }
+        return html;
+    };
+
+    if (isSameTicketAndRendered) {
+        const messagesContainer = document.getElementById("tchat-messages");
+        messagesContainer.innerHTML = renderMessagesHtml(tick);
+        
+        const titleEl = document.getElementById("tchat-header-title");
+        if (titleEl) {
+            titleEl.innerText = tick.titulo || 'Ticket';
+            titleEl.title = tick.titulo || 'Ticket';
+        }
+        
+        const statusEl = document.getElementById("tchat-status");
+        if (statusEl) statusEl.value = tick.estado;
+        
+        const inputField = document.getElementById("tchat-input");
+        const sendBtn = document.getElementById("tchat-send-btn");
+        if (inputField && sendBtn) {
+            if (tick.estado === 'Cerrado') {
+                inputField.disabled = true;
+                sendBtn.disabled = true;
+                inputField.placeholder = "Conversación finalizada";
+            } else {
+                inputField.disabled = false;
+                sendBtn.disabled = false;
+                if (inputField.placeholder === "Conversación finalizada") {
+                    inputField.placeholder = "Escribe un mensaje...";
+                }
+            }
+        }
+
+        setTimeout(() => { 
+            if (isAtBottom) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight; 
+            } else {
+                messagesContainer.scrollTop = oldScrollTop;
+            }
+        }, 50);
+
+        return;
+    }
+
+    container.setAttribute('data-ticket-id', String(tickId));
+
+    // Buscar nombre del cliente
+    let clientName = "Cliente";
+    if (window.clientsData && window.clientsData.length > 0) {
+        const client = window.clientsData.find(c => c.id === tick.cliente_id);
+        if (client) clientName = client.nombre;
+    } else {
+        const select = document.getElementById("ticketClientView");
+        if (select && select.options) {
+            for (let i=0; i<select.options.length; i++) {
+                if (select.options[i].value === tick.cliente_id) {
+                    clientName = select.options[i].text;
+                    break;
+                }
+            }
+        }
+    }
+
+    const initials = clientName.substring(0,2).toUpperCase();
+
+    container.innerHTML = `
+        <style>
+        .wa-chat-msg { max-width: 85%; padding: 12px 16px; border-radius: var(--radius-md); font-size: 0.95rem; position: relative; line-height: 1.5; word-wrap: break-word; transition: var(--transition-fast); }
+        .wa-chat-msg.admin { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 4px 12px rgba(0, 120, 212, 0.2); }
+        .wa-chat-msg.cliente { background: var(--bg-card); border: 1px solid var(--border-soft); color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: var(--glass-shadow); }
+        .wa-chat-time { font-size: 0.7rem; color: var(--text-dim); margin-top: 6px; display: block; text-align: right; }
+        .wa-chat-msg.admin .wa-chat-time { color: rgba(255, 255, 255, 0.7); }
+        .wa-chat-container { display: flex; flex-direction: column; height: 100%; overflow: hidden; background: transparent; }
+        .tchat-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+        .tchat-select-wrap { flex-shrink: 0; }
+        .tchat-label-container { 
+            display: flex; align-items: center; gap: 0.75rem; margin: 0; cursor: pointer;
+            background: rgba(128, 128, 128, 0.08);
+            border: 1px solid var(--border-soft);
+            padding: 4px 6px 4px 14px;
+            border-radius: 8px;
+        }
+        .tchat-select { padding: 6px 12px; font-size: 0.875rem; min-width: 120px; }
+        .tchat-label { font-size: 0.75rem; margin: 0; }
+        @media (max-width: 767px) {
+            .tchat-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+            .tchat-select-wrap { padding-left: 56px; }
+            .tchat-select { padding: 4px 8px; font-size: 0.75rem; min-width: 100px; }
+            .tchat-label { font-size: 0.65rem; }
+        }
+        </style>
+        <div class="animate-fade wa-chat-container relative">
+            <!-- BG Grid layer -->
+            <div class="absolute inset-0 bg-grid opacity-30 pointer-events-none -z-10"></div>
+            
+            <!-- HEADER -->
+            <div class="glass-header px-6 py-4 z-10 shadow-sm border-b border-[var(--border-soft)] tchat-header">
+                <div class="flex items-center gap-4 flex-1 min-w-0 w-full">
+                    <button class="btn btn-outline-secondary btn-sm rounded-circle flex items-center justify-center shrink-0" onclick="goBackFromTicketChat()" title="Volver" style="width: 40px; height: 40px; padding: 0;">
+                        <i class="bi bi-arrow-left fs-5"></i>
+                    </button>
+                    <div class="client-avatar shrink-0 hidden sm:flex">${initials}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-dim font-mono mb-0.5">#${tick.id.substring(0,8)}</div>
+                        <div class="text-sm text-dim font-medium truncate mb-0.5">${escapeHtml(clientName)}</div>
+                        <div id="tchat-header-title" class="text-sm text-main font-bold truncate" title="${escapeHtml(tick.titulo || 'Ticket')}">${escapeHtml(tick.titulo || 'Ticket')}</div>
+                    </div>
+                </div>
+                <div class="tchat-select-wrap">
+                    <label for="tchat-status" class="tchat-label-container">
+                        <span class="font-medium text-gray-700 dark:text-gray-200 uppercase tracking-wider tchat-label">Estado</span>
+                        <select id="tchat-status" class="tchat-select rounded border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white" style="cursor: pointer;">
+                            <option value="Abierto" ${tick.estado === 'Abierto' ? 'selected' : ''}>Abierto</option>
+                            <option value="Cerrado" ${tick.estado === 'Cerrado' ? 'selected' : ''}>Cerrado</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+            <!-- MESSAGES & SIDEBAR -->
+            <div style="display:flex; flex:1; overflow:hidden;">
+                <div id="tchat-messages" class="flex-1 overflow-y-auto p-6 md:px-12 lg:px-24 flex flex-col gap-4 z-0">
+                </div>
+            </div>
+            <!-- INPUT -->
+            <div class="glass-header px-6 md:px-12 lg:px-24 py-4 flex gap-4 items-center border-t border-[var(--border-soft)] z-10 shadow-lg" style="background: var(--bg-card);">
+                <input type="text" id="tchat-input" class="form-control text-main" placeholder="Escribe un mensaje..." autocomplete="off">
+                <button id="tchat-send-btn" class="btn btn-primary rounded-circle flex items-center justify-center shrink-0" style="width: 48px; height: 48px; padding: 0;">
+                    <i class="bi bi-send-fill fs-5" style="margin-left: -2px;"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    const messagesContainer = document.getElementById("tchat-messages");
+    const inputField = document.getElementById("tchat-input");
+    const sendBtn = document.getElementById("tchat-send-btn");
+    const statusSelect = document.getElementById("tchat-status");
+
+    messagesContainer.innerHTML = renderMessagesHtml(tick);
+
+    setTimeout(() => { 
+        if (isAtBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight; 
+        } else {
+            messagesContainer.scrollTop = oldScrollTop;
+        }
+    }, 50);
+
+    if (tick.estado === 'Cerrado') {
+        inputField.disabled = true;
+        sendBtn.disabled = true;
+        inputField.placeholder = "Conversación finalizada";
+    } else {
+        inputField.disabled = false;
+        sendBtn.disabled = false;
+        inputField.placeholder = "Escribe un mensaje...";
+        inputField.focus();
+    }
+
+    const sendMsg = async () => {
+        const text = inputField.value.trim();
+        if (!text) return;
+        
+        inputField.disabled = true;
+        sendBtn.disabled = true;
+        
+        try {
+            await window.api.addTicketMessage(tick.id, { rol: 'admin', mensaje: text });
+            inputField.value = "";
+            // Solo recargamos este ticket (quirúrgico, no toda la lista)
+            renderTicketChatView();
+        } catch(e) {
+            showToast("Error enviando mensaje", "error");
+            if (statusSelect.value !== 'Cerrado') {
+                inputField.disabled = false;
+                sendBtn.disabled = false;
+            }
+        }
+    };
+
+    sendBtn.onclick = sendMsg;
+    inputField.onkeydown = (e) => {
+        if (e.key === "Enter") sendMsg();
+    };
+
+    statusSelect.onchange = async () => {
+        try {
+            const newState = statusSelect.value;
+            
+            if (newState === 'Cerrado') {
+                await window.api.addTicketMessage(tick.id, { 
+                    rol: 'admin', 
+                    mensaje: 'Este ticket se dió por concluido por el personal de soporte. Muchas gracias!' 
+                });
+            }
+
+            await window.api.updateTicket(tick.id, { estado: newState });
+            showToast("Estado actualizado", "success");
+            // Solo recargamos el chat (el SmartRefresh se encarga del resto)
+            renderTicketChatView();
+        } catch(e) {
+            showToast("Error al actualizar estado", "error");
+        }
+    };
 }

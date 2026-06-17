@@ -133,6 +133,73 @@ router.get('/tickets/stream', (req, res) => {
   });
 });
 
+// --------------------------------------------------
+// SSE - LOGS REALTIME
+// --------------------------------------------------
+
+const _sseLogsClients = new Set();
+const _sseClientsList = new Set();
+
+function _broadcastClientEvent(payload) {
+  const data = `data: ${JSON.stringify(payload)}\n\n`;
+  for (const res of _sseClientsList) {
+    try { res.write(data); } catch (_) { _sseClientsList.delete(res); }
+  }
+}
+
+router.get('/clients/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  res.write(': connected\n\n');
+
+  _sseClientsList.add(res);
+
+  const keepAlive = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch (_) { clearInterval(keepAlive); }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    _sseClientsList.delete(res);
+  });
+});
+
+function _broadcastLogEvent(payload) {
+  const data = `data: ${JSON.stringify(payload)}\n\n`;
+  for (const res of _sseLogsClients) {
+    try { res.write(data); } catch (_) { _sseLogsClients.delete(res); }
+  }
+}
+
+router.get('/logs/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  res.write(': connected\n\n');
+
+  _sseLogsClients.add(res);
+
+  const keepAlive = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch (_) { clearInterval(keepAlive); }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    _sseLogsClients.delete(res);
+  });
+});
+
+// Config
+router.get('/config/supabase', (req, res) => {
+  res.json({
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_KEY
+  });
+});
+
 // Assistants
 router.get('/assistants', async (req, res) => {
   try { res.json(await railwayService.getAssistants()); }
@@ -358,10 +425,23 @@ router.get('/clients/:id/payments', async (req, res) => {
 });
 
 // Tickets
+// /tickets/meta debe ir ANTES de /tickets/:id para evitar conflicto de rutas
+router.get('/tickets/meta', async (req, res) => {
+  try { res.json(await supabaseService.getTicketsMeta()); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.get('/tickets/:id', async (req, res) => {
+  try { res.json(await supabaseService.getTicketById(req.params.id)); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/tickets', async (req, res) => {
   const filters = {
-    estado: sanitizeStr(req.query.estado, 50) || undefined,
+    estado:     sanitizeStr(req.query.estado, 50)      || undefined,
     cliente_id: sanitizeStr(req.query.cliente_id, 200) || undefined,
+    page:       parseInt(req.query.page)  || 1,
+    limit:      parseInt(req.query.limit) || 25,
   };
   Object.keys(filters).forEach(k => filters[k] === undefined && delete filters[k]);
   try { res.json(await supabaseService.getTickets(filters)); }
@@ -396,12 +476,40 @@ router.patch('/tickets/:id', async (req, res) => {
   if (req.body.descripcion !== undefined) ticketData.descripcion = sanitizeStr(req.body.descripcion, 5000) || null;
   if (req.body.cliente_id !== undefined) ticketData.cliente_id = sanitizeStr(req.body.cliente_id, 200);
   if (req.body.estado !== undefined && VALID_TICKET_ESTADOS.includes(req.body.estado)) ticketData.estado = req.body.estado;
+  if (req.body.read_admin_count !== undefined) {
+    const n = parseInt(req.body.read_admin_count);
+    if (!isNaN(n) && n >= 0) ticketData.read_admin_count = n;
+  }
 
   try {
     const result = await supabaseService.updateTicket(req.params.id, ticketData);
-    await supabaseService.logAction('Actualizar Ticket', `Ticket #${req.params.id} actualizado`, 'tickets', req.params.id);
+    // Solo loguear cambios de estado, no actualizaciones de read_admin_count
+    if (ticketData.estado) {
+      await supabaseService.logAction('Actualizar Ticket', `Ticket #${req.params.id} actualizado`, 'tickets', req.params.id);
+    }
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/tickets/:id/chat', async (req, res) => {
+  const mensaje = sanitizeStr(req.body.mensaje, 5000);
+  const rol = req.body.rol === 'cliente' ? 'cliente' : 'admin';
+  
+  if (!mensaje) return res.status(400).json({ error: 'El mensaje no puede estar vacío' });
+  
+  const chatMsg = {
+      id: crypto.randomUUID(),
+      rol,
+      mensaje,
+      fecha: new Date().toISOString()
+  };
+
+  try {
+      const result = await supabaseService.addTicketMessage(req.params.id, chatMsg);
+      res.json(result);
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+  }
 });
 
 router.delete('/tickets/:id', async (req, res) => {
@@ -412,6 +520,12 @@ router.delete('/tickets/:id', async (req, res) => {
 // Audit
 router.get('/audit', async (req, res) => {
   try { res.json(await supabaseService.getAuditLogs()); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Logs
+router.get('/logs', async (req, res) => {
+  try { res.json(await supabaseService.getSystemLogs(100)); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -461,14 +575,32 @@ async function startBackgroundMonitoring() {
     const realtimeClient = createClient(process.env.SUPABASE2_URL, process.env.SUPABASE2_KEY);
     realtimeClient
       .channel('tickets-inserts')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tickets' }, payload => {
-        _broadcastTicketEvent({ type: 'INSERT', ticket: payload.new });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, payload => {
+        _broadcastTicketEvent({ type: payload.eventType, ticket: payload.new || payload.old });
       })
       .subscribe(status => {
         if (status === 'SUBSCRIBED') console.log('[Realtime] tickets channel activo');
       });
+
+    realtimeClient
+      .channel('system_logs_inserts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'system_logs' }, payload => {
+        _broadcastLogEvent({ type: 'INSERT', log: payload.new });
+      })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') console.log('[Realtime] logs channel activo');
+      });
+
+    realtimeClient
+      .channel('clientes-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, payload => {
+        _broadcastClientEvent({ type: payload.eventType, client: payload.new || payload.old });
+      })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') console.log('[Realtime] clientes channel activo');
+      });
   } catch (e) {
-    console.error('[Realtime] Error iniciando suscripcion tickets:', e.message);
+    console.error('[Realtime] Error iniciando suscripcion:', e.message);
   }
 
   try {

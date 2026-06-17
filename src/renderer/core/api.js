@@ -27,6 +27,11 @@ window.api = {
   openDashboardWindow: (url) => { window.open(url, '_blank', 'noopener'); return Promise.resolve(); },
 
   // --------------------------------------------------
+  // CONFIG
+  // --------------------------------------------------
+  getConfigSupabase: () => _fetch('/api/config/supabase'),
+
+  // --------------------------------------------------
   // PROJECTS
   // --------------------------------------------------
   getAssistants: () => _fetch('/api/assistants'),
@@ -115,15 +120,25 @@ window.api = {
   // --------------------------------------------------
   // TICKETS
   // --------------------------------------------------
+  // Listado paginado SIN chats_adjuntos — para vistas de lista
   getTickets: (filters) => {
     const params = new URLSearchParams(filters || {}).toString();
     return _fetch(`/api/tickets${params ? '?' + params : ''}`);
   },
 
+  // Solo metadatos de tickets abiertos — para SmartRefresh background
+  getTicketsMeta: () => _fetch('/api/tickets/meta'),
+
+  // Ticket completo con chats_adjuntos — solo al abrir el chat
+  getTicketById: (id) => _fetch(`/api/tickets/${id}`),
+
   createTicket: (ticketData) => _post('/api/tickets', ticketData),
 
   updateTicket: (id, ticketData) =>
     _fetch(`/api/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(ticketData) }),
+
+  addTicketMessage: (id, messageData) =>
+    _post(`/api/tickets/${id}/chat`, messageData),
 
   deleteTicket: (id) =>
     _fetch(`/api/tickets/${id}`, { method: 'DELETE' }),
@@ -135,6 +150,7 @@ window.api = {
   // AUDIT
   // --------------------------------------------------
   getAuditLogs: () => _fetch('/api/audit'),
+  getLogs: () => _fetch('/api/logs'),
 
   unlinkProjectClient: (projectId) =>
     _post(`/api/projects/${projectId}/unlink`, {}),

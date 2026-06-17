@@ -43,6 +43,8 @@ document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
     assistants: "assistants-view",
     clients: "clients-view",
     audit: "audit-view",
+    logs: "logs-view",
+    "ticket-chat": "ticket-chat-view",
   };
 
   const views = Object.values(viewMap).concat([
@@ -50,6 +52,7 @@ document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
     "variables-view",
     "tickets-view",
     "billing-view",
+    "ticket-chat-view"
   ]);
 
   const activeViewEl = document.getElementById(viewMap[view]);
@@ -135,6 +138,23 @@ document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
       renderAuditView?.();
       break;
 
+    case "logs":
+      document.getElementById(viewMap.logs).style.display = "block";
+      if (typeof LogsView !== "undefined" && !LogsView.container) LogsView.init();
+      break;
+
+    case "ticket-chat":
+      document.getElementById(viewMap["ticket-chat"]).style.display = "block";
+      // Restaurar estado desde localStorage (necesario en F5 / recargas)
+      if (!window.currentChatTicketId) {
+          window.currentChatTicketId = localStorage.getItem('currentChatTicketId') || null;
+          window.currentChatTicketBackView = localStorage.getItem('currentChatTicketBackView') || 'tickets';
+      }
+      if (typeof renderTicketChatView === 'function') {
+          renderTicketChatView();
+      }
+      break;
+
   }
 
   window.onViewChanged?.(view);
@@ -209,6 +229,11 @@ async function loadAssistants(preserveSelection = true) {
   data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   assistants = data;
+  window.assistants = data;
+
+  if (typeof renderClientCards === 'function' && document.getElementById('clients-view')?.style.display === 'block') {
+      renderClientCards();
+  }
 
   const detailEl = document.getElementById("assistant-detail");
   const isDetailOpen = detailEl && detailEl.style.display === "block";

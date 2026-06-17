@@ -86,6 +86,9 @@
         <div class="sidebar-item" data-view="audit">
           <i class="bi bi-clipboard-data"></i><span>Auditoría</span>
         </div>
+        <div class="sidebar-item" data-view="logs">
+          <i class="bi bi-terminal"></i><span>Logs</span>
+        </div>
         <div class="sidebar-item" data-view="assistants">
           <i class="bi bi-cpu"></i><span>Asistentes</span>
         </div>
@@ -128,6 +131,10 @@
 
       <div class="sidebar-item" data-view="audit" title="Auditoría">
         <i class="bi bi-clipboard-data"></i>
+      </div>
+
+      <div class="sidebar-item" data-view="logs" title="Logs del Sistema">
+        <i class="bi bi-terminal"></i>
       </div>
 
       <div class="sidebar-item" data-view="assistants" title="Asistentes">
@@ -183,9 +190,12 @@
       <div id="billing-view" class="grow overflow-auto p-6"></div>
       <!-- AUDITORÍA -->
       <div id="audit-view" class="grow overflow-auto p-6"></div>
-<!-- VARIABLES -->
+      <!-- LOGS -->
+      <div id="logs-view" class="grow overflow-auto p-6" style="display:none;"></div>
+      <!-- VARIABLES -->
       <div id="variables-view" class="grow overflow-auto p-6"></div>
-      <!-- FIX: Se eliminó webchat-view — feature removida, el archivo JS no existía (404) -->
+      <!-- TICKET CHAT -->
+      <div id="ticket-chat-view" class="grow overflow-auto p-0" style="display:none; height: 100%;"></div>
     </div>
   </div>
 
@@ -402,6 +412,7 @@
 
   <!-- JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/core/api.js" defer></script>
   <script src="/core/utils.js" defer></script>
   <script src="/core/render.js" defer></script>
@@ -412,6 +423,7 @@
   <script src="/views/tickets-view.js" defer></script>
   <script src="/views/billing-view.js" defer></script>
   <script src="/views/audit-view.js" defer></script>
+  <script src="/views/logs-view.js" defer></script>
   <script src="/views/variables-view.js" defer></script>
   <script src="/views/dashboard-view.js" defer></script>
   <script src="/core/deploy-template.js" defer></script>
