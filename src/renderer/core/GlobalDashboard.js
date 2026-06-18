@@ -19,7 +19,7 @@ async function renderDashboard() {
   // Si la estructura ya existe, solo parchear
   if (document.getElementById("dash-projects-count")) {
     patchDashboard();
-    Promise.all([window.api.getClients(), window.api.getTickets()])
+    Promise.all([window.api.getClients(), window.api.getTicketsMeta()])
       .then(([c, t]) => { window.clientsData = c; window.ticketsData = t; patchDashboard(); })
       .catch(() => { });
     return;
@@ -29,7 +29,7 @@ async function renderDashboard() {
   buildDashboard(dash, window.clientsData || [], window.ticketsData || []);
 
   // Refrescar en background
-  Promise.all([window.api.getClients(), window.api.getTickets()])
+  Promise.all([window.api.getClients(), window.api.getTicketsMeta()])
     .then(([c, t]) => { window.clientsData = c; window.ticketsData = t; patchDashboard(); })
     .catch(console.error);
 }
@@ -51,6 +51,71 @@ function buildPlanBars(planCounts, total) {
   }).join('');
 }
 
+
+function buildInfraDist(clients, assistants) {
+  const linkedIds = new Set();
+  
+  for (const c of clients) {
+    if (Array.isArray(c.railway_project_ids)) {
+      c.railway_project_ids.forEach(id => id && linkedIds.add(String(id)));
+    }
+  }
+
+  const total      = assistants.length;
+  // Un proyecto está vinculado si su ID está en la lista de algún cliente
+  const linked     = assistants.filter(a => linkedIds.has(String(a.id))).length;
+  const orphanProj = total - linked;
+
+  const totalCli   = clients.length;
+  
+  // Un cliente tiene instancia SOLO si al menos uno de sus IDs existe realmente en los asistentes de Railway
+  const withInst   = clients.filter(c => {
+    if (!Array.isArray(c.railway_project_ids)) return false;
+    return c.railway_project_ids.some(projId => assistants.some(a => String(a.id) === String(projId)));
+  }).length;
+  
+  const orphanCli  = totalCli - withInst;
+
+  const bar = (count, max, color) => {
+    const pct = max > 0 ? Math.round(count / max * 100) : 0;
+    return `<div class="svc-bar-track"><div class="bar-fill" style="width:${pct}%;background:${color};"></div></div>`;
+  };
+
+  return `
+    <div class="x-small text-dim font-bold mb-2" style="letter-spacing:.05em">CLIENTES</div>
+    <div class="flex items-center gap-2 mb-1">
+      <span class="indicator-dot" style="background:var(--info);"></span>
+      <div class="svc-dist-label">Total</div>
+      ${bar(totalCli, totalCli, 'var(--info)')}
+      <div class="svc-dist-count">${totalCli}</div>
+    </div>
+    <div class="flex items-center gap-2 mb-3">
+      <span class="indicator-dot" style="background:var(--warning);"></span>
+      <div class="svc-dist-label">Sin instancia</div>
+      ${bar(orphanCli, totalCli, 'var(--warning)')}
+      <div class="svc-dist-count">${orphanCli}</div>
+    </div>
+    <div class="x-small text-dim font-bold mb-2" style="letter-spacing:.05em">PROYECTOS RAILWAY</div>
+    <div class="flex items-center gap-2 mb-1">
+      <span class="indicator-dot" style="background:var(--text-dim);"></span>
+      <div class="svc-dist-label">Total</div>
+      ${bar(total, total, 'var(--text-dim)')}
+      <div class="svc-dist-count">${total}</div>
+    </div>
+    <div class="flex items-center gap-2 mb-1">
+      <span class="indicator-dot" style="background:var(--success);"></span>
+      <div class="svc-dist-label">Vinculados</div>
+      ${bar(linked, total, 'var(--success)')}
+      <div class="svc-dist-count">${linked}</div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="indicator-dot" style="background:var(--error);"></span>
+      <div class="svc-dist-label">Huérfanos</div>
+      ${bar(orphanProj, total, 'var(--error)')}
+      <div class="svc-dist-count">${orphanProj}</div>
+    </div>
+  `;
+}
 
 function buildServicesDist(online, error, total) {
   if (total === 0) return '<div class="kpi-label">Sin servicios registrados</div>';
@@ -99,15 +164,21 @@ function buildDashboard(dash, clients, tickets) {
 
   dash.innerHTML = `
     <div>
-      <div class="view-header">
+      <div class="view-header flex justify-between items-center w-full">
         <div class="view-header-left">
           <h2 class="view-header-title">DASHBOARD</h2>
         </div>
+        <div class="view-header-right">
+          <button class="btn btn-sm btn-outline-light flex items-center gap-2" id="dashboard-refresh">
+            <i class="bi bi-arrow-clockwise"></i>Actualizar
+          </button>
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
-        <div>
+        <!-- Fila 1 (4 columnas en LG) -->
+        <div class="col-span-1">
           <div class="glass-card p-4 h-full rounded flex items-center gap-4 anim-card-enter" style="--si:0">
             <div class="donut-wrapper">
               <svg width="72" height="72" viewBox="0 0 100 100">
@@ -133,7 +204,7 @@ function buildDashboard(dash, clients, tickets) {
           </div>
         </div>
 
-        <div>
+        <div class="col-span-1">
           <div class="glass-card p-4 h-full rounded anim-card-enter" style="--si:1">
             <div class="flex justify-between items-start mb-2">
               <div>
@@ -146,7 +217,7 @@ function buildDashboard(dash, clients, tickets) {
           </div>
         </div>
 
-        <div>
+        <div class="col-span-1">
           <div class="glass-card p-4 h-full rounded anim-card-enter" style="--si:2">
             <div class="flex justify-between items-start mb-2">
               <div>
@@ -159,7 +230,7 @@ function buildDashboard(dash, clients, tickets) {
           </div>
         </div>
 
-        <div>
+        <div class="col-span-1">
           <div class="glass-card p-4 h-full rounded flex flex-col justify-between anim-card-enter" style="--si:3">
             <div class="flex justify-between items-start">
               <div>
@@ -180,8 +251,9 @@ function buildDashboard(dash, clients, tickets) {
           </div>
         </div>
 
-        <div class="md:col-span-2">
-          <div class="glass-card p-4 rounded anim-card-enter" style="--si:4">
+        <!-- Fila 2 (Abonos ocupa 2, los otros 1 y 1) -->
+        <div class="col-span-1 md:col-span-2 lg:col-span-2">
+          <div class="glass-card p-4 h-full rounded anim-card-enter flex flex-col justify-center" style="--si:4">
             <div class="flex justify-between items-center">
               <div>
                 <div class="kpi-label">Abonos Mensuales</div>
@@ -192,23 +264,17 @@ function buildDashboard(dash, clients, tickets) {
           </div>
         </div>
 
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        <div class="glass-card p-4 rounded anim-card-enter" style="--si:5">
-          <h6 class="mb-4 font-bold">Distribucion Servicios</h6>
-          <div id="dash-services-dist">${buildServicesDist(onlineServices, errorServices, totalServices)}</div>
+        <div class="col-span-1">
+          <div class="glass-card p-4 h-full rounded anim-card-enter" style="--si:5">
+            <h6 class="mb-4 font-bold">Distribucion Servicios</h6>
+            <div id="dash-services-dist">${buildServicesDist(onlineServices, errorServices, totalServices)}</div>
+          </div>
         </div>
 
-        <div class="glass-card p-4 rounded anim-card-enter" style="--si:6">
-          <h6 class="mb-4 font-bold">Acciones Rapidas</h6>
-          <div class="grid gap-2">
-            <button class="btn btn-sm btn-outline-light text-left" onclick="navigate('clients')">
-              <i class="bi bi-people mr-2"></i>Gestionar Clientes
-            </button>
-            <button class="btn btn-sm btn-outline-light text-left" id="dashboard-refresh">
-              <i class="bi bi-arrow-clockwise mr-2"></i>Actualizar</button>
+        <div class="col-span-1">
+          <div class="glass-card p-4 h-full rounded anim-card-enter" style="--si:6">
+            <h6 class="mb-4 font-bold">Infraestructura</h6>
+            <div id="dash-infra-dist">${buildInfraDist(clients, assistants)}</div>
           </div>
         </div>
 
@@ -224,7 +290,7 @@ function buildDashboard(dash, clients, tickets) {
       const [, c, t] = await Promise.all([
         loadAssistants(false),
         window.api.getClients(),
-        window.api.getTickets()
+        window.api.getTicketsMeta()
       ]);
       window.clientsData = c;
       window.ticketsData = t;
@@ -310,4 +376,7 @@ function patchDashboard() {
 
   const svcDist = document.getElementById('dash-services-dist');
   if (svcDist) svcDist.innerHTML = buildServicesDist(onlineServices, errorServices, totalServices);
+
+  const infraDist = document.getElementById('dash-infra-dist');
+  if (infraDist) infraDist.innerHTML = buildInfraDist(clients, assistants);
 }

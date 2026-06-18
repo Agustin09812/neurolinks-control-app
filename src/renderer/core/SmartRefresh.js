@@ -119,7 +119,7 @@ const _ch = {
       try {
         const [c, t] = await Promise.all([
           window.api.getClients().catch(() => null),
-          window.api.getTickets().catch(() => null)
+          window.api.getTicketsMeta().catch(() => null)
         ]);
         if (v !== this._ver) return;
         if (c) window.clientsData = c;

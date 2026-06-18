@@ -85,6 +85,10 @@ async function renderClientsView() {
                             <button class="btn btn-outline-light btn-sm" onclick="exportClientsToCSV()">
                                 <i class="bi bi-file-earmark-excel"></i><span class="btn-clients-label ml-1">Exportar</span>
                             </button>
+                            <button class="btn btn-outline-light btn-sm" onclick="document.getElementById('csv-import-input').click()">
+                                <i class="bi bi-upload"></i><span class="btn-clients-label ml-1">Importar</span>
+                            </button>
+                            <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="importClientsFromCSV(this)">
                             <button class="btn btn-outline-light btn-sm" id="btn-new-client">
                                 <i class="bi bi-person-plus"></i><span class="btn-clients-label ml-1">Nuevo</span>
                             </button>
@@ -400,6 +404,12 @@ function renderClientCards() {
             if (ticketCount > 0) _clientsWithTickets.add(c.id);
             else _clientsWithTickets.delete(c.id);
         }
+    });
+
+    // Re-order DOM to match filtered array order (newest first)
+    filtered.forEach(c => {
+        const card = grid.querySelector(`.client-card[data-id="${c.id}"]`);
+        if (card?.parentElement) grid.appendChild(card.parentElement);
     });
 
     _updateClientsSidebarDot();
@@ -1140,4 +1150,98 @@ function exportClientsToCSV() {
     link.click();
     document.body.removeChild(link);
     showToast("Reporte de clientes generado", "success");
+}
+
+async function importClientsFromCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+
+    const text = await file.text();
+    // Strip BOM if present
+    const clean = text.replace(/^\uFEFF/, '');
+    const lines = clean.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) {
+        showToast('El archivo CSV está vacío o no tiene datos', 'warning');
+        return;
+    }
+
+    // Parse quoted CSV fields
+    const parseRow = (line) => {
+        const result = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+                if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+                else inQuotes = !inQuotes;
+            } else if (ch === ',' && !inQuotes) {
+                result.push(cur); cur = '';
+            } else {
+                cur += ch;
+            }
+        }
+        result.push(cur);
+        return result;
+    };
+
+    const headers = parseRow(lines[0]).map(h => h.toLowerCase().trim());
+    const idxId    = headers.indexOf('id');
+    const idxNom   = headers.indexOf('nombre');
+    const idxEmp   = headers.indexOf('empresa');
+    const idxEmail = headers.indexOf('email');
+    const idxTel   = headers.indexOf('telefono');
+    const idxPlan  = headers.indexOf('plan');
+    const idxVenc  = headers.indexOf('vencimiento');
+
+    if (idxNom === -1) {
+        showToast('El CSV no tiene columna "Nombre"', 'danger');
+        return;
+    }
+
+    const existingIds = new Set(allClients.map(c => c.id));
+    const VALID_PLANS = ['Standard', 'Premium', 'Enterprise', 'Baja'];
+    let created = 0, updated = 0, errors = 0;
+
+    window.showActionSpinner?.('Importando clientes...');
+
+    for (let i = 1; i < lines.length; i++) {
+        const cols = parseRow(lines[i]);
+        const get  = (idx) => idx !== -1 ? (cols[idx] || '').trim() : '';
+
+        const nombre = get(idxNom);
+        if (!nombre || nombre === '-') continue;
+
+        const id        = get(idxId);
+        const empresa   = get(idxEmp) === '-' ? '' : get(idxEmp);
+        const email     = get(idxEmail) === '-' ? '' : get(idxEmail);
+        const telefono  = get(idxTel) === '-' ? '' : get(idxTel);
+        const venc      = get(idxVenc) === '-' ? '' : get(idxVenc);
+        const plan      = VALID_PLANS.includes(get(idxPlan)) ? get(idxPlan) : 'Standard';
+
+        const payload = { nombre, empresa: empresa || null, email: email || null, telefono: telefono || null, plan, vencimiento: venc || null };
+
+        try {
+            if (id && existingIds.has(id)) {
+                await window.api.updateClient(id, payload);
+                updated++;
+            } else {
+                await window.api.createClient(payload);
+                created++;
+            }
+        } catch (err) {
+            console.error(`[Import] Error en fila ${i + 1}:`, err);
+            errors++;
+        }
+    }
+
+    window.hideActionSpinner?.();
+    await loadClientsData();
+
+    const parts = [];
+    if (created) parts.push(`${created} creado${created > 1 ? 's' : ''}`);
+    if (updated) parts.push(`${updated} actualizado${updated > 1 ? 's' : ''}`);
+    if (errors)  parts.push(`${errors} con error`);
+    showToast(`Importación completada: ${parts.join(', ')}`, errors ? 'warning' : 'success');
 }
