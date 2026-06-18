@@ -1,5 +1,6 @@
 
 let allPayments = [];
+let allAdmins = [];
 let billingFilters = {
     client: "",
     method: "",
@@ -20,12 +21,11 @@ async function renderBillingView() {
     view.style.display = "block";
     view.innerHTML = `
         <div class="animate-fade">
-            <div class="flex flex-wrap justify-between items-center gap-2 mb-6">
-                <div>
-                    <h2 class="font-bold mb-0">CONTROL DE PAGOS</h2>
-                    <p class="text-sm mb-0 text-dim">Gestión financiera y facturación histórica</p>
+            <div class="view-header">
+                <div class="view-header-left">
+                    <h2 class="view-header-title">COBROS</h2>
                 </div>
-                <div class="flex gap-2 flex-wrap">
+                <div class="view-header-controls">
                     <button class="btn btn-outline-light btn-sm" onclick="openNewPaymentModal()">
                         <i class="bi bi-plus-lg mr-2"></i>Nueva Factura
                     </button>
@@ -92,9 +92,11 @@ async function renderBillingView() {
                             <tr>
                                 <th class="ps-4">Fecha</th>
                                 <th>Cliente</th>
-                                <th>Concepto</th>
-                                <th>Monto</th>
-                                <th>Método</th>
+                                <th>Plan / Concepto</th>
+                                <th>Bruto</th>
+                                <th>Comisión MP</th>
+                                <th>Neto</th>
+                                <th>Adjudicado a</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
@@ -163,6 +165,7 @@ async function renderBillingView() {
 
 async function loadBillingData() {
     try {
+        allAdmins = await window.api.getAdmins() || [];
         allPayments = await window.api.getAllPayments() || [];
         applyBillingFilters();
     } catch (err) {
@@ -178,8 +181,8 @@ async function refreshBilling() {
 function getFilteredPayments() {
     return allPayments.filter(p => {
         if (billingFilters.client && !p.clientes?.nombre.toLowerCase().includes(billingFilters.client.toLowerCase())) return false;
-        if (billingFilters.method && p.metodo !== billingFilters.method) return false;
-        const pDate = new Date(p.fecha);
+        if (billingFilters.method && billingFilters.method !== "Mercado Pago") return false; // Todo es MP ahora
+        const pDate = new Date(p.fecha_aprobacion);
         if (billingFilters.dateStart && pDate < new Date(billingFilters.dateStart)) return false;
         if (billingFilters.dateEnd) {
             const end = new Date(billingFilters.dateEnd);
@@ -202,21 +205,35 @@ function applyBillingFilters() {
     const filtered = getFilteredPayments();
 
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-white/50">No se encontraron pagos con estos filtros</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-white/50">No se encontraron pagos con estos filtros</td></tr>';
         return;
     }
 
     filtered.forEach(p => {
         const tr = document.createElement("tr");
+        
+        let comisionMp = p.monto - (p.net_amount || p.monto);
+        let montoNeto = p.net_amount || p.monto;
+
+        // Admin selector
+        let assignedAdminId = p.mp_vendedores?.user_id;
+        let adminOptions = '<option value="">Sin Asignar</option>';
+        allAdmins.forEach(adm => {
+            let selected = (assignedAdminId === adm.auth_user_id) ? "selected" : "";
+            adminOptions += `<option value="${adm.auth_user_id}" ${selected}>${escapeHtml(adm.nombre || adm.email)}</option>`;
+        });
+
         tr.innerHTML = `
-            <td class="ps-4 text-white/50">${new Date(p.fecha).toLocaleDateString()}</td>
+            <td class="ps-4 text-white/50">${new Date(p.fecha_aprobacion).toLocaleDateString()}</td>
             <td><span class="font-bold text-accent-clients">${p.clientes ? escapeHtml(p.clientes.nombre) : 'Sin Cliente'}</span></td>
-            <td class="text-sm opacity-75">${escapeHtml(p.concepto)}</td>
-            <td><span class="badge badge-status-success font-monospace">$${escapeHtml(String(p.monto))}</span></td>
-            <td class="text-center">
-                <span class="badge badge-status-secondary rounded-full x-small px-2 py-1">
-                    ${escapeHtml(p.metodo)}
-                </span>
+            <td class="text-sm opacity-75">Suscripción</td>
+            <td><span class="badge badge-status-secondary font-monospace">$${p.monto.toFixed(2)}</span></td>
+            <td><span class="text-danger font-monospace text-xs">-$${comisionMp.toFixed(2)}</span></td>
+            <td><span class="badge badge-status-success font-monospace">$${montoNeto.toFixed(2)}</span></td>
+            <td>
+                <select class="form-select form-select-sm text-xs bg-dark text-white border-secondary" style="max-width: 150px" onchange="assignPaymentAdmin('${p.id}', this.value)">
+                    ${adminOptions}
+                </select>
             </td>
             <td class="text-center">
                 <button class="btn btn-link text-danger p-0" onclick="deleteGlobalPayment('${p.id}')">
@@ -226,6 +243,17 @@ function applyBillingFilters() {
         `;
         tbody.appendChild(tr);
     });
+}
+
+async function assignPaymentAdmin(paymentId, adminId) {
+    try {
+        await window.api.assignPaymentAdmin(paymentId, adminId);
+        showToast("Pago adjudicado", "success");
+        // No recargamos todo para no perder el scroll, ya se actualizó en DB
+    } catch (err) {
+        showToast("Error al adjudicar pago", "danger");
+        console.error(err);
+    }
 }
 
 async function openNewPaymentModal() {
@@ -290,14 +318,28 @@ function exportBillingToCSV() {
     // FIX: Escapar comas y comillas para evitar corrupción del CSV
     const escapeCSV = (val) => `"${String(val).replace(/"/g, '""')}"`;
 
-    const headers = ["Fecha", "Cliente", "Concepto", "Monto", "Método"];
-    const rows = listToExport.map(p => [
-        escapeCSV(new Date(p.fecha).toLocaleDateString()),
-        escapeCSV(p.clientes ? p.clientes.nombre : 'Sin Cliente'),
-        escapeCSV(p.concepto),
-        p.monto,
-        escapeCSV(p.metodo)
-    ]);
+    const headers = ["Fecha", "Cliente", "Concepto", "Monto Bruto", "Comisión MP", "Monto Neto", "Método", "Adjudicado A"];
+    const rows = listToExport.map(p => {
+        let comisionMp = p.monto - (p.net_amount || p.monto);
+        let montoNeto = p.net_amount || p.monto;
+        let assignedAdminId = p.mp_vendedores?.user_id;
+        let adjudicado = "Sin Asignar";
+        if (assignedAdminId) {
+            let adm = allAdmins.find(a => a.auth_user_id === assignedAdminId);
+            if (adm) adjudicado = adm.nombre || adm.email;
+        }
+
+        return [
+            escapeCSV(new Date(p.fecha_aprobacion).toLocaleDateString()),
+            escapeCSV(p.clientes ? p.clientes.nombre : 'Sin Cliente'),
+            escapeCSV("Suscripción"),
+            p.monto.toFixed(2),
+            comisionMp.toFixed(2),
+            montoNeto.toFixed(2),
+            escapeCSV("Mercado Pago"),
+            escapeCSV(adjudicado)
+        ];
+    });
 
     let csvContent = "data:text/csv;charset=utf-8,﻿"
         + headers.join(",") + "\n"

@@ -139,6 +139,33 @@ router.get('/tickets/stream', (req, res) => {
 
 const _sseLogsClients = new Set();
 const _sseClientsList = new Set();
+const _ssePaymentsClients = new Set();
+
+function _broadcastPaymentEvent(payload) {
+  const data = `data: ${JSON.stringify(payload)}\n\n`;
+  for (const res of _ssePaymentsClients) {
+    try { res.write(data); } catch (_) { _ssePaymentsClients.delete(res); }
+  }
+}
+
+router.get('/payments/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  res.write(': connected\n\n');
+
+  _ssePaymentsClients.add(res);
+
+  const keepAlive = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch (_) { clearInterval(keepAlive); }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    _ssePaymentsClients.delete(res);
+  });
+});
 
 function _broadcastClientEvent(payload) {
   const data = `data: ${JSON.stringify(payload)}\n\n`;
@@ -560,6 +587,21 @@ router.delete('/payments/:id', async (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.patch('/payments/:id/assign', async (req, res) => {
+  const adminId = sanitizeStr(req.body.adminId, 200) || null;
+  try {
+    const result = await supabaseService.assignPaymentAdmin(req.params.id, adminId);
+    await supabaseService.logAction('Asignar Pago', `Pago ${req.params.id} asignado al administrador ${adminId || 'Ninguno'}`, 'pagos', req.params.id);
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Admins
+router.get('/admins', async (req, res) => {
+  try { res.json(await supabaseService.getAdmins()); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.use('/api', router);
 
 // --------------------------------------------------
@@ -598,6 +640,15 @@ async function startBackgroundMonitoring() {
       })
       .subscribe(status => {
         if (status === 'SUBSCRIBED') console.log('[Realtime] clientes channel activo');
+      });
+
+    realtimeClient
+      .channel('pagos-ingresos-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mp_pagos_ingresos' }, payload => {
+        _broadcastPaymentEvent({ type: payload.eventType, payment: payload.new || payload.old });
+      })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') console.log('[Realtime] pagos channel activo');
       });
   } catch (e) {
     console.error('[Realtime] Error iniciando suscripcion:', e.message);

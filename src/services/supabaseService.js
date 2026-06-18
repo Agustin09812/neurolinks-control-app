@@ -466,19 +466,19 @@ const supabaseService = {
      */
     async getClientPayments(clientId) {
         const { data, error } = await supabase2
-            .from('pagos')
+            .from('mp_pagos_ingresos')
             .select('*')
             .eq('cliente_id', clientId)
-            .order('fecha', { ascending: false });
+            .order('fecha_aprobacion', { ascending: false });
         if (error) throw error;
         return data;
     },
 
     async getAllPayments() {
         const { data, error } = await supabase2
-            .from('pagos')
-            .select('*, clientes(nombre)')
-            .order('fecha', { ascending: false });
+            .from('mp_pagos_ingresos')
+            .select('*, clientes(nombre), mp_vendedores(user_id)')
+            .order('fecha_aprobacion', { ascending: false });
         if (error) throw error;
         return data;
     },
@@ -493,9 +493,35 @@ const supabaseService = {
         return data;
     },
 
+    async assignPaymentAdmin(paymentId, adminId) {
+        let vendedorIdVal = null;
+        if (adminId) {
+            const { data: vend } = await supabase2.from('mp_vendedores').select('id').eq('user_id', adminId).single();
+            if (vend) vendedorIdVal = vend.id;
+        }
+        const { data, error } = await supabase2
+            .from('mp_pagos_ingresos')
+            .update({ vendedor_id: vendedorIdVal })
+            .eq('id', paymentId)
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    },
+
+    async getAdmins() {
+        // Obtenemos a los clientes marcados como admin para llenar la lista
+        const { data, error } = await supabase2
+            .from('clientes')
+            .select('auth_user_id, nombre, email')
+            .eq('is_admin', true);
+        if (error) throw error;
+        return data;
+    },
+
     async deletePayment(id) {
         const { error } = await supabase2
-            .from('pagos')
+            .from('mp_pagos_ingresos')
             .delete()
             .eq('id', id);
         if (error) throw error;

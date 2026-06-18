@@ -156,14 +156,19 @@ window.api = {
     _post(`/api/projects/${projectId}/unlink`, {}),
 
   // --------------------------------------------------
-  // BILLING
+  // BILLING & ADMINS
   // --------------------------------------------------
+  getAdmins: () => _fetch('/api/admins'),
+
   getClientPayments: (clientId) =>
     _fetch(`/api/clients/${clientId}/payments`),
 
   getAllPayments: () => _fetch('/api/payments'),
 
   createPayment: (paymentData) => _post('/api/payments', paymentData),
+
+  assignPaymentAdmin: (id, adminId) =>
+    _fetch(`/api/payments/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ adminId }) }),
 
   deletePayment: (id) =>
     _fetch(`/api/payments/${id}`, { method: 'DELETE' }),

@@ -170,6 +170,10 @@ function renderNotificationsPanel() {
 // --------------------------------------------------
 // SSE REALTIME NOTIFICATIONS (FASE 3)
 // --------------------------------------------------
+const _sessionLogCounts = { Error: 0, Warning: 0 };
+const _pendingLogUpdates = new Set();
+let _logDebounceTimer = null;
+
 function initRealtimeLogs() {
   try {
     const logsEventSource = new EventSource('/api/logs/stream');
@@ -179,18 +183,57 @@ function initRealtimeLogs() {
         const payload = JSON.parse(event.data);
         if (payload.type === 'INSERT' && payload.log) {
           const log = payload.log;
+          
+          // Agrupar niveles
+          const level = log.level === 'WARN' ? 'Warning' : (log.level === 'ERROR' ? 'Error' : log.level);
 
-          if (log.level === 'ERROR') {
-            const msg = `[${log.service}] ${log.message} - Proy: ${log.project_id || 'Sistema'}`;
-            
-            if(typeof window.showToast === 'function') {
-                window.showToast(msg, 'error', 8000); 
-            }
-            
+          if (level === 'Error' || level === 'Warning') {
+            _sessionLogCounts[level] = (_sessionLogCounts[level] || 0) + 1;
+            _pendingLogUpdates.add(level);
+
             const btnRefresh = document.getElementById('btn-refresh-logs');
-            if(btnRefresh && document.getElementById('logs-view').style.display !== 'none') {
+            if (btnRefresh && document.getElementById('logs-view').style.display !== 'none') {
                 btnRefresh.click();
             }
+
+            clearTimeout(_logDebounceTimer);
+            _logDebounceTimer = setTimeout(() => {
+                for (const lvl of _pendingLogUpdates) {
+                    const count = _sessionLogCounts[lvl];
+                    const msg = `${count} errores de nivel ${lvl} detectados`;
+                    const notifType = lvl === 'Error' ? 'error' : 'warning';
+                    const icon = lvl === 'Error' ? 'bi-x-octagon-fill' : 'bi-exclamation-triangle-fill';
+                    
+                    // Remover notificacion vieja del mismo nivel para que no se llene el panel
+                    const oldIdx = notifications.findIndex(n => n.key === `agg-log-${lvl}`);
+                    if (oldIdx !== -1) notifications.splice(oldIdx, 1);
+                    
+                    // Añadir la nueva notificacion agrupada
+                    const notifObj = { 
+                        id: crypto.randomUUID(), 
+                        type: notifType, 
+                        title: `Alertas del Sistema`, 
+                        message: msg, 
+                        date: new Date(), 
+                        read: false,
+                        key: `agg-log-${lvl}`
+                    };
+                    
+                    notifications.unshift(notifObj);
+                    if (notifications.length > NOTIFICATIONS_CAP) notifications.length = NOTIFICATIONS_CAP;
+                    
+                    updateNotificationsBadge();
+                    if (document.getElementById("notificationsCanvas")?.classList.contains("show")) {
+                        renderNotificationsPanel();
+                    }
+                    
+                    // Mostrar Toast
+                    if(typeof window.showToast === 'function') {
+                        window.showToast(`<i class="bi ${icon} mr-2"></i>${msg}`, notifType, 6000);
+                    }
+                }
+                _pendingLogUpdates.clear();
+            }, 1000);
           }
         }
       } catch (err) {
@@ -209,3 +252,23 @@ function initRealtimeLogs() {
 
 // Inicializar al cargar el panel
 initRealtimeLogs();
+
+function initRealtimePayments() {
+  try {
+    const paymentsEventSource = new EventSource('/api/payments/stream');
+    paymentsEventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'INSERT') {
+            if (typeof window.showToast === 'function') {
+                window.showToast("Nuevo pago recibido de Mercado Pago", "success");
+            }
+            if (typeof window.refreshBilling === 'function' && document.getElementById('billing-view')?.style.display !== 'none') {
+                window.refreshBilling();
+            }
+        }
+      } catch (err) { }
+    };
+  } catch (err) { }
+}
+initRealtimePayments();

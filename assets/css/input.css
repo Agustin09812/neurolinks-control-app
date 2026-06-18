@@ -746,7 +746,6 @@ body[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(0, 1
 input::placeholder { color: rgba(175, 200, 232, 0.35) !important; }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
   opacity: 0.6;
 }
 

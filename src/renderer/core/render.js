@@ -44,6 +44,7 @@ document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
     clients: "clients-view",
     audit: "audit-view",
     logs: "logs-view",
+    billing: "billing-view",
     "ticket-chat": "ticket-chat-view",
   };
 
@@ -143,6 +144,11 @@ document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
       if (typeof LogsView !== "undefined" && !LogsView.container) LogsView.init();
       break;
 
+    case "billing":
+      document.getElementById(viewMap.billing).style.display = "block";
+      renderBillingView?.();
+      break;
+
     case "ticket-chat":
       document.getElementById(viewMap["ticket-chat"]).style.display = "block";
       // Restaurar estado desde localStorage (necesario en F5 / recargas)
@@ -174,22 +180,46 @@ function clearActiveServiceMenu() {
 // --------------------------------------------------
 // TOAST NOTIFICATIONS (UNIFICADO)
 // --------------------------------------------------
-function showToast(message, type = "success", id = null) {
+let _globalToastAggregator = {};
+
+function showToast(message, type = "success", customId = null) {
   const container = document.querySelector(".toast-container");
   if (!container) { alert(message); return; }
 
-  const toastId = id || ("toast-" + Date.now());
+  // Use a hash-like key to group identical messages
+  // We use btoa safely by escaping first to avoid unicode errors
+  const aggKey = `${type}-${message}`;
+  const safeBase64 = btoa(unescape(encodeURIComponent(aggKey))).replace(/[^a-zA-Z0-9]/g, '');
+  const toastId = customId || ("toast-" + safeBase64);
+
+  if (!_globalToastAggregator[toastId]) {
+      _globalToastAggregator[toastId] = { count: 1, timer: null };
+  } else {
+      _globalToastAggregator[toastId].count++;
+  }
+
+  const aggData = _globalToastAggregator[toastId];
+  if (aggData.timer) clearTimeout(aggData.timer);
+  
+  // Clean up memory and reset count after 8 seconds of inactivity
+  aggData.timer = setTimeout(() => {
+      delete _globalToastAggregator[toastId];
+  }, 8000);
+
+  const displayMessage = aggData.count > 1 ? `[${aggData.count}] ${message}` : message;
+
   const icon = type === "success" ? "bi-check-circle-fill" : (type === "warning" ? "bi-exclamation-triangle-fill" : "bi-exclamation-circle-fill");
   const bgClass = type === 'danger' ? 'toast-danger' : (type === 'warning' ? 'toast-warning' : 'toast-themed');
 
-  // If a toast with this id already exists and is visible, update it in place
-  if (id) {
-    const existing = document.getElementById(toastId);
-    if (existing) {
-      const body = existing.querySelector('.toast-body');
-      if (body) body.innerHTML = `<i class="bi ${icon}"></i><div>${message}</div>`;
-      return;
-    }
+  const existing = document.getElementById(toastId);
+  if (existing) {
+    const body = existing.querySelector('.toast-body');
+    if (body) body.innerHTML = `<i class="bi ${icon}"></i><div>${displayMessage}</div>`;
+    
+    // Refresh the bootstrap toast timer so it stays visible
+    const bsToast = bootstrap.Toast.getInstance(existing) || new bootstrap.Toast(existing, { delay: 5000 });
+    bsToast.show();
+    return;
   }
 
   const toastHtml = `
@@ -197,7 +227,7 @@ function showToast(message, type = "success", id = null) {
       <div class="flex items-center">
         <div class="toast-body flex items-center gap-2">
           <i class="bi ${icon}"></i>
-          <div>${message}</div>
+          <div>${displayMessage}</div>
         </div>
         <button type="button" class="btn-close btn-close-white mr-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
       </div>
@@ -212,7 +242,9 @@ function showToast(message, type = "success", id = null) {
   const bsToast = new bootstrap.Toast(toastEl, { delay: 5000 });
   bsToast.show();
 
-  toastEl.addEventListener("hidden.bs.toast", () => toastEl.remove());
+  toastEl.addEventListener("hidden.bs.toast", () => {
+      toastEl.remove();
+  });
 }
 
 // --------------------------------------------------
@@ -1492,7 +1524,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadAssistants(false);
   lastAssistantsHash = generateAssistantsHash();
   let savedView = localStorage.getItem("activeView") || "dashboard";
-  if (savedView === "tickets" || savedView === "billing") savedView = "clients";
+  if (savedView === "tickets") savedView = "clients";
   navigate(savedView);
   document.body.classList.remove("app-preload");
   startAutoRefresh();
