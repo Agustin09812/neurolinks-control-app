@@ -65,17 +65,36 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'src/renderer/login.html'));
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
+  const username = sanitizeStr(req.body.username, 200);
   const password = sanitizeStr(req.body.password, 200);
-  if (!password) return res.status(400).json({ ok: false, error: 'Contraseña requerida' });
-  if (password === process.env.ADMIN_PASSWORD) {
+
+  if (!password) {
+    return res.status(400).json({ ok: false, error: 'Contraseña requerida' });
+  }
+
+  // 1. Intentar validar contra la tabla de base de datos
+  let isValid = false;
+  if (username) {
+    isValid = await supabaseService.validateAdminLogin(username, password);
+  }
+
+  // 2. Fallback si no es válido (solo permitido en desarrollo local)
+  const isLocalDev = process.env.NODE_ENV !== 'production';
+  if (!isValid && isLocalDev && username === 'admin' && password === process.env.ADMIN_PASSWORD) {
+    isValid = true;
+  }
+
+  if (isValid) {
     req.session.authenticated = true;
+    req.session.username = username || 'admin';
     if (req.body.rememberMe) {
       req.session.cookie.maxAge = 365 * 24 * 60 * 60 * 1000; // 1 year (effectively permanent)
     }
     return res.json({ ok: true });
   }
-  res.status(401).json({ ok: false });
+
+  res.status(401).json({ ok: false, error: 'Usuario o contraseña incorrectos' });
 });
 
 app.post('/logout', (req, res) => {
@@ -478,12 +497,14 @@ router.get('/tickets', async (req, res) => {
 router.post('/tickets', async (req, res) => {
   const titulo = sanitizeStr(req.body.titulo, 200);
   const cliente_id = sanitizeStr(req.body.cliente_id, 200);
+  const project_id = sanitizeStr(req.body.project_id, 200) || null;
   if (!titulo) return res.status(400).json({ error: 'El título es requerido' });
   if (!cliente_id) return res.status(400).json({ error: 'El cliente es requerido' });
 
   const ticketData = {
     titulo,
     cliente_id,
+    project_id,
     descripcion: sanitizeStr(req.body.descripcion, 5000) || null,
     estado: 'Abierto',
   };
@@ -502,6 +523,7 @@ router.patch('/tickets/:id', async (req, res) => {
   }
   if (req.body.descripcion !== undefined) ticketData.descripcion = sanitizeStr(req.body.descripcion, 5000) || null;
   if (req.body.cliente_id !== undefined) ticketData.cliente_id = sanitizeStr(req.body.cliente_id, 200);
+  if (req.body.project_id !== undefined) ticketData.project_id = sanitizeStr(req.body.project_id, 200) || null;
   if (req.body.estado !== undefined && VALID_TICKET_ESTADOS.includes(req.body.estado)) ticketData.estado = req.body.estado;
   if (req.body.read_admin_count !== undefined) {
     const n = parseInt(req.body.read_admin_count);
@@ -602,6 +624,10 @@ router.get('/admins', async (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.get('/me', (req, res) => {
+  res.json({ username: req.session.username || 'admin' });
+});
+
 app.use('/api', router);
 
 // --------------------------------------------------
@@ -611,6 +637,20 @@ app.use('/api', router);
 let lastAssistantsState = new Map();
 
 async function startBackgroundMonitoring() {
+  // Initial synchronization for auto-linking and backoffice tokens
+  try {
+    console.log('[Sync] Running initial database synchronization...');
+    const linkCount = await supabaseService.autoLinkClientProjects();
+    if (linkCount > 0) console.log(`[Sync] Automatically linked ${linkCount} pending project(s)`);
+
+    const tokenCount = await supabaseService.syncClientsBackofficeTokens();
+    if (tokenCount > 0) console.log(`[Sync] Automatically updated tokens for ${tokenCount} client(s)`);
+
+    console.log('[Sync] Initial synchronization completed successfully');
+  } catch (syncErr) {
+    console.error('[Sync] Error during initial synchronization:', syncErr.message);
+  }
+
   // Supabase Realtime: push INSERT events on tickets to SSE clients
   try {
     const { createClient } = require('@supabase/supabase-js');
@@ -635,8 +675,18 @@ async function startBackgroundMonitoring() {
 
     realtimeClient
       .channel('clientes-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, payload => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, async payload => {
         _broadcastClientEvent({ type: payload.eventType, client: payload.new || payload.old });
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          try {
+            const count = await supabaseService.autoLinkClientProjects();
+            if (count > 0) {
+              console.log(`[Auto-Link] Realtime triggered: Linked ${count} new project(s) due to client change`);
+            }
+          } catch (linkErr) {
+            console.error('[Auto-Link] Realtime trigger failed:', linkErr.message);
+          }
+        }
       })
       .subscribe(status => {
         if (status === 'SUBSCRIBED') console.log('[Realtime] clientes channel activo');

@@ -2339,3 +2339,30 @@ body[data-theme="light"] .topbar-brand-name {
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .main-wrapper { padding-bottom: env(safe-area-inset-bottom, 0px); }
 }
+
+/* Sidebar User Avatar Style */
+.sidebar-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0078D4 0%, #00B4D8 100%);
+  color: #ffffff;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.25);
+  user-select: none;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+body[data-theme="light"] .sidebar-user-avatar {
+  background: linear-gradient(135deg, #0057b3 0%, #0090c8 100%);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 87, 179, 0.15);
+}

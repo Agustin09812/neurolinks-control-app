@@ -67,6 +67,17 @@
     </div>
     <div class="offcanvas-body flex flex-col">
 
+      <!-- Mobile Profile Info -->
+      <div class="flex items-center gap-3 px-3 py-2 mb-3" id="offcanvas-user-info" style="display: none; border-bottom: 1px solid var(--border-soft); padding-bottom: 12px;">
+        <div class="sidebar-user-avatar" id="offcanvas-user-avatar" style="margin: 0; width: 34px; height: 34px; font-size: 0.8rem;">
+          <span id="offcanvas-user-initials">--</span>
+        </div>
+        <div>
+          <div style="font-size:0.85rem;font-weight:600;color:var(--text-main);" id="offcanvas-username-label">Admin</div>
+          <div style="font-size:0.68rem;color:var(--text-dim);">Administrador</div>
+        </div>
+      </div>
+
       <!-- Main nav -->
       <div class="offcanvas-nav flex flex-col gap-1">
 
@@ -161,6 +172,11 @@
       <div class="sidebar-item" onclick="openNotificationsPanel()" title="Notificaciones">
         <i class="bi bi-bell"></i>
         <span id="notifications-badge" class="badge-dot"></span>
+      </div>
+
+      <!-- User Initials Avatar -->
+      <div class="sidebar-user-avatar" id="sidebar-user-avatar" title="Cargando..." style="display: none;">
+        <span id="sidebar-user-initials">--</span>
       </div>
 
       <!-- Logout -->
@@ -326,6 +342,59 @@
       </div>
     </div>
   </div>
+  <!-- TICKET MODAL (GLOBAL) -->
+  <div class="modal fade" id="ticketModalView" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content glass-card shadow-lg">
+        <div class="modal-header">
+          <h5 class="modal-title font-bold" id="ticketModalTitleView">Nuevo Ticket</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="ticketFormView">
+          <div class="modal-body p-6">
+            <input type="hidden" id="ticketIdView">
+            <div class="grid md:grid-cols-2 gap-2">
+              <!-- TÍTULO -->
+              <div>
+                <label class="form-label text-dim text-sm font-bold required">TÍTULO DEL PROBLEMA</label>
+                <input type="text" class="form-control text-main" id="ticketTitleView" required>
+              </div>
+              <!-- CLIENTE -->
+              <div>
+                <label class="form-label text-dim text-sm font-bold required">CLIENTE</label>
+                <select class="form-select" id="ticketClientView" required></select>
+              </div>
+              <!-- PROYECTO -->
+              <div>
+                <label class="form-label text-dim text-sm font-bold">PROYECTO ASOCIADO</label>
+                <select class="form-select text-main" id="ticketProjectView">
+                  <option value="">-- Sin proyecto --</option>
+                </select>
+              </div>
+              <!-- ESTADO -->
+              <div>
+                <label class="form-label text-dim text-sm font-bold">ESTADO</label>
+                <select class="form-select" id="ticketEstadoView">
+                  <option value="Abierto">Abierto</option>
+                  <option value="Cerrado">Cerrado</option>
+                </select>
+              </div>
+              <!-- DESCRIPCIÓN -->
+              <div class="md:col-span-2 mt-2" id="ticketDescContainerView">
+                <label class="form-label text-dim text-sm font-bold">DESCRIPCIÓN INICIAL</label>
+                <textarea class="form-control text-main ticket-textarea" id="ticketDescView" rows="5"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer p-4">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-sm btn-success">Guardar Ticket</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
 
 
   <!-- Toast Container -->
@@ -476,6 +545,68 @@
     document.getElementById('btn-logout-offcanvas').addEventListener('click', function() {
       document.getElementById('logout-form').submit();
     });
+
+    // Fetch and display logged-in administrator avatar/initials
+    async function loadAdminAvatar() {
+      console.log('[Avatar] Initializing admin avatar...');
+      try {
+        if (!window.api || typeof window.api.getCurrentUser !== 'function') {
+          console.warn('[Avatar] window.api.getCurrentUser is not defined yet. Retrying shortly...');
+          setTimeout(loadAdminAvatar, 100);
+          return;
+        }
+        const data = await window.api.getCurrentUser();
+        console.log('[Avatar] Received user data:', data);
+        if (data && data.username) {
+          const name = data.username.trim();
+          const parts = name.split(/\s+/).filter(Boolean);
+          
+          let initials = '';
+          if (parts.length > 0) {
+            initials += parts[0][0];
+            if (parts.length > 1) {
+              initials += parts[1][0];
+            }
+          } else {
+            initials = name.slice(0, 2);
+          }
+          initials = initials.toUpperCase();
+
+          const displayName = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+
+          // Update desktop sidebar avatar
+          const desktopAvatar = document.getElementById('sidebar-user-avatar');
+          const desktopInitials = document.getElementById('sidebar-user-initials');
+          if (desktopAvatar && desktopInitials) {
+            desktopInitials.textContent = initials;
+            desktopAvatar.title = `Conectado: ${displayName}`;
+            desktopAvatar.style.display = 'flex';
+            console.log('[Avatar] Updated desktop avatar with initials:', initials);
+          }
+
+          // Update mobile offcanvas avatar
+          const mobileInfo = document.getElementById('offcanvas-user-info');
+          const mobileInitials = document.getElementById('offcanvas-user-initials');
+          const mobileLabel = document.getElementById('offcanvas-username-label');
+          if (mobileInfo && mobileInitials && mobileLabel) {
+            mobileInitials.textContent = initials;
+            mobileLabel.textContent = displayName;
+            mobileInfo.style.display = 'flex';
+            console.log('[Avatar] Updated mobile offcanvas info with:', displayName);
+          }
+        } else {
+          console.warn('[Avatar] No username in session data');
+        }
+      } catch (err) {
+        console.error('[Avatar] Error loading admin avatar:', err);
+      }
+    }
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadAdminAvatar);
+    } else {
+      loadAdminAvatar();
+    }
   </script>
 
   <!-- PWA Service Worker -->

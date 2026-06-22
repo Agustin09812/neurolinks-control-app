@@ -322,8 +322,13 @@
       <form id="login-form">
 
         <div class="login-input-wrap">
+          <i class="bi bi-person login-input-icon"></i>
+          <input type="text" id="username-input" class="login-input" placeholder="Usuario" autofocus required autocomplete="username">
+        </div>
+
+        <div class="login-input-wrap">
           <i class="bi bi-lock login-input-icon"></i>
-          <input type="password" id="password-input" class="login-input" placeholder="Contraseña" autofocus>
+          <input type="password" id="password-input" class="login-input" placeholder="Contraseña" required autocomplete="current-password">
           <button type="button" id="toggle-pw" class="login-pw-toggle" tabindex="-1">
             <i class="bi bi-eye" id="toggle-pw-icon"></i>
           </button>
@@ -336,7 +341,7 @@
 
         <div id="error-msg" class="login-error">
           <i class="bi bi-exclamation-circle-fill"></i>
-          Contraseña incorrecta
+          Usuario o contraseña incorrectos
         </div>
 
         <button type="submit" id="login-btn" class="login-btn">Ingresar</button>
@@ -375,6 +380,7 @@
       e.preventDefault();
       const btn      = document.getElementById('login-btn');
       const errorMsg = document.getElementById('error-msg');
+      const username = document.getElementById('username-input').value;
       const password = document.getElementById('password-input').value;
       const rememberMe = rememberEl.checked;
 
@@ -389,7 +395,7 @@
         const res = await fetch('/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password, rememberMe })
+          body: JSON.stringify({ username, password, rememberMe })
         });
         if (res.ok) {
           window.location.href = '/';

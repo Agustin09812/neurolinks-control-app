@@ -159,6 +159,7 @@ window.api = {
   // BILLING & ADMINS
   // --------------------------------------------------
   getAdmins: () => _fetch('/api/admins'),
+  getCurrentUser: () => _fetch('/api/me'),
 
   getClientPayments: (clientId) =>
     _fetch(`/api/clients/${clientId}/payments`),

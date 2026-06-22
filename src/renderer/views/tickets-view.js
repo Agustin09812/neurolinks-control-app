@@ -119,68 +119,32 @@ async function renderTicketsView(filterClientId = "") {
                 </div>
             </div>
         </div>
-        <!-- MODAL TICKET (SOLO CREAR) -->
-            <div class="modal fade" id="ticketModalView" tabindex="-1">
-                <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content glass-card shadow-lg">
-                        <div class="modal-header">
-                            <h5 class="modal-title font-bold" id="ticketModalTitleView">Nuevo Ticket</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form id="ticketFormView">
-                            <div class="modal-body p-6">
-                                <input type="hidden" id="ticketIdView">
-
-                                <div class="grid md:grid-cols-2 gap-2">
-
-                                    <!-- TÍTULO -->
-                                    <div class="">
-                                        <label class="form-label text-dim text-sm font-bold required">TÍTULO DEL PROBLEMA</label>
-                                        <input type="text" class="form-control text-main" id="ticketTitleView" required>
-                                    </div>
-
-                                    <!-- CLIENTE -->
-                                    <div class="">
-                                        <label class="form-label text-dim text-sm font-bold required">CLIENTE</label>
-                                        <select class="form-select" id="ticketClientView" required></select>
-                                    </div>
-
-                                    <!-- ESTADO -->
-                                    <div class="">
-                                        <label class="form-label text-dim text-sm font-bold">ESTADO</label>
-                                        <select class="form-select" id="ticketEstadoView">
-                                            <option value="Abierto">Abierto</option>
-                                            <option value="Cerrado">Cerrado</option>
-                                        </select>
-                                    </div>
-
-                                    <!-- DESCRIPCIÓN -->
-                                    <div class="md:col-span-2 mt-2" id="ticketDescContainerView">
-                                        <label class="form-label text-dim text-sm font-bold">DESCRIPCIÓN INICIAL</label>
-                                        <textarea
-                                            class="form-control text-main ticket-textarea"
-                                            id="ticketDescView"
-                                            rows="5">
-                                        </textarea>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="modal-footer p-4">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="submit" class="btn btn-sm btn-success">Guardar Ticket</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
     `;
 
-    document.getElementById("ticketFormView").onsubmit = handleTicketSubmit;
     allTicketsView = window.ticketsData || [];
     renderTicketsList();
     populateTicketFilters();
     loadTicketsData();
+}
+
+function updateProjectDropdown(clientId, selectedProjectId = "") {
+    const projSelect = document.getElementById("ticketProjectView");
+    if (!projSelect) return;
+    projSelect.innerHTML = '<option value="">-- Sin proyecto --</option>';
+    if (!clientId) return;
+
+    const client = (window.clientsData || []).find(c => String(c.id) === String(clientId));
+    if (client && client.railway_project_ids && Array.isArray(client.railway_project_ids)) {
+        client.railway_project_ids.forEach(projId => {
+            const proj = window.assistants ? window.assistants.find(a => String(a.id) === String(projId)) : null;
+            const projName = proj ? proj.name : projId;
+            const opt = document.createElement("option");
+            opt.value = projId;
+            opt.textContent = projName;
+            if (String(projId) === String(selectedProjectId)) opt.selected = true;
+            projSelect.appendChild(opt);
+        });
+    }
 }
 
 
@@ -208,8 +172,15 @@ async function populateTicketFilters() {
 function _clientDisplay(t) {
     const name = t.clientes ? escapeHtml(t.clientes.nombre) : null;
     const phone = t.chat_id ? escapeHtml(t.chat_id) : null;
-    if (name && phone) return `${name} <span class="text-dim">(${phone})</span>`;
-    return name || phone || 'Sin cliente';
+    let clientStr = name || phone || 'Sin cliente';
+    if (name && phone) clientStr = `${name} <span class="text-dim">(${phone})</span>`;
+    
+    if (t.project_id) {
+        const proj = window.assistants ? window.assistants.find(a => String(a.id) === String(t.project_id)) : null;
+        const projName = proj ? proj.name : 'Proyecto Desconocido';
+        clientStr += `<br><span class="text-dim text-xs" style="margin-top:2px; display:inline-block;"><i class="bi bi-box-arrow-up-right mr-1"></i>Proveniente de ${escapeHtml(projName)}</span>`;
+    }
+    return clientStr;
 }
 
 function prependNewTickets(newTickets) {
@@ -315,6 +286,9 @@ function _buildTicketCard(t, onOpen, onDelete) {
         ? `${clientName}${phone ? ` <span class="text-dim">(${phone})</span>` : ''}`
         : (phone || 'Sin cliente');
 
+    const proj = t.project_id && window.assistants ? window.assistants.find(a => String(a.id) === String(t.project_id)) : null;
+    const projectLine = proj ? `<div class="text-xs text-dim text-center mt-1"><i class="bi bi-box-arrow-up-right mr-1"></i>Proveniente de ${escapeHtml(proj.name)}</div>` : '';
+
     const clamp = 'overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;';
 
     card.innerHTML = `
@@ -325,6 +299,7 @@ function _buildTicketCard(t, onOpen, onDelete) {
             </div>
             <div class="text-center"><span class="status-badge status-${(t.estado || '').toLowerCase().replace(' ', '')}">${escapeHtml(t.estado || '')}</span></div>
             <div class="text-sm text-dim text-center">${clientLine}</div>
+            ${projectLine}
             <div class="font-bold text-center" style="${clamp}">${escapeHtml(t.titulo)}</div>
             ${t.descripcion ? `<div class="text-sm text-dim text-center" style="${clamp}">${escapeHtml(t.descripcion)}</div>` : ''}
             ${t.estado === 'Cerrado' ? `<div class="text-center"><button class="btn btn-sm btn-outline-danger btn-card-del"><i class="bi bi-trash"></i></button></div>` : '<div></div>'}
@@ -393,13 +368,17 @@ function renderTicketsList() {
     if (info) info.textContent = `Página ${currentPage} de ${totalPages}`;
 }
 
-function openNewTicketModal() {
+async function openNewTicketModal() {
+    await populateTicketModalClients();
     document.getElementById("ticketFormView").reset();
     document.getElementById("ticketIdView").value = "";
     document.getElementById("ticketModalTitleView").innerText = "Nuevo Ticket";
     document.getElementById("ticketDescContainerView").style.display = "block";
     if (ticketFilters.client) {
         document.getElementById("ticketClientView").value = ticketFilters.client;
+        updateProjectDropdown(ticketFilters.client);
+    } else {
+        updateProjectDropdown("");
     }
     bootstrap.Modal.getOrCreateInstance(document.getElementById("ticketModalView")).show();
 }
@@ -421,6 +400,7 @@ async function handleTicketSubmit(e) {
     const data = {
         titulo: document.getElementById("ticketTitleView").value,
         cliente_id: document.getElementById("ticketClientView").value,
+        project_id: document.getElementById("ticketProjectView")?.value || null,
         descripcion: document.getElementById("ticketDescView").value,
         estado: document.getElementById("ticketEstadoView").value
     };
@@ -526,12 +506,14 @@ async function renderClientTicketsTab(clientId, container, clientTelefono = null
         </div>
     `;
 
-    document.getElementById("btn-new-client-ticket").onclick = () => {
+    document.getElementById("btn-new-client-ticket").onclick = async () => {
+        await populateTicketModalClients();
         document.getElementById("ticketFormView").reset();
         document.getElementById("ticketIdView").value = "";
         document.getElementById("ticketModalTitleView").innerText = "Nuevo Ticket";
         document.getElementById("ticketDescContainerView").style.display = "block";
         document.getElementById("ticketClientView").value = clientId;
+        updateProjectDropdown(clientId);
         bootstrap.Modal.getOrCreateInstance(document.getElementById("ticketModalView")).show();
     };
 
@@ -595,12 +577,16 @@ async function loadClientTickets(clientId, clientTelefono = null) {
         tickets.forEach(t => {
             // Fila de tabla (desktop)
             if (tbody) {
+                const proj = t.project_id && window.assistants ? window.assistants.find(a => String(a.id) === String(t.project_id)) : null;
+                const projectText = proj ? `<div class="text-xs text-dim mt-0.5"><i class="bi bi-box-arrow-up-right mr-1"></i>Proveniente de ${escapeHtml(proj.name)}</div>` : '';
+
                 const tr = document.createElement("tr");
                 tr.className = "ticket-row";
                 tr.innerHTML = `
                     <td>
                         <div class="font-bold text-sm">#${t.id.substring(0, 8)}</div>
                         <div class="text-sm text-white">${escapeHtml(t.titulo)}</div>
+                        ${projectText}
                     </td>
                     <td class="text-center"><span class="status-badge status-${(t.estado || '').toLowerCase().replace(' ', '')}">${escapeHtml(t.estado || '')}</span></td>
                     <td class="text-center"><div class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</div></td>
@@ -619,6 +605,9 @@ async function loadClientTickets(clientId, clientTelefono = null) {
 
             // Card (mobile/tablet)
             if (cardsView) {
+                const proj = t.project_id && window.assistants ? window.assistants.find(a => String(a.id) === String(t.project_id)) : null;
+                const projectText = proj ? `<div class="text-xs text-dim text-center mt-1"><i class="bi bi-box-arrow-up-right mr-1"></i>Proveniente de ${escapeHtml(proj.name)}</div>` : '';
+
                 const card = document.createElement("div");
                 card.className = "glass-card no-hover p-4 rounded";
                 card.style.cursor = "pointer";
@@ -630,6 +619,7 @@ async function loadClientTickets(clientId, clientTelefono = null) {
                             <span class="text-sm text-dim">${new Date(t.created_at).toLocaleDateString()}</span>
                         </div>
                         <div class="text-center"><span class="status-badge status-${(t.estado || '').toLowerCase().replace(' ', '')}">${escapeHtml(t.estado || '')}</span></div>
+                        ${projectText}
                         <div class="font-bold text-center" style="${clamp}">${escapeHtml(t.titulo)}</div>
                         ${t.descripcion ? `<div class="text-sm text-dim text-center" style="${clamp}">${escapeHtml(t.descripcion)}</div>` : ''}
                         ${t.estado === 'Cerrado' ? '<div class="text-center"><button class="btn btn-sm btn-outline-danger btn-card-del-ct"><i class="bi bi-trash"></i></button></div>' : ''}
@@ -876,7 +866,10 @@ async function renderTicketChatView() {
                     <div class="client-avatar shrink-0 hidden sm:flex">${initials}</div>
                     <div class="flex-1 min-w-0">
                         <div class="text-xs text-dim font-mono mb-0.5">#${tick.id.substring(0,8)}</div>
-                        <div class="text-sm text-dim font-medium truncate mb-0.5">${escapeHtml(clientName)}</div>
+                        <div class="text-sm text-dim font-medium truncate mb-0.5">
+                            ${escapeHtml(clientName)}
+                            ${tick.project_id && window.assistants ? (window.assistants.find(a => String(a.id) === String(tick.project_id)) ? `<span class="badge badge-status-info text-xs ml-2" style="font-size: 0.72rem; padding: 2px 6px;"><i class="bi bi-box-arrow-up-right mr-1"></i>Proveniente de ${escapeHtml(window.assistants.find(a => String(a.id) === String(tick.project_id)).name)}</span>` : '') : ''}
+                        </div>
                         <div id="tchat-header-title" class="text-sm text-main font-bold truncate" title="${escapeHtml(tick.titulo || 'Ticket')}">${escapeHtml(tick.titulo || 'Ticket')}</div>
                     </div>
                 </div>
@@ -976,4 +969,37 @@ async function renderTicketChatView() {
             showToast("Error al actualizar estado", "error");
         }
     };
+}
+
+async function populateTicketModalClients() {
+    const modalSelect = document.getElementById("ticketClientView");
+    if (!modalSelect) return;
+    
+    if (modalSelect.children.length <= 1) {
+        try {
+            const clients = await window.api.getClients() || [];
+            const options = clients.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join("");
+            modalSelect.innerHTML = '<option value="">-- Seleccionar --</option>' + options;
+        } catch (err) {
+            console.error("Error populating ticket modal clients:", err);
+        }
+    }
+}
+
+function initTicketModalGlobal() {
+    const form = document.getElementById("ticketFormView");
+    if (form) form.onsubmit = handleTicketSubmit;
+    
+    const clientSelect = document.getElementById("ticketClientView");
+    if (clientSelect) {
+        clientSelect.addEventListener("change", (e) => {
+            updateProjectDropdown(e.target.value);
+        });
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTicketModalGlobal);
+} else {
+    initTicketModalGlobal();
 }

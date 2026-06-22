@@ -364,7 +364,7 @@ function renderClientCards() {
                 planEl.className = `badge client-plan ${getPlanBadgeClass(c.plan)} shrink-0 hidden md:inline-block`;
                 planEl.textContent = c.plan || 'Standard';
             }
-            
+
             // Si existe un dot, lo actualizamos también
             const dotEl = card.querySelector('.rounded-full.md\\:hidden');
             if (dotEl) {
@@ -381,7 +381,7 @@ function renderClientCards() {
             if (window.ticketsData) {
                 ticketCount = window.ticketsData.filter(t => String(t.cliente_id) === String(c.id)).length;
             }
-            
+
             const astEl = card.querySelector(`#ast-count-${c.id}`);
             if (astEl) astEl.innerHTML = `<i class="bi bi-robot mr-1"></i>${astCount}`;
 
@@ -527,9 +527,9 @@ async function loadClientFullDetail(client) {
             </div>
         </div>
 
-        <!-- ASISTENTES VINCULADOS -->
+        <!-- PROYECTOS VINCULADOS -->
         <div class="mb-6">
-            <h6 class="text-dim text-sm font-bold mb-4">ASISTENTES VINCULADOS</h6>
+            <h6 class="text-dim text-sm font-bold mb-4">PROYECTOS VINCULADOS</h6>
             <div id="detail-assistants-container">
                 <div class="text-center py-4">
                     <div class="spinner-border spinner-border-sm text-dim"></div>
@@ -751,7 +751,7 @@ function refreshAstCount(clientId) {
             const activeCount = assistants.filter(p => ids.includes(p.id)).length;
             el.innerHTML = `<i class="bi bi-robot"></i> ${activeCount}`;
         }
-    }).catch(() => {});
+    }).catch(() => { });
 }
 
 async function loadClientAssistantSection(clientId) {
@@ -766,8 +766,8 @@ async function loadClientAssistantSection(clientId) {
             wrap.innerHTML = `
                 <div class="link-assistant-card flex flex-col items-center justify-center p-6 rounded" id="btn-show-link-assistant">
                     <i class="bi bi-plus-circle fs-3 mb-2 text-dim"></i>
-                    <div class="font-semibold">Vincular asistente</div>
-                    <div class="text-sm text-dim mt-1">Asociar un asistente a este cliente</div>
+                    <div class="font-semibold">Vincular proyecto</div>
+                    <div class="text-sm text-dim mt-1">Asociar un proyecto a este cliente</div>
                 </div>
             `;
             document.getElementById("btn-show-link-assistant").onclick = () => openLinkAssistantModal(clientId);
@@ -881,7 +881,7 @@ async function loadClientAssistantSection(clientId) {
                     const val = settings?.find(s => s.key === "SYSTEM_CONFIG_VISIBLE")?.value;
                     const cb = card.querySelector(".btn-ca-sysconfig");
                     if (cb) cb.checked = val === "true" || val === true;
-                }).catch(() => {});
+                }).catch(() => { });
 
                 card.querySelector(".btn-ca-sysconfig").addEventListener("change", async (e) => {
                     const newVal = e.target.checked ? "true" : "false";
@@ -901,10 +901,10 @@ async function loadClientAssistantSection(clientId) {
                 });
 
                 card.querySelector(".btn-ca-unlink").onclick = async () => {
-                    if (!confirm("¿Desvincular este asistente?")) return;
+                    if (!confirm("¿Desvincular este proyecto?")) return;
                     try {
                         await window.api.unlinkProjectClient(p.id);
-                        showToast("Asistente desvinculado", "warning");
+                        showToast("Proyecto desvinculado", "warning");
                         loadClientAssistantSection(clientId);
                         refreshAstCount(clientId);
                     } catch { showToast("Error al desvincular", "danger"); }
@@ -920,13 +920,13 @@ async function loadClientAssistantSection(clientId) {
         addCol.innerHTML = `
             <div class="link-assistant-card flex flex-col items-center justify-center p-4 rounded btn-show-link-assistant" style="height:100%;">
                 <i class="bi bi-plus-circle fs-4 mb-1 text-dim"></i>
-                <div class="font-semibold text-sm">Vincular asistente</div>
+                <div class="font-semibold text-sm">Vincular proyecto</div>
             </div>
         `;
         addCol.querySelector(".btn-show-link-assistant").onclick = () => openLinkAssistantModal(clientId);
         row.appendChild(addCol);
     } catch {
-        wrap.innerHTML = '<div class="text-red-400 text-sm">Error cargando asistentes</div>';
+        wrap.innerHTML = '<div class="text-red-400 text-sm">Error cargando proyectos</div>';
     }
 }
 
@@ -942,7 +942,7 @@ function openLinkAssistantModal(clientId) {
         <div class="modal-dialog">
             <div class="modal-content glass-card">
                 <div class="modal-header">
-                    <h5 class="modal-title">Vincular Asistente</h5>
+                    <h5 class="modal-title">Vincular Proyecto</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -950,7 +950,7 @@ function openLinkAssistantModal(clientId) {
                         <span class="input-group-text text-dim">
                             <i class="bi bi-search"></i>
                         </span>
-                        <input type="text" id="link-assistant-search" class="form-control text-main" placeholder="Buscar asistente...">
+                        <input type="text" id="link-assistant-search" class="form-control text-main" placeholder="Buscar proyecto...">
                     </div>
                     <div id="link-assistant-list" class="flex flex-col gap-2 scrollable-list"></div>
                 </div>
@@ -985,7 +985,7 @@ async function renderLinkAssistantList(clientId, bsModal, search = "") {
         );
 
         if (available.length === 0) {
-            list.innerHTML = '<div class="text-dim text-sm text-center py-4">No hay asistentes disponibles</div>';
+            list.innerHTML = '<div class="text-dim text-sm text-center py-4">No hay proyectos disponibles</div>';
             return;
         }
 
@@ -1009,7 +1009,7 @@ async function renderLinkAssistantList(clientId, bsModal, search = "") {
             item.querySelector(".btn-link-assistant").onclick = async () => {
                 try {
                     await window.api.linkProjectClient(p.id, clientId);
-                    showToast("Asistente vinculado", "success");
+                    showToast("Proyecto vinculado", "success");
                     bsModal.hide();
                     loadClientAssistantSection(clientId);
                     refreshAstCount(clientId);
@@ -1020,7 +1020,7 @@ async function renderLinkAssistantList(clientId, bsModal, search = "") {
             list.appendChild(item);
         });
     } catch {
-        list.innerHTML = '<div class="text-red-400 text-sm text-center py-4">Error al cargar asistentes</div>';
+        list.innerHTML = '<div class="text-red-400 text-sm text-center py-4">Error al cargar proyectos</div>';
     }
 }
 
@@ -1187,13 +1187,13 @@ async function importClientsFromCSV(input) {
     };
 
     const headers = parseRow(lines[0]).map(h => h.toLowerCase().trim());
-    const idxId    = headers.indexOf('id');
-    const idxNom   = headers.indexOf('nombre');
-    const idxEmp   = headers.indexOf('empresa');
+    const idxId = headers.indexOf('id');
+    const idxNom = headers.indexOf('nombre');
+    const idxEmp = headers.indexOf('empresa');
     const idxEmail = headers.indexOf('email');
-    const idxTel   = headers.indexOf('telefono');
-    const idxPlan  = headers.indexOf('plan');
-    const idxVenc  = headers.indexOf('vencimiento');
+    const idxTel = headers.indexOf('telefono');
+    const idxPlan = headers.indexOf('plan');
+    const idxVenc = headers.indexOf('vencimiento');
 
     if (idxNom === -1) {
         showToast('El CSV no tiene columna "Nombre"', 'danger');
@@ -1208,17 +1208,17 @@ async function importClientsFromCSV(input) {
 
     for (let i = 1; i < lines.length; i++) {
         const cols = parseRow(lines[i]);
-        const get  = (idx) => idx !== -1 ? (cols[idx] || '').trim() : '';
+        const get = (idx) => idx !== -1 ? (cols[idx] || '').trim() : '';
 
         const nombre = get(idxNom);
         if (!nombre || nombre === '-') continue;
 
-        const id        = get(idxId);
-        const empresa   = get(idxEmp) === '-' ? '' : get(idxEmp);
-        const email     = get(idxEmail) === '-' ? '' : get(idxEmail);
-        const telefono  = get(idxTel) === '-' ? '' : get(idxTel);
-        const venc      = get(idxVenc) === '-' ? '' : get(idxVenc);
-        const plan      = VALID_PLANS.includes(get(idxPlan)) ? get(idxPlan) : 'Standard';
+        const id = get(idxId);
+        const empresa = get(idxEmp) === '-' ? '' : get(idxEmp);
+        const email = get(idxEmail) === '-' ? '' : get(idxEmail);
+        const telefono = get(idxTel) === '-' ? '' : get(idxTel);
+        const venc = get(idxVenc) === '-' ? '' : get(idxVenc);
+        const plan = VALID_PLANS.includes(get(idxPlan)) ? get(idxPlan) : 'Standard';
 
         const payload = { nombre, empresa: empresa || null, email: email || null, telefono: telefono || null, plan, vencimiento: venc || null };
 
@@ -1242,6 +1242,6 @@ async function importClientsFromCSV(input) {
     const parts = [];
     if (created) parts.push(`${created} creado${created > 1 ? 's' : ''}`);
     if (updated) parts.push(`${updated} actualizado${updated > 1 ? 's' : ''}`);
-    if (errors)  parts.push(`${errors} con error`);
+    if (errors) parts.push(`${errors} con error`);
     showToast(`Importación completada: ${parts.join(', ')}`, errors ? 'warning' : 'success');
 }
