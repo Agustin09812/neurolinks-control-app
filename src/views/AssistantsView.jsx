@@ -310,9 +310,8 @@ export default function AssistantsView({ navigate }) {
     return (
       <div>
         <div className="view-header">
-          <div className="view-header-left">
-            <h2 className="view-header-title">MIS ASISTENTES</h2>
-            <p className="view-header-subtitle">Gestión técnica de proyectos desplegados en Railway</p>
+          <div className="view-header-left clients-header-left">
+            <h2 className="view-header-title mb-0">MIS ASISTENTES</h2>
           </div>
           <div className="view-header-controls">
             <button className="btn btn-sm btn-outline-light flex items-center gap-2" disabled>
@@ -569,33 +568,43 @@ export default function AssistantsView({ navigate }) {
         </div>
       ) : (
         <div id="assistants-grid-panel">
-          {/* GRID PANEL HEADER */}
+          {/* HEADER PANEL */}
           <div className="view-header">
-            <div className="view-header-left">
-              <h2 className="view-header-title">MIS ASISTENTES</h2>
-              <p className="view-header-subtitle">Gestión técnica de proyectos desplegados en Railway</p>
+            <div className="view-header-left clients-header-left">
+              <h2 className="view-header-title mb-0">MIS ASISTENTES</h2>
+              <div className="input-group input-group-sm search-input-group mb-0">
+                <span className="input-group-text text-dim">
+                  <i className="bi bi-search"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control text-main"
+                  placeholder="Buscar..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
             </div>
             <div className="view-header-controls">
-              <div className="input-group input-group-sm search-input-group">
-                <span className="input-group-text"><i className="bi bi-search"></i></span>
-                <input type="text" className="form-control" placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} />
-              </div>
-              <button className="btn btn-outline-light btn-sm" onClick={toggleView} title={isListView ? 'Vista cuadrícula' : 'Vista lista'}>
-                <i className={`bi bi-${isListView ? 'grid' : 'list-ul'}`}></i>
-              </button>
-              {anyUpdatable && (
-                <button className="btn btn-warning btn-sm" onClick={handleUpdateAll}>
-                  <i className="bi bi-arrow-up-circle mr-2"></i>Update All
+              <div className="flex gap-2 clients-toolbar-btns">
+                <button className="btn btn-outline-light btn-sm" onClick={toggleView} title={isListView ? 'Vista cuadrícula' : 'Vista lista'}>
+                  <i className={`bi bi-${isListView ? 'grid' : 'list-ul'}`}></i>
                 </button>
-              )}
-              <button className="btn btn-outline-light btn-sm" onClick={handleRefresh} disabled={refreshing}>
-                {refreshing ? (
-                  <span className="spinner-border spinner-border-sm mr-2"></span>
-                ) : (
-                  <i className="bi bi-arrow-clockwise mr-2"></i>
+                {anyUpdatable && (
+                  <button className="btn btn-warning btn-sm" onClick={handleUpdateAll}>
+                    <i className="bi bi-arrow-up-circle mr-2 btn-assistant-icon"></i>
+                    <span className="btn-assistant-label">Update All</span>
+                  </button>
                 )}
-                Actualizar
-              </button>
+                <button className="btn btn-outline-light btn-sm" onClick={handleRefresh} disabled={refreshing}>
+                  {refreshing ? (
+                    <span className="spinner-border spinner-border-sm mr-2 btn-assistant-icon"></span>
+                  ) : (
+                    <i className="bi bi-arrow-clockwise mr-2 btn-assistant-icon"></i>
+                  )}
+                  <span className="btn-assistant-label">Actualizar</span>
+                </button>
+              </div>
             </div>
           </div>
 

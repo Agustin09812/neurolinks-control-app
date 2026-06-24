@@ -72,9 +72,9 @@ export default function LogsView() {
     <div className="audit-layout animate-fade-in">
       {/* Cabecera flotante */}
       <div className="view-header">
-        <div className="view-header-left">
-          <h2 className="view-header-title flex items-center gap-2">
-            <i className="bi bi-terminal"></i>LOGS GLOBALES DEL SISTEMA
+        <div className="view-header-left clients-header-left">
+          <h2 className="view-header-title mb-0 flex items-center gap-2">
+            LOGS GLOBALES
           </h2>
         </div>
         <div className="view-header-controls">
@@ -90,7 +90,7 @@ export default function LogsView() {
             ) : (
               <i className="bi bi-arrow-clockwise"></i>
             )}
-            <span className="btn-refresh-label">Actualizar</span>
+            <span>Actualizar</span>
           </button>
         </div>
       </div>
@@ -188,8 +188,8 @@ export default function LogsView() {
                       log.level === 'ERROR'
                         ? 'badge-status-danger'
                         : log.level === 'WARN'
-                        ? 'badge-status-warning'
-                        : 'badge-status-info';
+                          ? 'badge-status-warning'
+                          : 'badge-status-info';
                     return (
                       <tr key={log.id}>
                         <td>
@@ -252,8 +252,8 @@ export default function LogsView() {
                 log.level === 'ERROR'
                   ? 'badge-status-danger'
                   : log.level === 'WARN'
-                  ? 'badge-status-warning'
-                  : 'badge-status-info';
+                    ? 'badge-status-warning'
+                    : 'badge-status-info';
               return (
                 <div key={log.id} className="glass-card p-4 rounded">
                   <div className="flex justify-between items-start gap-2 mb-2">

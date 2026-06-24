@@ -48,13 +48,11 @@ export default function AuditView() {
 
   return (
     <div className="audit-layout">
-      {/* Cabecera flotante */}
+      {/* Cabecera flotante principal */}
       <div className="view-header">
-        <div className="view-header-left">
-          <h2 className="view-header-title">REGISTRO DE ACTIVIDAD</h2>
-        </div>
-        <div className="view-header-controls">
-          <div className="input-group input-group-sm search-input-group">
+        <div className="view-header-left clients-header-left">
+          <h2 className="view-header-title mb-0">REGISTRO DE ACTIVIDAD</h2>
+          <div className="input-group input-group-sm search-input-group mb-0">
             <span className="input-group-text text-dim">
               <i className="bi bi-search"></i>
             </span>
@@ -66,20 +64,24 @@ export default function AuditView() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <button
-            className="btn btn-outline-light btn-sm flex items-center gap-1"
-            onClick={fetchLogs}
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="spinner-border spinner-border-sm"></span>
-            ) : isSuccess ? (
-              <i className="bi bi-check-lg"></i>
-            ) : (
-              <i className="bi bi-arrow-clockwise"></i>
-            )}
-            <span className="btn-refresh-label">Actualizar</span>
-          </button>
+        </div>
+        <div className="view-header-controls">
+          <div className="flex gap-2 clients-toolbar-btns">
+            <button
+              className="btn btn-outline-light btn-sm flex items-center gap-1"
+              onClick={fetchLogs}
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="spinner-border spinner-border-sm"></span>
+              ) : isSuccess ? (
+                <i className="bi bi-check-lg"></i>
+              ) : (
+                <i className="bi bi-arrow-clockwise"></i>
+              )}
+              <span>Actualizar</span>
+            </button>
+          </div>
         </div>
       </div>
 

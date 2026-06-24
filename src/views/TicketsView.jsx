@@ -216,8 +216,8 @@ export default function TicketsView({ navigate }) {
     <div className="animate-fade">
       {/* HEADER */}
       <div className="view-header">
-        <div className="view-header-left">
-          <h2 className="view-header-title">
+        <div className="view-header-left clients-header-left">
+          <h2 className="view-header-title mb-0">
             <i className="bi bi-ticket-perforated mr-2"></i>SOPORTE Y TICKETS
           </h2>
         </div>

@@ -31,12 +31,11 @@ export default function DashboardView({ navigate }) {
   if (loading) {
     return (
       <div>
-        <div className="view-header flex justify-between items-center w-full">
-          <div className="view-header-left">
-            <h2 className="view-header-title">DASHBOARD</h2>
-            <p className="text-xs mb-0 text-dim mt-1">Sincronizando información...</p>
+        <div className="view-header">
+          <div className="view-header-left clients-header-left">
+            <h2 className="view-header-title mb-0">DASHBOARD</h2>
           </div>
-          <div className="view-header-right">
+          <div className="view-header-controls">
             <button className="btn btn-sm btn-outline-light flex items-center gap-2" disabled>
               <span className="spinner-border spinner-border-sm"></span>
               Cargando
@@ -211,11 +210,11 @@ export default function DashboardView({ navigate }) {
 
   return (
     <div>
-      <div className="view-header flex justify-between items-center w-full">
-        <div className="view-header-left">
-          <h2 className="view-header-title">DASHBOARD</h2>
+      <div className="view-header">
+        <div className="view-header-left clients-header-left">
+          <h2 className="view-header-title mb-0">DASHBOARD</h2>
         </div>
-        <div className="view-header-right">
+        <div className="view-header-controls">
           <button
             className="btn btn-sm btn-outline-light flex items-center gap-2"
             onClick={handleRefresh}
