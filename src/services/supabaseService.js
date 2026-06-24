@@ -2,18 +2,14 @@ const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
-const supabase2Url = process.env.SUPABASE2_URL;
-const supabase2Key = process.env.SUPABASE2_KEY;
 
-if (!supabaseUrl || !supabaseKey || supabaseUrl === 'YOUR_SUPABASE_URL') {
+if (!supabaseUrl || !supabaseKey) {
     console.warn('Supabase credentials not configured in .env');
-}
-if (!supabase2Url || !supabase2Key) {
-    console.warn('Supabase2 credentials not configured in .env');
 }
 
 const supabase = createClient(supabaseUrl || '', supabaseKey || '');
-const supabase2 = createClient(supabase2Url || '', supabase2Key || '');
+
+
 
 const supabaseService = {
     /**
@@ -21,7 +17,7 @@ const supabaseService = {
      */
     async testConnection() {
         try {
-            const { data, error } = await supabase2
+            const { data, error } = await supabase
                 .from('config')
                 .select('*')
                 .eq('clave', 'test_connection')
@@ -39,7 +35,7 @@ const supabaseService = {
      * Gestión de Clientes (CRM)
      */
     async getClients() {
-        const { data, error } = await supabase2
+        const { data, error } = await supabase
             .from('clientes')
             .select('*, proyectos_railway(railway_project_id)')
             .order('created_at', { ascending: false });
@@ -50,12 +46,17 @@ const supabaseService = {
                 c.railway_project_ids = c.proyectos_railway.map(p => p.railway_project_id);
                 delete c.proyectos_railway;
             }
+            c.vendedor_user_id = c.vendedor_id;
             return c;
         });
     },
 
     async createClient(clientData) {
-        const { data, error } = await supabase2
+        if (clientData.vendedor_user_id !== undefined) {
+            clientData.vendedor_id = clientData.vendedor_user_id || null;
+            delete clientData.vendedor_user_id;
+        }
+        const { data, error } = await supabase
             .from('clientes')
             .insert([clientData])
             .select()
@@ -65,7 +66,11 @@ const supabaseService = {
     },
 
     async updateClient(id, clientData) {
-        const { data, error } = await supabase2
+        if (clientData.vendedor_user_id !== undefined) {
+            clientData.vendedor_id = clientData.vendedor_user_id || null;
+            delete clientData.vendedor_user_id;
+        }
+        const { data, error } = await supabase
             .from('clientes')
             .update(clientData)
             .eq('id', id)
@@ -80,7 +85,7 @@ const supabaseService = {
         try {
 
             // 1. eliminar vínculos de proyectos
-            const { error: relError } = await supabase2
+            const { error: relError } = await supabase
                 .from('proyectos_railway')
                 .delete()
                 .eq('cliente_id', clientId);
@@ -88,7 +93,7 @@ const supabaseService = {
             if (relError) throw relError;
 
             // 2. eliminar tickets
-            const { error: ticketError } = await supabase2
+            const { error: ticketError } = await supabase
                 .from('tickets')
                 .delete()
                 .eq('cliente_id', clientId);
@@ -96,7 +101,7 @@ const supabaseService = {
             if (ticketError) throw ticketError;
 
             // 3. eliminar pagos
-            const { error: paymentError } = await supabase2
+            const { error: paymentError } = await supabase
                 .from('pagos')
                 .delete()
                 .eq('cliente_id', clientId);
@@ -104,7 +109,7 @@ const supabaseService = {
             if (paymentError) throw paymentError;
 
             // 4. eliminar cliente
-            const { error } = await supabase2
+            const { error } = await supabase
                 .from('clientes')
                 .delete()
                 .eq('id', clientId);
@@ -125,7 +130,7 @@ const supabaseService = {
      */
     async linkProjectToClient(railwayProjectId, clientId) {
         // 1. Upsert relation
-        const { data, error } = await supabase2
+        const { data, error } = await supabase
             .from('proyectos_railway')
             .upsert({
                 railway_project_id: railwayProjectId,
@@ -137,7 +142,7 @@ const supabaseService = {
 
         // 2. Fetch all current project links for this client to rebuild arrays
         try {
-            const { data: links } = await supabase2
+            const { data: links } = await supabase
                 .from('proyectos_railway')
                 .select('railway_project_id')
                 .eq('cliente_id', clientId);
@@ -145,7 +150,7 @@ const supabaseService = {
             const projectIds = (links || []).map(l => l.railway_project_id).filter(Boolean);
 
             // 3. Update client record
-            await supabase2
+            await supabase
                 .from('clientes')
                 .update({
                     token_backoffice: projectIds[0] || null,
@@ -161,7 +166,7 @@ const supabaseService = {
     },
 
     async getProjectClient(railwayProjectId) {
-        const { data, error } = await supabase2
+        const { data, error } = await supabase
             .from('proyectos_railway')
             .select('*, clientes(*)')
             .eq('railway_project_id', railwayProjectId)
@@ -171,7 +176,7 @@ const supabaseService = {
     },
 
     async getClientProjects(clientId) {
-        const { data, error } = await supabase2
+        const { data, error } = await supabase
             .from('proyectos_railway')
             .select('railway_project_id')
             .eq('cliente_id', clientId);
@@ -181,13 +186,13 @@ const supabaseService = {
 
     async autoLinkClientProjects() {
         // Read clients that have tokens_backoffice or token_backoffice populated
-        const { data: clients, error } = await supabase2
+        const { data: clients, error } = await supabase
             .from('clientes')
             .select('id, tokens_backoffice, token_backoffice');
         if (error) throw error;
 
         // Read existing links
-        const { data: existing, error: err2 } = await supabase2
+        const { data: existing, error: err2 } = await supabase
             .from('proyectos_railway')
             .select('railway_project_id, cliente_id');
         if (err2) throw err2;
@@ -218,7 +223,7 @@ const supabaseService = {
 
         if (toInsert.length === 0) return 0;
 
-        const { error: err3 } = await supabase2
+        const { error: err3 } = await supabase
             .from('proyectos_railway')
             .upsert(toInsert, { onConflict: 'railway_project_id' });
         if (err3) throw err3;
@@ -229,7 +234,7 @@ const supabaseService = {
     async syncClientsBackofficeTokens() {
         try {
             // 1. Fetch all projects linked in proyectos_railway
-            const { data: links, error: err1 } = await supabase2
+            const { data: links, error: err1 } = await supabase
                 .from('proyectos_railway')
                 .select('railway_project_id, cliente_id');
             if (err1) throw err1;
@@ -245,7 +250,7 @@ const supabaseService = {
             }
 
             // 2. Fetch all clients
-            const { data: clients, error: err2 } = await supabase2
+            const { data: clients, error: err2 } = await supabase
                 .from('clientes')
                 .select('id, tokens_backoffice, token_backoffice');
             if (err2) throw err2;
@@ -265,7 +270,7 @@ const supabaseService = {
 
                 if (needsSync) {
                     console.log(`[Sync] Client ${client.id} is out of sync. Updating tokens_backoffice with:`, linkedProjects);
-                    const { error: errUpdate } = await supabase2
+                    const { error: errUpdate } = await supabase
                         .from('clientes')
                         .update({
                             token_backoffice: linkedProjects[0],
@@ -291,7 +296,7 @@ const supabaseService = {
 
     async validateAdminLogin(username, password) {
         try {
-            const { data, error } = await supabase2
+            const { data, error } = await supabase
                 .from('admins_account')
                 .select('*')
                 .eq('username', username)
@@ -313,7 +318,7 @@ const supabaseService = {
         // 1. Find the client ID associated with this project before deleting the link
         let clientId = null;
         try {
-            const { data: link } = await supabase2
+            const { data: link } = await supabase
                 .from('proyectos_railway')
                 .select('cliente_id')
                 .eq('railway_project_id', railwayProjectId)
@@ -324,7 +329,7 @@ const supabaseService = {
         }
 
         // 2. Delete relation
-        const { error } = await supabase2
+        const { error } = await supabase
             .from('proyectos_railway')
             .delete()
             .eq('railway_project_id', railwayProjectId);
@@ -334,14 +339,14 @@ const supabaseService = {
         // 3. If there was an associated client, update their record
         if (clientId) {
             try {
-                const { data: links } = await supabase2
+                const { data: links } = await supabase
                     .from('proyectos_railway')
                     .select('railway_project_id')
                     .eq('cliente_id', clientId);
 
                 const projectIds = (links || []).map(l => l.railway_project_id).filter(Boolean);
 
-                await supabase2
+                await supabase
                     .from('clientes')
                     .update({
                         token_backoffice: projectIds[0] || null,
@@ -368,7 +373,7 @@ const supabaseService = {
         const from  = (page - 1) * limit;
         const to    = from + limit - 1;
 
-        let query = supabase2
+        let query = supabase
             .from('tickets')
             .select('id, cliente_id, project_id, titulo, descripcion, estado, tipo, created_at, updated_at, read_admin_count, chat_id, clientes(nombre)', { count: 'exact' })
             .eq('tipo', 'Soporte');
@@ -386,7 +391,7 @@ const supabaseService = {
 
     // Solo metadatos: para SmartRefresh (sin chats, sin descripcion pesada)
     async getTicketsMeta() {
-        const { data, error } = await supabase2
+        const { data, error } = await supabase
             .from('tickets')
             .select('id, cliente_id, project_id, estado, updated_at, read_admin_count, chats_adjuntos, clientes(nombre)')
             .eq('tipo', 'Soporte')
@@ -398,7 +403,7 @@ const supabaseService = {
 
     // Ticket completo con chats_adjuntos: solo se llama al abrir el chat
     async getTicketById(id) {
-        const { data, error } = await supabase2
+        const { data, error } = await supabase
             .from('tickets')
             .select('*, clientes(nombre)')
             .eq('id', id)
@@ -419,7 +424,7 @@ const supabaseService = {
         delete ticketData.prioridad;
         delete ticketData.chat_id;
 
-        const { data, error } = await supabase2
+        const { data, error } = await supabase
             .from('tickets')
             .insert([ticketData])
             .select()
@@ -434,7 +439,7 @@ const supabaseService = {
     },
 
     async updateTicket(id, ticketData) {
-        const { data, error } = await supabase2
+        const { data, error } = await supabase
             .from('tickets')
             .update(ticketData)
             .eq('id', id)
@@ -445,7 +450,7 @@ const supabaseService = {
     },
 
     async addTicketMessage(id, messageObj) {
-        const { data: ticket, error: errFetch } = await supabase2
+        const { data: ticket, error: errFetch } = await supabase
             .from('tickets')
             .select('chats_adjuntos')
             .eq('id', id)
@@ -463,7 +468,7 @@ const supabaseService = {
 
         chats.push(messageObj);
 
-        const { data, error } = await supabase2
+        const { data, error } = await supabase
             .from('tickets')
             .update({ chats_adjuntos: chats })
             .eq('id', id)
@@ -475,7 +480,7 @@ const supabaseService = {
     },
 
     async deleteTicket(id) {
-        const { error } = await supabase2
+        const { error } = await supabase
             .from('tickets')
             .delete()
             .eq('id', id);
@@ -526,7 +531,7 @@ const supabaseService = {
     },
 
     async deleteTicket(id) {
-        const { error } = await supabase2
+        const { error } = await supabase
             .from('tickets')
             .delete()
             .eq('id', id);
@@ -535,7 +540,7 @@ const supabaseService = {
     },
 
     async getPendingTicketsCount() {
-        const { count, error } = await supabase2
+        const { count, error } = await supabase
             .from('tickets')
             .select('*', { count: 'exact', head: true })
             .eq('estado', 'Abierto')
@@ -545,14 +550,14 @@ const supabaseService = {
     },
 
     async getClientPendingTickets(clientId) {
-        const { data: projects } = await supabase2
+        const { data: projects } = await supabase
             .from('proyectos_railway')
             .select('railway_project_id')
             .eq('cliente_id', clientId);
 
         const projectIds = (projects || []).map(p => p.railway_project_id);
 
-        let query = supabase2
+        let query = supabase
             .from('tickets')
             .select('*', { count: 'exact', head: true })
             .eq('estado', 'Abierto')
@@ -613,75 +618,21 @@ const supabaseService = {
         return data;
     },
 
-    /**
-     * Gestión de Pagos (Billing)
-     */
-    async getClientPayments(clientId) {
-        const { data, error } = await supabase2
-            .from('mp_pagos_ingresos')
-            .select('*')
-            .eq('cliente_id', clientId)
-            .order('fecha_aprobacion', { ascending: false });
-        if (error) throw error;
-        return data;
-    },
-
-    async getAllPayments() {
-        const { data, error } = await supabase2
-            .from('mp_pagos_ingresos')
-            .select('*, clientes(nombre), mp_vendedores(user_id)')
-            .order('fecha_aprobacion', { ascending: false });
-        if (error) throw error;
-        return data;
-    },
-
-    async createPayment(paymentData) {
-        const { data, error } = await supabase2
-            .from('pagos')
-            .insert([paymentData])
-            .select()
-            .single();
-        if (error) throw error;
-        return data;
-    },
-
-    async assignPaymentAdmin(paymentId, adminId) {
-        let vendedorIdVal = null;
-        if (adminId) {
-            const { data: vend } = await supabase2.from('mp_vendedores').select('id').eq('user_id', adminId).single();
-            if (vend) vendedorIdVal = vend.id;
-        }
-        const { data, error } = await supabase2
-            .from('mp_pagos_ingresos')
-            .update({ vendedor_id: vendedorIdVal })
-            .eq('id', paymentId)
-            .select()
-            .single();
-        if (error) throw error;
-        return data;
-    },
-
     async getAdmins() {
-        // Obtenemos a los clientes marcados como admin para llenar la lista
-        const { data, error } = await supabase2
-            .from('clientes')
-            .select('auth_user_id, nombre, email')
-            .eq('is_admin', true);
+        const { data, error } = await supabase
+            .from('admins_account')
+            .select('id, username')
+            .order('id', { ascending: true });
         if (error) throw error;
-        return data;
-    },
-
-    async deletePayment(id) {
-        const { error } = await supabase2
-            .from('mp_pagos_ingresos')
-            .delete()
-            .eq('id', id);
-        if (error) throw error;
-        return true;
+        return data.map(admin => ({
+            auth_user_id: admin.id,
+            nombre: admin.username,
+            email: ''
+        }));
     },
 
     async getSettings(projectId) {
-        const { data, error } = await supabase2
+        const { data, error } = await supabase
             .from('settings')
             .select('key, value')
             .eq('project_id', projectId);
@@ -690,7 +641,7 @@ const supabaseService = {
     },
 
     async updateSetting(projectId, key, value) {
-        const { data: updated, error: updateError } = await supabase2
+        const { data: updated, error: updateError } = await supabase
             .from('settings')
             .update({ value })
             .eq('project_id', projectId)
@@ -699,7 +650,7 @@ const supabaseService = {
         if (updateError) throw updateError;
 
         if (!updated || updated.length === 0) {
-            const { error: insertError } = await supabase2
+            const { error: insertError } = await supabase
                 .from('settings')
                 .insert({ project_id: projectId, key, value });
             if (insertError) throw insertError;
@@ -711,7 +662,7 @@ const supabaseService = {
      * System Logs
      */
     async getSystemLogs(limit = 100) {
-        const { data, error } = await supabase2
+        const { data, error } = await supabase
             .from('system_logs')
             .select('*')
             .order('created_at', { ascending: false })

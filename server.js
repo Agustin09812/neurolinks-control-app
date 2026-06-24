@@ -7,6 +7,36 @@ const railwayService = require('./src/services/railwayService');
 const supabaseService = require('./src/services/supabaseService');
 
 // --------------------------------------------------
+// IN-MEMORY CACHE
+// --------------------------------------------------
+
+const _cache = new Map(); // key -> { data, expiresAt }
+
+/**
+ * Returns cached data if still valid, otherwise calls fn(), caches the result and returns it.
+ * @param {string} key - Cache key
+ * @param {number} ttlMs - Time-to-live in milliseconds
+ * @param {Function} fn - Async function that fetches fresh data
+ * @param {boolean} [forceRefresh=false] - If true, bypass cache and fetch fresh
+ */
+async function withCache(key, ttlMs, fn, forceRefresh = false) {
+  if (!forceRefresh) {
+    const hit = _cache.get(key);
+    if (hit && Date.now() < hit.expiresAt) {
+      return hit.data;
+    }
+  }
+  const data = await fn();
+  _cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+  return data;
+}
+
+/** Invalidate one or more cache keys immediately */
+function invalidateCache(...keys) {
+  keys.forEach(k => _cache.delete(k));
+}
+
+// --------------------------------------------------
 // INPUT SANITIZATION HELPERS
 // --------------------------------------------------
 
@@ -27,7 +57,6 @@ function isValidDate(dateStr) {
 
 const VALID_PLANS = ['Standard', 'Premium', 'Enterprise', 'Baja'];
 const VALID_TICKET_ESTADOS = ['Abierto', 'En progreso', 'Cerrado'];
-const VALID_PAYMENT_METODOS = ['Transferencia', 'Efectivo', 'Mercado Pago', 'Crypto', 'Cripto', 'Otro'];
 
 const app = express();
 
@@ -54,15 +83,15 @@ function requireAuth(req, res, next) {
 // PUBLICO: assets y login
 // --------------------------------------------------
 
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/assets', express.static(path.join(__dirname, 'dist/assets')));
 
 app.get('/sw.js', (req, res) => {
-  res.sendFile(path.join(__dirname, 'assets/sw.js'));
+  res.sendFile(path.join(__dirname, 'dist/sw.js'));
 });
 
 app.get('/login', (req, res) => {
   if (req.session.authenticated) return res.redirect('/');
-  res.sendFile(path.join(__dirname, 'src/renderer/login.html'));
+  res.sendFile(path.join(__dirname, 'dist/login.html'));
 });
 
 app.post('/login', async (req, res) => {
@@ -107,11 +136,8 @@ app.post('/logout', (req, res) => {
 // --------------------------------------------------
 
 app.get('/', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'src/renderer/index.html'));
+  res.sendFile(path.join(__dirname, 'dist/index.html'));
 });
-
-app.use('/core', express.static(path.join(__dirname, 'src/renderer/core')));
-app.use('/views', express.static(path.join(__dirname, 'src/renderer/views')));
 
 // --------------------------------------------------
 // API ROUTES
@@ -158,33 +184,6 @@ router.get('/tickets/stream', (req, res) => {
 
 const _sseLogsClients = new Set();
 const _sseClientsList = new Set();
-const _ssePaymentsClients = new Set();
-
-function _broadcastPaymentEvent(payload) {
-  const data = `data: ${JSON.stringify(payload)}\n\n`;
-  for (const res of _ssePaymentsClients) {
-    try { res.write(data); } catch (_) { _ssePaymentsClients.delete(res); }
-  }
-}
-
-router.get('/payments/stream', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-  res.write(': connected\n\n');
-
-  _ssePaymentsClients.add(res);
-
-  const keepAlive = setInterval(() => {
-    try { res.write(': ping\n\n'); } catch (_) { clearInterval(keepAlive); }
-  }, 25000);
-
-  req.on('close', () => {
-    clearInterval(keepAlive);
-    _ssePaymentsClients.delete(res);
-  });
-});
 
 function _broadcastClientEvent(payload) {
   const data = `data: ${JSON.stringify(payload)}\n\n`;
@@ -246,10 +245,13 @@ router.get('/config/supabase', (req, res) => {
   });
 });
 
-// Assistants
+// Assistants — cached 15s; pass ?refresh=true to force a fresh fetch
 router.get('/assistants', async (req, res) => {
-  try { res.json(await railwayService.getAssistants()); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try {
+    const forceRefresh = req.query.refresh === 'true';
+    const data = await withCache('assistants', 15_000, () => railwayService.getAssistants(), forceRefresh);
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Projects
@@ -274,6 +276,7 @@ router.post('/projects/:id/unlink', async (req, res) => {
   try {
     const result = await supabaseService.unlinkProjectClient(req.params.id);
     await supabaseService.logAction('Desvincular Proyecto', `Se desvinculó el proyecto ${req.params.id} del cliente`, 'clientes', req.params.id);
+    invalidateCache('clients');
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -390,15 +393,17 @@ router.post('/clients/link', async (req, res) => {
   try {
     const result = await supabaseService.linkProjectToClient(railwayProjectId, clientId);
     await supabaseService.logAction('Vincular Proyecto', `Se vinculó el proyecto ${railwayProjectId} al cliente ID: ${clientId}`, 'clientes', clientId);
+    invalidateCache('clients');
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/clients', async (req, res) => {
   try {
-    res.json(await supabaseService.getClients());
-  }
-  catch (err) { res.status(500).json({ error: err.message }); }
+    const forceRefresh = req.query.refresh === 'true';
+    const data = await withCache('clients', 5_000, () => supabaseService.getClients(), forceRefresh);
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/clients', async (req, res) => {
@@ -409,14 +414,16 @@ router.post('/clients', async (req, res) => {
   const plan = VALID_PLANS.includes(req.body.plan) ? req.body.plan : 'Standard';
   const vencimiento = isValidDate(req.body.vencimiento) ? (req.body.vencimiento || null) : null;
   const abono = req.body.abono !== undefined ? (parseFloat(req.body.abono) || 0) : 0;
+  const vendedor_user_id = req.body.vendedor_user_id !== undefined ? (req.body.vendedor_user_id || null) : null;
 
   if (!nombre) return res.status(400).json({ error: 'El nombre es requerido' });
   if (email && !isValidEmail(email)) return res.status(400).json({ error: 'Email inválido' });
 
-  const clientData = { nombre, email, empresa, telefono, plan, vencimiento, abono };
+  const clientData = { nombre, email, empresa, telefono, plan, vencimiento, abono, vendedor_user_id };
   try {
     const result = await supabaseService.createClient(clientData);
     await supabaseService.logAction('Crear Cliente', `Se creó el cliente ${nombre}`, 'clientes', result.id);
+    invalidateCache('clients');
     res.json(result);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'El email ya esta registrado en otro cliente.' });
@@ -439,10 +446,12 @@ router.patch('/clients/:id', async (req, res) => {
   if (req.body.plan !== undefined) clientData.plan = VALID_PLANS.includes(req.body.plan) ? req.body.plan : 'Standard';
   if (req.body.vencimiento !== undefined) clientData.vencimiento = isValidDate(req.body.vencimiento) ? (req.body.vencimiento || null) : null;
   if (req.body.abono !== undefined) clientData.abono = parseFloat(req.body.abono) || 0;
+  if (req.body.vendedor_user_id !== undefined) clientData.vendedor_user_id = req.body.vendedor_user_id || null;
 
   try {
     const result = await supabaseService.updateClient(req.params.id, clientData);
     await supabaseService.logAction('Actualizar Cliente', `Se actualizaron datos de ${clientData.nombre || 'cliente'}`, 'clientes', req.params.id);
+    invalidateCache('clients');
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -451,6 +460,7 @@ router.delete('/clients/:id', async (req, res) => {
   try {
     const result = await supabaseService.deleteClient(req.params.id);
     await supabaseService.logAction('Eliminar Cliente', `Se eliminó el cliente ID: ${req.params.id}`, 'clientes', req.params.id);
+    invalidateCache('clients');
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -465,16 +475,14 @@ router.get('/clients/:id/pending-tickets', async (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.get('/clients/:id/payments', async (req, res) => {
-  try { res.json(await supabaseService.getClientPayments(req.params.id)); }
-  catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 // Tickets
 // /tickets/meta debe ir ANTES de /tickets/:id para evitar conflicto de rutas
 router.get('/tickets/meta', async (req, res) => {
-  try { res.json(await supabaseService.getTicketsMeta()); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try {
+    const forceRefresh = req.query.refresh === 'true';
+    const data = await withCache('tickets_meta', 5_000, () => supabaseService.getTicketsMeta(), forceRefresh);
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/tickets/:id', async (req, res) => {
@@ -511,6 +519,7 @@ router.post('/tickets', async (req, res) => {
   try {
     const result = await supabaseService.createTicket(ticketData);
     await supabaseService.logAction('Crear Ticket', `Nuevo ticket: ${titulo}`, 'tickets', result.id);
+    invalidateCache('tickets_meta');
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -536,6 +545,7 @@ router.patch('/tickets/:id', async (req, res) => {
     if (ticketData.estado) {
       await supabaseService.logAction('Actualizar Ticket', `Ticket #${req.params.id} actualizado`, 'tickets', req.params.id);
     }
+    invalidateCache('tickets_meta');
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -562,8 +572,11 @@ router.post('/tickets/:id/chat', async (req, res) => {
 });
 
 router.delete('/tickets/:id', async (req, res) => {
-  try { res.json(await supabaseService.deleteTicket(req.params.id)); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try {
+    const result = await supabaseService.deleteTicket(req.params.id);
+    invalidateCache('tickets_meta');
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Audit
@@ -576,46 +589,6 @@ router.get('/audit', async (req, res) => {
 router.get('/logs', async (req, res) => {
   try { res.json(await supabaseService.getSystemLogs(100)); }
   catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// Payments
-router.get('/payments', async (req, res) => {
-  try { res.json(await supabaseService.getAllPayments()); }
-  catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-router.post('/payments', async (req, res) => {
-  const cliente_id = sanitizeStr(req.body.cliente_id, 200);
-  const concepto = sanitizeStr(req.body.concepto, 200);
-  const metodo = VALID_PAYMENT_METODOS.includes(req.body.metodo) ? req.body.metodo : 'Transferencia';
-  const fecha = req.body.fecha;
-  const monto = parseFloat(req.body.monto);
-
-  if (!cliente_id) return res.status(400).json({ error: 'El cliente es requerido' });
-  if (!concepto) return res.status(400).json({ error: 'El concepto es requerido' });
-  if (!isValidDate(fecha) || !fecha) return res.status(400).json({ error: 'Fecha inválida' });
-  if (isNaN(monto) || monto <= 0) return res.status(400).json({ error: 'Monto inválido' });
-
-  const paymentData = { cliente_id, concepto, metodo, fecha, monto };
-  try {
-    const result = await supabaseService.createPayment(paymentData);
-    await supabaseService.logAction('Registrar Pago', `Pago de $${monto} - ${concepto}`, 'pagos', result.id);
-    res.json(result);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-router.delete('/payments/:id', async (req, res) => {
-  try { res.json(await supabaseService.deletePayment(req.params.id)); }
-  catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-router.patch('/payments/:id/assign', async (req, res) => {
-  const adminId = sanitizeStr(req.body.adminId, 200) || null;
-  try {
-    const result = await supabaseService.assignPaymentAdmin(req.params.id, adminId);
-    await supabaseService.logAction('Asignar Pago', `Pago ${req.params.id} asignado al administrador ${adminId || 'Ninguno'}`, 'pagos', req.params.id);
-    res.json(result);
-  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Admins
@@ -654,7 +627,7 @@ async function startBackgroundMonitoring() {
   // Supabase Realtime: push INSERT events on tickets to SSE clients
   try {
     const { createClient } = require('@supabase/supabase-js');
-    const realtimeClient = createClient(process.env.SUPABASE2_URL, process.env.SUPABASE2_KEY);
+    const realtimeClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
     realtimeClient
       .channel('tickets-inserts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, payload => {
@@ -692,14 +665,7 @@ async function startBackgroundMonitoring() {
         if (status === 'SUBSCRIBED') console.log('[Realtime] clientes channel activo');
       });
 
-    realtimeClient
-      .channel('pagos-ingresos-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'mp_pagos_ingresos' }, payload => {
-        _broadcastPaymentEvent({ type: payload.eventType, payment: payload.new || payload.old });
-      })
-      .subscribe(status => {
-        if (status === 'SUBSCRIBED') console.log('[Realtime] pagos channel activo');
-      });
+    // pagos-ingresos-changes subscription removed as billing system is eradicated
   } catch (e) {
     console.error('[Realtime] Error iniciando suscripcion:', e.message);
   }

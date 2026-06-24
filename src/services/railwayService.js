@@ -17,12 +17,19 @@ async function railwayQuery(query, variables = {}, customToken = null) {
       },
       body: JSON.stringify({ query, variables })
     });
-    return await response.json();
+    
+    const text = await response.text();
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      throw new Error(`La API de Railway devolvió una respuesta no válida (HTTP ${response.status}): ${text.slice(0, 150)}...`);
+    }
   } catch (error) {
-    console.error("Error en railwayQuery:", error);
+    console.error("Error en railwayQuery:", error.message || error);
     throw error;
   }
 }
+
 
 const railwayService = {
   async getAssistants() {

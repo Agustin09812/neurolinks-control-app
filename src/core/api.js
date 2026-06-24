@@ -18,8 +18,7 @@ function _post(path, body) {
   return _fetch(path, { method: 'POST', body: JSON.stringify(body) });
 }
 
-window.api = {
-
+export const api = {
   // --------------------------------------------------
   // EXTERNAL
   // --------------------------------------------------
@@ -34,7 +33,7 @@ window.api = {
   // --------------------------------------------------
   // PROJECTS
   // --------------------------------------------------
-  getAssistants: () => _fetch('/api/assistants'),
+  getAssistants: (forceRefresh = false) => _fetch(`/api/assistants${forceRefresh ? '?refresh=true' : ''}`),
 
   updateProjectName: (projectId, newName) =>
     _fetch(`/api/projects/${projectId}/name`, { method: 'PATCH', body: JSON.stringify({ newName }) }),
@@ -93,7 +92,7 @@ window.api = {
   // --------------------------------------------------
   // VERSION
   // --------------------------------------------------
-  getAppVersion: () => Promise.resolve('1.2.4'),
+  getAppVersion: () => Promise.resolve('1.2.5'),
 
   // --------------------------------------------------
   // CLIENTS
@@ -120,16 +119,13 @@ window.api = {
   // --------------------------------------------------
   // TICKETS
   // --------------------------------------------------
-  // Listado paginado SIN chats_adjuntos — para vistas de lista
   getTickets: (filters) => {
     const params = new URLSearchParams(filters || {}).toString();
     return _fetch(`/api/tickets${params ? '?' + params : ''}`);
   },
 
-  // Solo metadatos de tickets abiertos — para SmartRefresh background
   getTicketsMeta: () => _fetch('/api/tickets/meta'),
 
-  // Ticket completo con chats_adjuntos — solo al abrir el chat
   getTicketById: (id) => _fetch(`/api/tickets/${id}`),
 
   createTicket: (ticketData) => _post('/api/tickets', ticketData),
@@ -156,22 +152,11 @@ window.api = {
     _post(`/api/projects/${projectId}/unlink`, {}),
 
   // --------------------------------------------------
-  // BILLING & ADMINS
+  // ADMINS & USER info
   // --------------------------------------------------
   getAdmins: () => _fetch('/api/admins'),
   getCurrentUser: () => _fetch('/api/me'),
-
-  getClientPayments: (clientId) =>
-    _fetch(`/api/clients/${clientId}/payments`),
-
-  getAllPayments: () => _fetch('/api/payments'),
-
-  createPayment: (paymentData) => _post('/api/payments', paymentData),
-
-  assignPaymentAdmin: (id, adminId) =>
-    _fetch(`/api/payments/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ adminId }) }),
-
-  deletePayment: (id) =>
-    _fetch(`/api/payments/${id}`, { method: 'DELETE' }),
-
 };
+
+// Expose globally to maintain backward compatibility in some custom places
+window.api = api;
