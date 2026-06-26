@@ -1,4 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
+const railwayService = require('./railwayService');
+const dnsService = require('./dnsService');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
@@ -9,7 +11,82 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
+async function recalculatePlanSubscriptionsLocal(vendedorId, planTipo, lineasCantidad) {
+    console.log(`[recalculatePlanSubscriptionsLocal] Running fallback database-only count...`);
+    const { count, error: countErr } = await supabase
+        .from("clientes")
+        .select("id", { count: "exact", head: true })
+        .eq("vendedor_id", vendedorId)
+        .eq("plan_tipo", planTipo)
+        .eq("is_deleted", false);
 
+    if (!countErr && count !== null) {
+        await supabase
+            .from("mp_planes")
+            .update({ suscripciones_activas: count })
+            .eq("vendedor_id", vendedorId)
+            .eq("plan_tipo", planTipo)
+            .eq("lineas_cantidad", lineasCantidad);
+        console.log(`[recalculatePlanSubscriptionsLocal] Updated mp_planes with local count: ${count}`);
+    }
+}
+
+async function recalculatePlanSubscriptions(vendedorId, planTipo, lineasCantidad) {
+    try {
+        console.log(`[recalculatePlanSubscriptions] Recalculating active subs for seller: ${vendedorId}, planTipo: ${planTipo}, lineasCantidad: ${lineasCantidad}`);
+        const { data: planData, error: planErr } = await supabase
+            .from("mp_planes")
+            .select("mp_plan_id, mp_vendedores(access_token)")
+            .eq("vendedor_id", vendedorId)
+            .eq("plan_tipo", planTipo)
+            .eq("lineas_cantidad", lineasCantidad)
+            .single();
+
+        if (planErr || !planData) {
+            console.warn(`[recalculatePlanSubscriptions] Could not fetch mp_plan_id from DB:`, planErr?.message || "Plan not found.");
+            return await recalculatePlanSubscriptionsLocal(vendedorId, planTipo, lineasCantidad);
+        }
+
+        const mpPlanId = planData.mp_plan_id;
+        const accessToken = planData.mp_vendedores?.access_token;
+
+        if (!mpPlanId || !accessToken) {
+            console.warn(`[recalculatePlanSubscriptions] Missing mpPlanId or seller access_token. Falling back to local count.`);
+            return await recalculatePlanSubscriptionsLocal(vendedorId, planTipo, lineasCantidad);
+        }
+
+        console.log(`[recalculatePlanSubscriptions] Querying Mercado Pago API for plan ID ${mpPlanId}...`);
+        const mpRes = await fetch(`https://api.mercadopago.com/preapproval/search?preapproval_plan_id=${mpPlanId}&status=authorized`, {
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+            }
+        });
+
+        if (mpRes.ok) {
+            const mpJson = await mpRes.json();
+            const activeCount = mpJson.paging?.total ?? 0;
+            console.log(`[recalculatePlanSubscriptions] Mercado Pago API reported ${activeCount} active subscriptions.`);
+
+            const { error: updateErr } = await supabase
+                .from("mp_planes")
+                .update({ suscripciones_activas: activeCount })
+                .eq("vendedor_id", vendedorId)
+                .eq("plan_tipo", planTipo)
+                .eq("lineas_cantidad", lineasCantidad);
+
+            if (updateErr) throw updateErr;
+            console.log(`[recalculatePlanSubscriptions] Successfully updated mp_planes via API.`);
+        } else {
+            const errText = await mpRes.text();
+            console.warn(`[recalculatePlanSubscriptions] Mercado Pago API returned status ${mpRes.status}: ${errText}. Falling back to local count.`);
+            return await recalculatePlanSubscriptionsLocal(vendedorId, planTipo, lineasCantidad);
+        }
+    } catch (err) {
+        console.error(`[recalculatePlanSubscriptions] Error in recalculatePlanSubscriptions:`, err.message);
+        await recalculatePlanSubscriptionsLocal(vendedorId, planTipo, lineasCantidad).catch(console.error);
+    }
+}
 
 const supabaseService = {
     /**
@@ -83,6 +160,136 @@ const supabaseService = {
     async deleteClient(clientId) {
 
         try {
+            // 0. Consultar cliente para obtener datos de recursos externos (Teardown)
+            const { data: cliente, error: fetchErr } = await supabase
+                .from("clientes")
+                .select("id, auth_user_id, backoffice_activado, mp_preapproval_id, token_backoffice, tokens_backoffice, deployment_url, deployment_urls, plan_tipo, vendedor_id, proyecto_slug, lineas_cantidad")
+                .eq("id", clientId)
+                .single();
+
+            if (!fetchErr && cliente) {
+                console.log(`[Teardown] Iniciando teardown de recursos para cliente ${clientId}...`);
+
+                // 0.1 Cancelar suscripción en Mercado Pago
+                if (cliente.mp_preapproval_id) {
+                    console.log(`[Teardown] Cancelando preapproval en Mercado Pago: ${cliente.mp_preapproval_id}`);
+                    let sellerToken = null;
+                    if (cliente.vendedor_id) {
+                        const { data: seller } = await supabase
+                            .from("mp_vendedores")
+                            .select("access_token")
+                            .eq("id", cliente.vendedor_id)
+                            .single();
+                        if (seller) sellerToken = seller.access_token;
+                    }
+                    if (!sellerToken && cliente.auth_user_id) {
+                        const { data: seller } = await supabase
+                            .from("mp_vendedores")
+                            .select("access_token")
+                            .eq("user_id", cliente.auth_user_id)
+                            .maybeSingle();
+                        if (seller) sellerToken = seller.access_token;
+                    }
+
+                    const mainToken = process.env.MP_ACCESS_TOKEN;
+                    const mpTokens = [];
+                    if (sellerToken) mpTokens.push({ name: "Seller Token", value: sellerToken });
+                    if (mainToken) mpTokens.push({ name: "Main Token", value: mainToken });
+
+                    const url = `https://api.mercadopago.com/preapproval/${cliente.mp_preapproval_id}`;
+                    let mpCancelled = false;
+
+                    for (const token of mpTokens) {
+                        try {
+                            console.log(`[Teardown] Probando cancelación con ${token.name}...`);
+                            const mpRes = await fetch(url, {
+                                method: "PUT",
+                                headers: {
+                                    "Authorization": `Bearer ${token.value}`,
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({ status: "cancelled" })
+                            });
+                            if (mpRes.ok) {
+                                console.log(`[Teardown] ✅ Preapproval ${cliente.mp_preapproval_id} cancelado exitosamente con ${token.name}.`);
+                                mpCancelled = true;
+                                break;
+                            } else {
+                                const errTxt = await mpRes.text();
+                                console.warn(`[Teardown] ⚠️ MP API falló para ${token.name}:`, errTxt);
+                            }
+                        } catch (err) {
+                            console.error(`[Teardown] ❌ Error con ${token.name}:`, err.message);
+                        }
+                    }
+                }
+
+                // 0.2 Eliminar proyectos de Railway
+                const projectIds = new Set();
+                if (cliente.token_backoffice) projectIds.add(cliente.token_backoffice);
+                if (cliente.tokens_backoffice && cliente.tokens_backoffice.length) {
+                    cliente.tokens_backoffice.forEach(tid => {
+                        if (tid && tid !== 'none') projectIds.add(tid);
+                    });
+                }
+
+                // Consultar también la tabla proyectos_railway para capturar los proyectos generados manualmente
+                const { data: proys } = await supabase
+                    .from('proyectos_railway')
+                    .select('railway_project_id')
+                    .eq('cliente_id', clientId);
+                if (proys && proys.length) {
+                    proys.forEach(p => {
+                        if (p.railway_project_id) projectIds.add(p.railway_project_id);
+                    });
+                }
+
+                for (const projectId of projectIds) {
+                    try {
+                        await railwayService.deleteProject(projectId);
+                    } catch (err) {
+                        console.error(`[Teardown] Error eliminando proyecto ${projectId}:`, err.message);
+                    }
+                }
+
+                // 0.3 Eliminar registros DNS en Hostinger
+                const slugs = new Set();
+                if (cliente.proyecto_slug) {
+                    slugs.add(cliente.proyecto_slug);
+                    if (cliente.lineas_cantidad > 1) {
+                        for (let i = 1; i <= cliente.lineas_cantidad; i++) {
+                            slugs.add(`${cliente.proyecto_slug}-linea${i}`);
+                        }
+                    }
+                }
+
+                const dnsFilters = Array.from(slugs).flatMap(slug => [
+                    { name: slug, type: "CNAME" },
+                    { name: `_railway-verify.${slug}`, type: "TXT" }
+                ]);
+
+                if (dnsFilters.length > 0) {
+                    try {
+                        await dnsService.deleteDnsRecords(dnsFilters);
+                    } catch (err) {
+                        console.error(`[Teardown] Error eliminando registros DNS:`, err.message);
+                    }
+                }
+
+                // 0.4 Eliminar datos operativos en Supabase asociados a los projectIds
+                if (projectIds.size > 0) {
+                    const pids = Array.from(projectIds);
+                    console.log(`[Teardown] Limpiando datos operativos en BD para los proyectos:`, pids);
+                    await supabase.from("settings").delete().in("project_id", pids);
+                    await supabase.from("whatsapp_sessions").delete().in("project_id", pids);
+                    await supabase.from("routing_table").delete().in("project_id", pids);
+                    await supabase.from("meta_onboarding").delete().in("project_id", pids);
+                    await supabase.from("chat_tags").delete().in("project_id", pids);
+                    await supabase.from("tags").delete().in("project_id", pids);
+                    await supabase.from("messages").delete().in("project_id", pids);
+                    await supabase.from("chats").delete().in("project_id", pids);
+                }
+            }
 
             // 1. eliminar vínculos de proyectos
             const { error: relError } = await supabase
@@ -115,6 +322,11 @@ const supabaseService = {
                 .eq('id', clientId);
 
             if (error) throw error;
+
+            // 5. Recalcular suscripciones del vendedor
+            if (cliente && cliente.vendedor_id && cliente.plan_tipo) {
+                await recalculatePlanSubscriptions(cliente.vendedor_id, cliente.plan_tipo, cliente.lineas_cantidad);
+            }
 
             return { success: true };
 

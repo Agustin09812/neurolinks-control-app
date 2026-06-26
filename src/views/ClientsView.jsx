@@ -22,9 +22,14 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
   const [adminFilter, setAdminFilter] = useState('');
 
   // Selected Client details
-  const [selectedClientId, setSelectedClientId] = useState(null);
+  const [selectedClientId, setSelectedClientId] = useState(() => localStorage.getItem('selectedClientId') || null);
   const [clientProjects, setClientProjects] = useState([]);
   const [clientTickets, setClientTickets] = useState([]);
+
+  useEffect(() => {
+    if (selectedClientId) localStorage.setItem('selectedClientId', selectedClientId);
+    else localStorage.removeItem('selectedClientId');
+  }, [selectedClientId]);
 
   // Client Modal (Create / Edit)
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);

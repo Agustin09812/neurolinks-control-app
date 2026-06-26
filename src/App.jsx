@@ -242,13 +242,56 @@ export default function App() {
 
     try {
       ticketsSse = new EventSource('/api/tickets/stream');
-      ticketsSse.onmessage = (event) => {
+      ticketsSse.onmessage = async (event) => {
         try {
           const payload = JSON.parse(event.data);
           if (payload.type === 'INSERT' || payload.type === 'UPDATE' || payload.type === 'DELETE') {
             // Silent background refresh — no loading spinners
             store.invalidate('ticketsMeta', 'clients');
             if (window.refreshTickets) window.refreshTickets();
+            if (window.fetchTicketDetailsGlobal) window.fetchTicketDetailsGlobal();
+
+            if ((payload.type === 'INSERT' || payload.type === 'UPDATE') && payload.ticket) {
+              const tick = payload.ticket;
+              
+              // Resolve client name
+              let clientName = 'Cliente';
+              try {
+                const clients = await api.getClients() || [];
+                const cObj = clients.find(c => c.id === tick.cliente_id);
+                if (cObj && cObj.nombre) clientName = cObj.nombre;
+              } catch {}
+
+              // Parse chats_adjuntos
+              let chats = [];
+              if (tick.chats_adjuntos) {
+                if (typeof tick.chats_adjuntos === 'string') {
+                  try { chats = JSON.parse(tick.chats_adjuntos); } catch(e){}
+                } else if (Array.isArray(tick.chats_adjuntos)) {
+                  chats = tick.chats_adjuntos;
+                }
+              }
+
+              if (payload.type === 'INSERT') {
+                addNotification(
+                  'ticket',
+                  `Nuevo Ticket: ${clientName}`,
+                  `Nuevo ticket de ${clientName}${tick.titulo ? `: ${tick.titulo}` : ''}`,
+                  `ticket-ins-${tick.id}`
+                );
+              } else if (payload.type === 'UPDATE' && chats.length > 0) {
+                const lastMsg = chats[chats.length - 1];
+                if (lastMsg && lastMsg.rol !== 'admin') {
+                  const msgText = lastMsg.mensaje || 'Nuevo mensaje adjunto';
+                  addNotification(
+                    'ticket',
+                    `Mensaje de ${clientName}`,
+                    `Mensaje de ${clientName}: ${msgText}`,
+                    `ticket-msg-${tick.id}-${chats.length}`
+                  );
+                }
+              }
+            }
           }
         } catch (e) {}
       };

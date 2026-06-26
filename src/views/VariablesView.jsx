@@ -64,25 +64,27 @@ export default function VariablesView({ navigate }) {
 
   return (
     <div className="variables-panel animate-fade-up">
-      {/* HEADER */}
-      <div className="rw-topbar mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <button className="btn btn-outline-light" onClick={handleBack} title="Volver">
+      {/* HEADER / TOPBAR */}
+      <div className="view-header flex items-center justify-between gap-3 w-full mb-6" style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <div className="flex items-center gap-3 overflow-hidden">
+          <button className="btn btn-outline-light btn-sm flex items-center justify-center shrink-0" onClick={handleBack} title="Volver a Asistentes">
             <i className="bi bi-arrow-left"></i>
           </button>
+          <h2 className="view-header-title mb-0 text-base sm:text-lg lg:text-xl truncate hidden sm:block">Variables: {context.serviceName}</h2>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
           <button
-            className="btn btn-outline-light btn-sm"
+            className="btn btn-outline-light btn-sm flex items-center gap-2"
             onClick={() => api.openExternal("https://supabase.com/dashboard/project/ygyicozjewxbyixtpjlo/editor/99056?schema=public")}
           >
-            <i className="bi bi-plus-lg mr-1"></i>Añadir variable
+            <i className="bi bi-plus-lg"></i><span>Añadir variable</span>
           </button>
         </div>
-        <div className="text-center mb-2">
-          <h4 className="font-bold mb-0">
-            <i className="bi bi-sliders mr-2 icon-service"></i>{context.serviceName}
-          </h4>
-          <small className="text-dim">Configuración del servicio</small>
-        </div>
+      </div>
+
+      {/* MOBILE SERVICE TITLE (visible only on mobile screens < 640px) */}
+      <div className="block sm:hidden text-center mb-6 px-2">
+        <h3 className="view-header-title font-bold text-lg mb-0 truncate w-full">Variables: {context.serviceName}</h3>
       </div>
 
       {/* SEARCH */}

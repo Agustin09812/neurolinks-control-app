@@ -68,13 +68,17 @@ export default function TicketChatView({ navigate }) {
       return;
     }
     fetchTicketDetails(true);
+    window.fetchTicketDetailsGlobal = () => fetchTicketDetails(true);
 
     // Auto-refresh chat every 15s when active
     const interval = setInterval(() => {
       fetchTicketDetails(false);
     }, 15000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      delete window.fetchTicketDetailsGlobal;
+    };
   }, [tickId]);
 
   const scrollToBottom = () => {

@@ -149,7 +149,7 @@ export default function DeployProject({ navigate }) {
                   </div>
                   <span className="font-bold text-main text-sm tracking-wide">Despliegue Instantáneo y Seguro</span>
                 </div>
-                <p className="mb-0 mt-1 text-xs leading-relaxed text-sky-100/70 pl-1">
+                <p className="mb-0 mt-1 text-xs leading-relaxed text-sky-100/70 deploy-info-text pl-1">
                   Se aprovisionará una instancia dedicada en Railway de forma automática. Una vez completado, podrás personalizar todas tus claves y variables de entorno desde la sección de Variables.
                 </p>
               </div>

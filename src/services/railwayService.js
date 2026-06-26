@@ -460,6 +460,26 @@ const railwayService = {
         error: error.message
       };
     }
+  },
+
+  async deleteProject(projectId) {
+    console.log(`[railwayService] Requesting deletion of Railway project: ${projectId}`);
+    try {
+      const query = `
+        mutation projectDelete($id: String!) {
+          projectDelete(id: $id)
+        }
+      `;
+      const result = await railwayQuery(query, { id: projectId });
+      if (result.errors) {
+        throw new Error(result.errors[0].message);
+      }
+      console.log(`[railwayService] Result for ${projectId}:`, result.data);
+      return { success: true, data: result.data };
+    } catch (error) {
+      console.error(`[railwayService] Failed to delete project ${projectId}:`, error.message);
+      return { success: false, error: error.message };
+    }
   }
 };
 
