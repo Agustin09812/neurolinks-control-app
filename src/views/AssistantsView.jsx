@@ -19,8 +19,31 @@ export default function AssistantsView({ navigate }) {
   const [refreshing, setRefreshing] = useState(false);
 
   // Grid list controls
-  const [isListView, setIsListView] = useState(() => localStorage.getItem('assistantsView') === 'list');
+  const [isListView, setIsListView] = useState(() => window.innerWidth > 600);
   const [search, setSearch] = useState('');
+  const [selectedClientFilter, setSelectedClientFilter] = useState('');
+
+  useEffect(() => {
+    const handleResize = () => setIsListView(window.innerWidth > 600);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Map project ID to client object for quick lookup
+  const projectClientMap = React.useMemo(() => {
+    const map = {};
+    clients.forEach(c => {
+      const pIds = c.railway_project_ids || c.tokens_backoffice || [];
+      const ids = Array.isArray(pIds) ? pIds : (c.token_backoffice ? [c.token_backoffice] : []);
+      ids.forEach(pId => {
+        if (pId) map[pId] = c;
+      });
+      if (c.token_backoffice && !map[c.token_backoffice]) {
+        map[c.token_backoffice] = c;
+      }
+    });
+    return map;
+  }, [clients]);
 
   // Selected assistant detail state
   const [selectedProjectId, setSelectedProjectId] = useState(() => localStorage.getItem('selectedAssistantProjectId') || null);
@@ -132,12 +155,6 @@ export default function AssistantsView({ navigate }) {
       });
     }
   }, [selectedProject]);
-
-  const toggleView = () => {
-    const next = !isListView ? 'list' : 'grid';
-    setIsListView(!isListView);
-    localStorage.setItem('assistantsView', next);
-  };
 
   const getStatusIcon = (status) => {
     if (!status) return 'bi-circle';
@@ -290,6 +307,7 @@ export default function AssistantsView({ navigate }) {
       window.showToast('Cliente vinculado', 'success');
       setIsLinkModalOpen(false);
       fetchDetailMetadata();
+      store.fetchClients(true).catch(() => {});
     } catch (err) {
       window.showToast('Error al vincular cliente', 'danger');
     }
@@ -329,9 +347,13 @@ export default function AssistantsView({ navigate }) {
   }
 
   // Filter list
-  const filteredAssistants = assistants.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredAssistants = assistants.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    if (!matchesSearch) return false;
+    if (!selectedClientFilter) return true;
+    const assignedClient = projectClientMap[p.id];
+    return assignedClient && assignedClient.id === selectedClientFilter;
+  });
 
   const anyUpdatable = assistants.some(p => (p.services || []).some(s => s.isUpdatable));
 
@@ -569,40 +591,126 @@ export default function AssistantsView({ navigate }) {
       ) : (
         <div id="assistants-grid-panel">
           {/* HEADER PANEL */}
-          <div className="view-header">
-            <div className="view-header-left clients-header-left">
-              <h2 className="view-header-title mb-0">MIS ASISTENTES</h2>
-              <div className="input-group input-group-sm search-input-group mb-0">
-                <span className="input-group-text text-dim">
-                  <i className="bi bi-search"></i>
-                </span>
-                <input
-                  type="text"
-                  className="form-control text-main"
-                  placeholder="Buscar..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+          <style>{`
+            /* Contenedor principal de la cabecera */
+            .assistant-custom-header {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 1rem;
+              width: 100%;
+            }
+            .assistant-header-top {
+              display: flex;
+              align-items: center;
+              gap: 1rem;
+              flex: 1 1 auto;
+            }
+            .assistant-header-inputs {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+            }
+            .assistant-header-controls {
+              display: flex;
+              align-items: center;
+              justify-content: flex-end;
+              flex-shrink: 0;
+            }
+            .assistant-btn-label {
+              display: inline !important;
+            }
+            .assistant-btn-icon {
+              margin-right: 0.5rem !important;
+            }
+
+            /* VISTA TABLET Y MOBILE: <= 991px */
+            @media (max-width: 991px) {
+              .assistant-custom-header {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+                width: 100%;
+              }
+              .assistant-header-top {
+                flex-direction: column;
+                align-items: center;
+                width: 100%;
+                gap: 0.8rem;
+              }
+              .assistant-header-inputs {
+                flex-direction: column;
+                align-items: center;
+                width: 100%;
+                gap: 0.8rem;
+              }
+              .assistant-header-inputs > div {
+                width: 100% !important;
+                max-width: 400px;
+              }
+              .assistant-header-controls {
+                width: 100%;
+                justify-content: center;
+              }
+              .assistant-header-controls .flex {
+                justify-content: center;
+                width: 100%;
+                flex-wrap: wrap;
+              }
+            }
+          `}</style>
+          <div className="view-header assistant-custom-header">
+            <div className="assistant-header-top">
+              <h2 className="view-header-title mb-0 text-center">MIS ASISTENTES</h2>
+              <div className="assistant-header-inputs">
+                <div className="input-group input-group-sm mb-0" style={{ width: '180px' }}>
+                  <span className="input-group-text text-dim">
+                    <i className="bi bi-search"></i>
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control text-main"
+                    placeholder="Buscar..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-row items-center gap-1" style={{ width: '180px' }}>
+                  <select
+                    className="form-select form-select-sm text-main bg-transparent border-secondary w-full"
+                    value={selectedClientFilter}
+                    onChange={(e) => setSelectedClientFilter(e.target.value)}
+                  >
+                    <option value="">Todos los clientes</option>
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id} className="bg-dark text-white">
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedClientFilter && (
+                    <button className="btn btn-outline-secondary btn-sm shrink-0" onClick={() => setSelectedClientFilter('')} title="Limpiar filtro">
+                      <i className="bi bi-x-lg"></i>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="view-header-controls">
-              <div className="flex gap-2 clients-toolbar-btns">
-                <button className="btn btn-outline-light btn-sm" onClick={toggleView} title={isListView ? 'Vista cuadrícula' : 'Vista lista'}>
-                  <i className={`bi bi-${isListView ? 'grid' : 'list-ul'}`}></i>
-                </button>
+            <div className="assistant-header-controls">
+              <div className="flex gap-2 items-center justify-center">
                 {anyUpdatable && (
-                  <button className="btn btn-warning btn-sm" onClick={handleUpdateAll}>
-                    <i className="bi bi-arrow-up-circle mr-2 btn-assistant-icon"></i>
-                    <span className="btn-assistant-label">Update All</span>
+                  <button className="btn btn-warning btn-sm flex items-center" onClick={handleUpdateAll}>
+                    <i className="bi bi-arrow-up-circle assistant-btn-icon"></i>
+                    <span className="assistant-btn-label">Update All</span>
                   </button>
                 )}
-                <button className="btn btn-outline-light btn-sm" onClick={handleRefresh} disabled={refreshing}>
+                <button className="btn btn-outline-light btn-sm flex items-center" onClick={handleRefresh} disabled={refreshing}>
                   {refreshing ? (
-                    <span className="spinner-border spinner-border-sm mr-2 btn-assistant-icon"></span>
+                    <span className="spinner-border spinner-border-sm assistant-btn-icon"></span>
                   ) : (
-                    <i className="bi bi-arrow-clockwise mr-2 btn-assistant-icon"></i>
+                    <i className="bi bi-arrow-clockwise assistant-btn-icon"></i>
                   )}
-                  <span className="btn-assistant-label">Actualizar</span>
+                  <span className="assistant-btn-label">Actualizar</span>
                 </button>
               </div>
             </div>
@@ -616,6 +724,7 @@ export default function AssistantsView({ navigate }) {
               filteredAssistants.map((project, index) => {
                 const statusColor = getStatusColor(project.status);
                 const hasUpdate = (project.services || []).some(s => s.isUpdatable);
+                const client = projectClientMap[project.id];
 
                 if (isListView) {
                   return (
@@ -630,6 +739,15 @@ export default function AssistantsView({ navigate }) {
                         <div className="text-xs text-white/50">ID: {project.id.substring(0, 8)}</div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        {client ? (
+                          <span className="badge badge-status-info">
+                            <i className="bi bi-person-fill mr-1"></i>{client.nombre}
+                          </span>
+                        ) : (
+                          <span className="badge badge-status-secondary">
+                            <i className="bi bi-dash-circle mr-1"></i>No vinculado
+                          </span>
+                        )}
                         <span className="text-sm text-dim hidden sm:block">Servicios: {(project.services || []).length}</span>
                         <span className={`badge badge-status-${statusColor}`}>{project.status.toUpperCase()}</span>
                         {hasUpdate && (
@@ -653,6 +771,17 @@ export default function AssistantsView({ navigate }) {
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
                       <span className={`badge badge-status-${statusColor}`}>{project.status.toUpperCase()}</span>
                       <span className="text-xs text-white/50">ID: {project.id.substring(0, 8)}</span>
+                    </div>
+                    <div className="mb-3">
+                      {client ? (
+                        <span className="badge badge-status-info">
+                          <i className="bi bi-person-fill mr-1"></i>{client.nombre}
+                        </span>
+                      ) : (
+                        <span className="badge badge-status-secondary">
+                          <i className="bi bi-dash-circle mr-1"></i>No vinculado
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap text-sm text-dim">
                       <span>Servicios: {(project.services || []).length}</span>

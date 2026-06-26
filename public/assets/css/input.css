@@ -2388,3 +2388,13 @@ body[data-theme="light"] .sidebar-user-avatar {
   border-color: rgba(255, 255, 255, 0.4);
   box-shadow: 0 4px 12px rgba(0, 87, 179, 0.15);
 }
+
+/* Responsive View Modes (600px breakpoint) */
+@media (max-width: 600px) {
+  .desktop-list-view { display: none !important; }
+  .mobile-grid-view { display: grid !important; }
+}
+@media (min-width: 601px) {
+  .desktop-list-view { display: flex !important; }
+  .mobile-grid-view { display: none !important; }
+}
