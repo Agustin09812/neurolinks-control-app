@@ -298,6 +298,29 @@ router.post('/templates/:id/deploy', async (req, res) => {
     const result = await railwayService.deployTemplate(req.params.id);
     if (result.success) {
       await supabaseService.logAction('Deploy Template', `Nuevo proyecto creado vía template: ${req.params.id}`, 'proyectos', result.projectId);
+      
+      try {
+        if (result.projectId) {
+          const clientData = {
+            nombre: 'GENERICO',
+            empresa: 'GENERICO',
+            email: `generico_${result.projectId.slice(0, 6).toLowerCase()}@generico.com`,
+            telefono: null,
+            plan: 'Standard',
+            vencimiento: null,
+            abono: 9999,
+            vendedor_user_id: null
+          };
+          const newClient = await supabaseService.createClient(clientData);
+          if (newClient && newClient.id) {
+            await supabaseService.linkProjectToClient(result.projectId, newClient.id);
+            await supabaseService.logAction('Crear Cliente Genérico', `Cliente generado y vinculado al proyecto ${result.projectId}`, 'clientes', newClient.id);
+            invalidateCache('clients');
+          }
+        }
+      } catch (clientErr) {
+        console.error('Error al generar cliente genérico para despliegue:', clientErr);
+      }
     }
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }

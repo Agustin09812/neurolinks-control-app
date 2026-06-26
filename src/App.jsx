@@ -9,7 +9,7 @@ import AssistantsView from './views/AssistantsView';
 import TicketsView from './views/TicketsView';
 import VariablesView from './views/VariablesView';
 import TicketChatView from './views/TicketChatView';
-import DeployProjectModal from './views/DeployProjectModal';
+import DeployProject from './views/DeployProject';
 
 export default function App() {
   const [view, setView] = useState(() => localStorage.getItem('activeView') || 'dashboard');
@@ -20,7 +20,6 @@ export default function App() {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [hasTicketsBadge, setHasTicketsBadge] = useState(false);
-  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [actionSpinner, setActionSpinner] = useState(null);
 
   const canvasRef = useRef(null);
@@ -37,7 +36,7 @@ export default function App() {
   // Expose routing globally so legacy code can call it
   useEffect(() => {
     window.navigate = navigate;
-    window.openDeployModal = () => setIsDeployModalOpen(true);
+    window.openDeployModal = () => navigate('deploy');
     document.body.classList.remove('app-preload');
   }, []);
 
@@ -314,6 +313,8 @@ export default function App() {
         return <TicketChatView navigate={navigate} />;
       case 'variables':
         return <VariablesView navigate={navigate} />;
+      case 'deploy':
+        return <DeployProject navigate={navigate} />;
       default:
         return <DashboardView navigate={navigate} />;
     }
@@ -546,8 +547,6 @@ export default function App() {
           </div>
         </div>
       </div>
-
-      <DeployProjectModal isOpen={isDeployModalOpen} onClose={() => setIsDeployModalOpen(false)} />
 
       {actionSpinner && (
         <div id="action-spinner" style={{
