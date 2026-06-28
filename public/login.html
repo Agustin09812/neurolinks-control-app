@@ -398,7 +398,7 @@
           body: JSON.stringify({ username, password, rememberMe })
         });
         if (res.ok) {
-          window.location.href = '/';
+          window.location.replace('/');
         } else {
           errorMsg.style.display = 'flex';
           btn.disabled = false;
@@ -413,6 +413,12 @@
         btn.style.opacity = '1';
       }
     };
+
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) {
+        window.location.reload();
+      }
+    });
   </script>
 
   <!-- Neural background animation -->

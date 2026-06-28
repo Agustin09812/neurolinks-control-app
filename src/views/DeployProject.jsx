@@ -36,9 +36,9 @@ export default function DeployProject({ navigate }) {
     try {
       const result = await api.deployTemplate(selectedTemplate.id);
       if (result.success) {
-        alert("Despliegue iniciado. El nuevo proyecto aparecerá en la lista de asistentes en unos momentos.");
+        alert("Despliegue iniciado. El nuevo proyecto aparecerá en la lista de proyectos en unos momentos.");
         if (window.refreshAssistants) window.refreshAssistants();
-        navigate('assistants');
+        navigate('projects');
       } else {
         alert("Error al desplegar: " + (result.error || "Respuesta desconocida"));
       }

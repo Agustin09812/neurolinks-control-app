@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../core/api';
 import { store, useStoreKey } from '../core/store';
 
-export default function AssistantsView({ navigate }) {
+export default function ProjectsView({ navigate }) {
   // Shared data from global store — instant if already cached from another view
   const assistantsData = useStoreKey('assistants', () => store.fetchAssistants());
   const clientsData    = useStoreKey('clients',    () => store.fetchClients());
@@ -74,7 +74,7 @@ export default function AssistantsView({ navigate }) {
         store.fetchClients(true),
       ]);
     } catch (err) {
-      window.showToast('Error al cargar asistentes', 'danger');
+      window.showToast('Error al cargar proyectos', 'danger');
     } finally {
       setRefreshing(false);
     }
@@ -127,7 +127,7 @@ export default function AssistantsView({ navigate }) {
       const val = settings?.find(s => s.key === 'SYSTEM_CONFIG_VISIBLE')?.value;
       setSysConfigVal(val === 'true' || val === true);
     } catch (err) {
-      console.error('[AssistantsView] Error loading details metadata:', err);
+      console.error('[ProjectsView] Error loading details metadata:', err);
     } finally {
       setLoadingHeaderData(false);
     }
@@ -182,7 +182,7 @@ export default function AssistantsView({ navigate }) {
     try {
       await api.redeployService(serviceId, environmentId);
       window.showToast('Reinicio solicitado correctamente', 'success');
-      loadAssistantsData();
+      store.fetchAssistants(true).catch(() => {});
     } catch (err) {
       window.showToast('Error al reiniciar el servicio', 'danger');
     }
@@ -335,7 +335,7 @@ export default function AssistantsView({ navigate }) {
       <div>
         <div className="view-header">
           <div className="view-header-left clients-header-left">
-            <h2 className="view-header-title mb-0">MIS ASISTENTES</h2>
+            <h2 className="view-header-title mb-0">MIS PROYECTOS</h2>
           </div>
           <div className="view-header-controls">
             <button className="btn btn-sm btn-outline-light flex items-center gap-2" disabled>
@@ -346,7 +346,7 @@ export default function AssistantsView({ navigate }) {
         </div>
         <div className="h-full flex flex-col justify-center items-center py-20 text-dim">
           <span className="spinner-border text-primary mb-3"></span>
-          <span>Cargando asistentes...</span>
+          <span>Cargando proyectos...</span>
         </div>
       </div>
     );
@@ -365,12 +365,63 @@ export default function AssistantsView({ navigate }) {
 
   return (
     <div>
+      <style>{`
+        /* Glow effect for Client button in Dark Mode */
+        [data-theme="dark"] .btn-client-glow:hover {
+          box-shadow: 0 0 20px rgba(14, 165, 233, 0.6), 0 0 8px rgba(14, 165, 233, 0.9) !important;
+          border: 1px solid rgba(14, 165, 233, 0.8) !important;
+          background-color: rgba(14, 165, 233, 0.15) !important;
+        }
+        [data-theme="dark"] .btn-client-link-glow:hover {
+          box-shadow: 0 0 20px rgba(16, 185, 129, 0.6), 0 0 8px rgba(16, 185, 129, 0.9) !important;
+          border: 1px solid rgba(16, 185, 129, 0.8) !important;
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+
+        /* Glow effect for Client button in Light Mode */
+        [data-theme="light"] .btn-client-glow:hover {
+          box-shadow: 0 0 14px rgba(2, 132, 199, 0.45), 0 0 4px rgba(2, 132, 199, 0.6) !important;
+          border: 1px solid rgba(2, 132, 199, 0.5) !important;
+          background-color: rgba(14, 165, 233, 0.08) !important;
+        }
+        [data-theme="light"] .btn-client-link-glow:hover {
+          box-shadow: 0 0 14px rgba(5, 150, 105, 0.45), 0 0 4px rgba(5, 150, 105, 0.6) !important;
+          border: 1px solid rgba(5, 150, 105, 0.5) !important;
+          background-color: rgba(16, 185, 129, 0.08) !important;
+        }
+
+        /* Custom styles for search dropdown container in modal */
+        [data-theme="dark"] .client-search-container {
+          background-color: rgba(0, 0, 0, 0.4);
+          border-color: var(--border-soft, #333);
+        }
+        [data-theme="dark"] .client-search-item:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="light"] .client-search-container {
+          background-color: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        [data-theme="light"] .client-search-item {
+          color: var(--text-main, #222);
+        }
+        [data-theme="light"] .client-search-item:hover {
+          background-color: rgba(0, 0, 0, 0.06);
+        }
+
+        /* Modal close button fix for Light Mode */
+        [data-theme="light"] .modal-header .btn-close {
+          filter: invert(1) grayscale(100%) brightness(0);
+        }
+      `}</style>
       {selectedProject ? (
         <div className="anim-slide-right">
           {/* HEADER / TOPBAR */}
           <div className="view-header flex items-center justify-between gap-3 w-full mb-6" style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <div className="flex items-center gap-3 overflow-hidden">
-              <button className="btn btn-outline-light btn-sm flex items-center justify-center shrink-0" onClick={() => setSelectedProjectId(null)} title="Volver a Asistentes">
+              <button className="btn btn-outline-light btn-sm flex items-center justify-center shrink-0" onClick={() => setSelectedProjectId(null)} title="Volver a Proyectos">
                 <i className="bi bi-arrow-left"></i>
               </button>
               <h2 className="view-header-title mb-0 text-base sm:text-lg lg:text-xl truncate hidden sm:block">{selectedProject.name}</h2>
@@ -449,15 +500,16 @@ export default function AssistantsView({ navigate }) {
               {/* TILE 2: CLIENTE */}
               {projectClient ? (
                 <button
-                  className="flex items-center justify-between p-3.5 rounded-xl status-tile shadow-inner hover:bg-sky-500/10 hover:border-sky-500/30 transition-all text-left group border-0 w-full cursor-pointer"
+                  className="flex items-center justify-between p-3.5 rounded-xl status-tile shadow-inner btn-client-glow transition-all text-left group border border-transparent w-full cursor-pointer"
                   onClick={() => {
                     localStorage.setItem('selectedClientId', projectClient.id);
-                    navigate('clients');
+                    localStorage.setItem('clientBackToProjects', 'true');
+                    navigate('clients', true);
                   }}
                   title="Ver detalle del cliente"
                 >
                   <div className="flex items-center gap-2">
-                    <i className="bi bi-person-badge text-sky-400 fs-5 group-hover:scale-110 transition-transform"></i>
+                    <i className="bi bi-person-badge text-sky-400 fs-5"></i>
                     <span className="text-xs text-dim font-bold tracking-wider">CLIENTE</span>
                   </div>
                   <span className="text-xs font-bold text-sky-300 bg-sky-500/15 border border-sky-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 truncate max-w-[150px]">
@@ -467,11 +519,11 @@ export default function AssistantsView({ navigate }) {
                 </button>
               ) : (
                 <button
-                  className="flex items-center justify-between p-3.5 rounded-xl status-tile shadow-inner hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all text-left group border-0 w-full cursor-pointer"
+                  className="flex items-center justify-between p-3.5 rounded-xl status-tile shadow-inner btn-client-link-glow transition-all text-left group border border-transparent w-full cursor-pointer"
                   onClick={() => { setLinkClientId(''); setLinkSearch(''); setIsLinkModalOpen(true); }}
                 >
                   <div className="flex items-center gap-2">
-                    <i className="bi bi-link-45deg text-emerald-400 fs-4 group-hover:scale-110 transition-transform"></i>
+                    <i className="bi bi-link-45deg text-emerald-400 fs-4"></i>
                     <span className="text-xs text-dim font-bold tracking-wider">CLIENTE</span>
                   </div>
                   <span className="text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 rounded-full flex items-center gap-1">
@@ -708,7 +760,7 @@ export default function AssistantsView({ navigate }) {
           `}</style>
           <div className="view-header assistant-custom-header">
             <div className="assistant-header-top">
-              <h2 className="view-header-title mb-0 text-center">MIS ASISTENTES</h2>
+              <h2 className="view-header-title mb-0 text-center">MIS PROYECTOS</h2>
               <div className="assistant-header-inputs">
                 <div className="input-group input-group-sm mb-0" style={{ width: '180px' }}>
                   <span className="input-group-text text-dim">
@@ -766,7 +818,7 @@ export default function AssistantsView({ navigate }) {
           {/* GRID / LIST */}
           <div className={`mt-4 ${isListView ? 'flex flex-col gap-2' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'}`}>
             {filteredAssistants.length === 0 ? (
-              <div className="col-span-full text-center text-white/50 py-12">No hay asistentes desplegados.</div>
+              <div className="col-span-full text-center text-white/50 py-12">No hay proyectos desplegados.</div>
             ) : (
               filteredAssistants.map((project, index) => {
                 const statusColor = getStatusColor(project.status);
@@ -901,7 +953,7 @@ export default function AssistantsView({ navigate }) {
                     </div>
 
                     {linkSearch && (
-                      <div className="mb-3 max-h-[160px] sm:max-h-[240px] overflow-y-auto border border-secondary rounded bg-black/40 p-1 shadow-inner w-full max-w-full">
+                      <div className="mb-3 max-h-[160px] sm:max-h-[240px] overflow-y-auto border border-secondary rounded client-search-container p-1 shadow-inner w-full max-w-full">
                         {clients
                           .filter(c => c.nombre.toLowerCase().includes(linkSearch.toLowerCase()) || (c.empresa && c.empresa.toLowerCase().includes(linkSearch.toLowerCase())) || (c.email && c.email.toLowerCase().includes(linkSearch.toLowerCase())))
                           .map(c => {
@@ -909,7 +961,7 @@ export default function AssistantsView({ navigate }) {
                             return (
                               <div
                                 key={c.id}
-                                className={`p-1.5 sm:p-2 rounded cursor-pointer text-xs sm:text-sm flex items-center justify-between mb-1 last:mb-0 transition-all w-full max-w-full overflow-hidden ${linkClientId === c.id ? 'bg-success/20 border border-success/40 text-success font-bold' : 'hover:bg-white/10 text-main'}`}
+                                className={`p-1.5 sm:p-2 rounded cursor-pointer text-xs sm:text-sm flex items-center justify-between mb-1 last:mb-0 transition-all w-full max-w-full overflow-hidden client-search-item ${linkClientId === c.id ? 'bg-success/20 border border-success/40 text-success font-bold' : 'text-main'}`}
                                 onClick={() => setLinkClientId(c.id)}
                               >
                                 <div className="truncate max-w-[180px] sm:max-w-[400px]" title={`${c.nombre}${emp}`}>

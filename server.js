@@ -90,6 +90,7 @@ app.get('/sw.js', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   if (req.session.authenticated) return res.redirect('/');
   res.sendFile(path.join(__dirname, 'dist/login.html'));
 });

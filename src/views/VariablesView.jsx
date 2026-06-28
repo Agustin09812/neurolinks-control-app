@@ -12,7 +12,7 @@ export default function VariablesView({ navigate }) {
 
   useEffect(() => {
     if (!context) {
-      navigate('assistants');
+      navigate('projects');
       return;
     }
 
@@ -59,7 +59,7 @@ export default function VariablesView({ navigate }) {
 
   const handleBack = () => {
     sessionStorage.removeItem('varsContext');
-    navigate('assistants');
+    navigate('projects');
   };
 
   return (
@@ -67,7 +67,7 @@ export default function VariablesView({ navigate }) {
       {/* HEADER / TOPBAR */}
       <div className="view-header flex items-center justify-between gap-3 w-full mb-6" style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <div className="flex items-center gap-3 overflow-hidden">
-          <button className="btn btn-outline-light btn-sm flex items-center justify-center shrink-0" onClick={handleBack} title="Volver a Asistentes">
+          <button className="btn btn-outline-light btn-sm flex items-center justify-center shrink-0" onClick={handleBack} title="Volver a Proyectos">
             <i className="bi bi-arrow-left"></i>
           </button>
           <h2 className="view-header-title mb-0 text-base sm:text-lg lg:text-xl truncate hidden sm:block">Variables: {context.serviceName}</h2>

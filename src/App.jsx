@@ -5,7 +5,7 @@ import DashboardView from './views/DashboardView';
 import ClientsView from './views/ClientsView';
 import AuditView from './views/AuditView';
 import LogsView from './views/LogsView';
-import AssistantsView from './views/AssistantsView';
+import ProjectsView from './views/ProjectsView';
 import TicketsView from './views/TicketsView';
 import VariablesView from './views/VariablesView';
 import TicketChatView from './views/TicketChatView';
@@ -26,18 +26,45 @@ export default function App() {
   const notificationMemory = useRef(new Map());
 
   // Handle setting active view
-  const navigate = (newView) => {
+  const navigate = (newView, preserveSubState = false, fromPopState = false) => {
+    if (newView === 'clients' && !preserveSubState) {
+      localStorage.removeItem('selectedClientId');
+      localStorage.removeItem('clientBackToAssistants');
+    }
     setView(newView);
     localStorage.setItem('activeView', newView);
     setIsMobileSidebarOpen(false);
     setIsNotifOpen(false);
+
+    if (!fromPopState) {
+      window.history.pushState({ view: newView }, '', `?view=${newView}`);
+    }
   };
 
   // Expose routing globally so legacy code can call it
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialView = urlParams.get('view') || localStorage.getItem('activeView') || 'dashboard';
+    if (initialView !== view) {
+      setView(initialView);
+      localStorage.setItem('activeView', initialView);
+    }
+    window.history.replaceState({ view: initialView }, '', `?view=${initialView}`);
+
+    const handlePopState = (e) => {
+      if (e.state && e.state.view) {
+        navigate(e.state.view, true, true);
+      } else {
+        navigate('dashboard', true, true);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+
     window.navigate = navigate;
     window.openDeployModal = () => navigate('deploy');
     document.body.classList.remove('app-preload');
+
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   // Expose action spinner control globally
@@ -251,7 +278,7 @@ export default function App() {
             if (window.refreshTickets) window.refreshTickets();
             if (window.fetchTicketDetailsGlobal) window.fetchTicketDetailsGlobal();
 
-            if ((payload.type === 'INSERT' || payload.type === 'UPDATE') && payload.ticket) {
+            if ((payload.type === 'INSERT' || payload.type === 'UPDATE') && payload.ticket && payload.ticket.tipo === 'Soporte') {
               const tick = payload.ticket;
               
               // Resolve client name
@@ -342,8 +369,9 @@ export default function App() {
     switch (view) {
       case 'dashboard':
         return <DashboardView navigate={navigate} />;
+      case 'projects':
       case 'assistants':
-        return <AssistantsView navigate={navigate} />;
+        return <ProjectsView navigate={navigate} />;
       case 'clients':
         return <ClientsView navigate={navigate} setHasTicketsBadge={setHasTicketsBadge} />;
       case 'audit':
@@ -429,8 +457,8 @@ export default function App() {
             <div className={`sidebar-item ${view === 'logs' ? 'active' : ''}`} onClick={() => navigate('logs')}>
               <i className="bi bi-terminal"></i><span>Logs</span>
             </div>
-            <div className={`sidebar-item ${view === 'assistants' ? 'active' : ''}`} onClick={() => navigate('assistants')}>
-              <i className="bi bi-cpu"></i><span>Asistentes</span>
+            <div className={`sidebar-item ${view === 'projects' || view === 'assistants' ? 'active' : ''}`} onClick={() => navigate('projects')}>
+              <i className="bi bi-cpu"></i><span>Proyectos</span>
             </div>
           </div>
 
@@ -467,7 +495,7 @@ export default function App() {
           <div className={`sidebar-item ${view === 'logs' ? 'active' : ''}`} onClick={() => navigate('logs')} title="Logs del Sistema">
             <i className="bi bi-terminal"></i>
           </div>
-          <div className={`sidebar-item ${view === 'assistants' ? 'active' : ''}`} onClick={() => navigate('assistants')} title="Asistentes">
+          <div className={`sidebar-item ${view === 'projects' || view === 'assistants' ? 'active' : ''}`} onClick={() => navigate('projects')} title="Proyectos">
             <i className="bi bi-cpu"></i>
           </div>
         </div>

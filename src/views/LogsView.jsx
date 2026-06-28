@@ -12,6 +12,19 @@ export default function LogsView() {
   const [level, setLevel] = useState('');
   const [selectedDetails, setSelectedDetails] = useState(null);
 
+  const formatJsonDetails = (details) => {
+    if (!details) return '';
+    let obj = details;
+    if (typeof details === 'string') {
+      try {
+        obj = JSON.parse(details);
+      } catch (e) {
+        return details;
+      }
+    }
+    return JSON.stringify(obj, null, 2);
+  };
+
   const fetchLogs = async () => {
     setLoading(true);
     setRefreshSuccess(false);
@@ -311,10 +324,14 @@ export default function LogsView() {
                     color: '#9cdcfe',
                     fontSize: '0.85rem',
                     maxHeight: '400px',
-                    overflow: 'auto',
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    wordWrap: 'break-word',
                   }}
                 >
-                  {JSON.stringify(selectedDetails, null, 2)}
+                  {formatJsonDetails(selectedDetails)}
                 </pre>
               </div>
               <div className="modal-footer p-4">

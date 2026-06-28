@@ -525,7 +525,11 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
         key={c.id}
         className="glass-card p-4 hover-lift clickable flex flex-col justify-between anim-card-enter"
         style={{ '--si': index }}
-        onClick={() => setSelectedClientId(c.id)}
+        onClick={() => {
+          localStorage.removeItem('clientBackToAssistants');
+          localStorage.removeItem('clientBackToProjects');
+          setSelectedClientId(c.id);
+        }}
       >
         <div>
           <div className="flex items-center gap-4 mb-3">
@@ -714,7 +718,17 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
       <div className="anim-slide-right">
         {/* HEADER BACK BUTTON */}
         <div className="mb-6">
-          <button className="btn btn-outline-light btn-sm" onClick={() => setSelectedClientId(null)} title="Volver">
+          <button className="btn btn-outline-light btn-sm" onClick={() => {
+            if (localStorage.getItem('clientBackToProjects') === 'true' || localStorage.getItem('clientBackToAssistants') === 'true') {
+              localStorage.removeItem('clientBackToProjects');
+              localStorage.removeItem('clientBackToAssistants');
+              setSelectedClientId(null);
+              localStorage.removeItem('selectedClientId');
+              navigate('projects');
+            } else {
+              setSelectedClientId(null);
+            }
+          }} title="Volver">
             <i className="bi bi-arrow-left mr-2"></i>Volver
           </button>
         </div>
