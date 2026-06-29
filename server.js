@@ -686,6 +686,7 @@ async function startBackgroundMonitoring() {
             if (count > 0) {
               console.log(`[Auto-Link] Realtime triggered: Linked ${count} new project(s) due to client change`);
             }
+            await supabaseService.syncClientsBackofficeTokens();
           } catch (linkErr) {
             console.error('[Auto-Link] Realtime trigger failed:', linkErr.message);
           }

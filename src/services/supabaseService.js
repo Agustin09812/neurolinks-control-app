@@ -455,16 +455,48 @@ const supabaseService = {
                 })
                 .eq('id', clientId);
 
-            // 4. Sync client credentials to this project from client fallback ID
-            const { data: clientSettings } = await supabase
+            // 4. Sync client credentials from client fallback ID or existing projects (excluding the newly linked one to avoid inheriting old creds)
+            const existingProjectIds = projectIds.filter(id => id !== railwayProjectId);
+            const sourceIds = [`client_${clientId}`, ...existingProjectIds];
+            const searchIds = [`client_${clientId}`, ...projectIds];
+
+            const { data: allSettings } = await supabase
                 .from('settings')
-                .select('key, value')
-                .eq('project_id', `client_${clientId}`)
+                .select('project_id, key, value')
+                .in('project_id', searchIds)
                 .in('key', ['ADMIN_USER', 'ADMIN_PASS']);
 
-            if (clientSettings && clientSettings.length > 0) {
-                for (const setting of clientSettings) {
-                    await this.updateSetting(railwayProjectId, setting.key, setting.value);
+            let adminUser = null;
+            let adminPass = null;
+            if (allSettings) {
+                // Prioritize finding credentials from sourceIds (client or its previously linked projects)
+                for (const sId of sourceIds) {
+                    if (!adminUser) {
+                        const u = allSettings.find(s => s.project_id === sId && s.key === 'ADMIN_USER' && s.value);
+                        if (u) adminUser = u.value;
+                    }
+                    if (!adminPass) {
+                        const p = allSettings.find(s => s.project_id === sId && s.key === 'ADMIN_PASS' && s.value);
+                        if (p) adminPass = p.value;
+                    }
+                }
+                // Fallback if the client had absolutely no previous projects or credentials (e.g. brand new client linking its first project)
+                if (!adminUser) {
+                    const u = allSettings.find(s => s.key === 'ADMIN_USER' && s.value);
+                    if (u) adminUser = u.value;
+                }
+                if (!adminPass) {
+                    const p = allSettings.find(s => s.key === 'ADMIN_PASS' && s.value);
+                    if (p) adminPass = p.value;
+                }
+            }
+
+            if (adminUser || adminPass) {
+                for (const pId of searchIds) {
+                    if (pId) {
+                        if (adminUser) await this.updateSetting(pId, 'ADMIN_USER', adminUser);
+                        if (adminPass) await this.updateSetting(pId, 'ADMIN_PASS', adminPass);
+                    }
                 }
             }
         } catch (syncErr) {
@@ -564,6 +596,20 @@ const supabaseService = {
                 .select('id, tokens_backoffice, token_backoffice');
             if (err2) throw err2;
 
+            // Cargar todas las credenciales de la tabla settings en una sola consulta eficiente para sincronizar
+            const { data: settingsData } = await supabase
+                .from('settings')
+                .select('project_id, key, value')
+                .in('key', ['ADMIN_USER', 'ADMIN_PASS']);
+
+            const credsMap = {};
+            if (settingsData) {
+                settingsData.forEach(s => {
+                    if (!credsMap[s.project_id]) credsMap[s.project_id] = {};
+                    credsMap[s.project_id][s.key] = s.value;
+                });
+            }
+
             let updatedCount = 0;
             for (const client of clients) {
                 const linkedProjects = clientProjectMap.get(client.id) || [];
@@ -592,6 +638,38 @@ const supabaseService = {
                         console.error(`[Sync] Failed to update client ${client.id}:`, errUpdate.message);
                     } else {
                         updatedCount++;
+                    }
+                }
+
+                if (linkedProjects.length > 0) {
+                    // Sync credentials across client fallback ID and all linked projects
+                    const searchIds = [`client_${client.id}`, ...linkedProjects];
+                    let adminUser = null;
+                    let adminPass = null;
+                    for (const pId of searchIds) {
+                        if (credsMap[pId]) {
+                            if (!adminUser && credsMap[pId]['ADMIN_USER']) adminUser = credsMap[pId]['ADMIN_USER'];
+                            if (!adminPass && credsMap[pId]['ADMIN_PASS']) adminPass = credsMap[pId]['ADMIN_PASS'];
+                        }
+                    }
+
+                    if (adminUser || adminPass) {
+                        for (const pId of searchIds) {
+                            if (pId) {
+                                const currUser = credsMap[pId]?.['ADMIN_USER'];
+                                const currPass = credsMap[pId]?.['ADMIN_PASS'];
+                                if (adminUser && currUser !== adminUser) {
+                                    await this.updateSetting(pId, 'ADMIN_USER', adminUser);
+                                    if (!credsMap[pId]) credsMap[pId] = {};
+                                    credsMap[pId]['ADMIN_USER'] = adminUser;
+                                }
+                                if (adminPass && currPass !== adminPass) {
+                                    await this.updateSetting(pId, 'ADMIN_PASS', adminPass);
+                                    if (!credsMap[pId]) credsMap[pId] = {};
+                                    credsMap[pId]['ADMIN_PASS'] = adminPass;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -666,6 +744,17 @@ const supabaseService = {
             } catch (syncErr) {
                 console.error('[Unlink-Sync] Failed to sync client tokens on manual unlink:', syncErr.message);
             }
+        }
+
+        // 4. Clean up credentials from the unlinked project in settings table to prevent orphan access
+        try {
+            await supabase
+                .from('settings')
+                .delete()
+                .eq('project_id', railwayProjectId)
+                .in('key', ['ADMIN_USER', 'ADMIN_PASS']);
+        } catch (cleanErr) {
+            console.error('[Unlink-Sync] Failed to clean up settings on manual unlink:', cleanErr.message);
         }
 
         return true;
