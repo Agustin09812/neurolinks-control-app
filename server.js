@@ -295,6 +295,7 @@ router.get('/templates', async (req, res) => {
 });
 
 router.post('/templates/:id/deploy', async (req, res) => {
+  const targetClientId = req.body.clientId ? sanitizeStr(req.body.clientId, 200) : null;
   try {
     const result = await railwayService.deployTemplate(req.params.id);
     if (result.success) {
@@ -302,27 +303,33 @@ router.post('/templates/:id/deploy', async (req, res) => {
       
       try {
         if (result.projectId) {
-          const clientData = {
-            nombre: 'GENERICO',
-            empresa: 'GENERICO',
-            email: `generico_${result.projectId.slice(0, 6).toLowerCase()}@generico.com`,
-            telefono: null,
-            plan: 'Standard',
-            vencimiento: null,
-            abono: 9999,
-            vendedor_user_id: null,
-            admin_user: 'admin',
-            admin_pass: result.projectId.slice(0, 8)
-          };
-          const newClient = await supabaseService.createClient(clientData);
-          if (newClient && newClient.id) {
-            await supabaseService.linkProjectToClient(result.projectId, newClient.id);
-            await supabaseService.logAction('Crear Cliente Genérico', `Cliente generado y vinculado al proyecto ${result.projectId}`, 'clientes', newClient.id);
+          if (targetClientId) {
+            await supabaseService.linkProjectToClient(result.projectId, targetClientId);
+            await supabaseService.logAction('Vincular Proyecto a Cliente', `Proyecto ${result.projectId} desplegado y vinculado al cliente ${targetClientId}`, 'clientes', targetClientId);
             invalidateCache('clients');
+          } else {
+            const clientData = {
+              nombre: 'GENERICO',
+              empresa: 'GENERICO',
+              email: `generico_${result.projectId.slice(0, 6).toLowerCase()}@generico.com`,
+              telefono: null,
+              plan: 'Standard',
+              vencimiento: null,
+              abono: 9999,
+              vendedor_user_id: null,
+              admin_user: 'admin',
+              admin_pass: result.projectId.slice(0, 8)
+            };
+            const newClient = await supabaseService.createClient(clientData);
+            if (newClient && newClient.id) {
+              await supabaseService.linkProjectToClient(result.projectId, newClient.id);
+              await supabaseService.logAction('Crear Cliente Genérico', `Cliente generado y vinculado al proyecto ${result.projectId}`, 'clientes', newClient.id);
+              invalidateCache('clients');
+            }
           }
         }
       } catch (clientErr) {
-        console.error('Error al generar cliente genérico para despliegue:', clientErr);
+        console.error('Error al generar/vincular cliente para despliegue:', clientErr);
       }
     }
     res.json(result);

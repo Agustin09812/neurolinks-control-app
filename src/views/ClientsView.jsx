@@ -49,6 +49,49 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
   // Link Assistant Modal
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkSearch, setLinkSearch] = useState('');
+  const [linkModalTab, setLinkModalTab] = useState('menu'); // 'menu', 'link', 'create'
+  const [templates, setTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [deployingTemplate, setDeployingTemplate] = useState(false);
+
+  const handleOpenCreateTab = async () => {
+    setLinkModalTab('create');
+    setLoadingTemplates(true);
+    try {
+      const data = await api.searchTemplates("");
+      let filtered = (data || []).filter(t => t.id === '7ee93cd3-5d50-444e-9c47-1617446449d3');
+      if (filtered.length === 0) {
+        filtered = [{ id: '7ee93cd3-5d50-444e-9c47-1617446449d3', name: 'Backoffice - Official Meta API' }];
+      }
+      setTemplates(filtered);
+    } catch (error) {
+      console.error("Error loading templates:", error);
+      if (window.showToast) window.showToast("Error al conectar con Railway", "danger");
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  const handleConfirmDeployForClient = async (templateId) => {
+    if (!selectedClientId || !templateId) return;
+    setDeployingTemplate(true);
+    try {
+      const result = await api.deployTemplate(templateId, selectedClientId);
+      if (result.success) {
+        alert("Despliegue iniciado. El nuevo proyecto aparecerá vinculado a este cliente en unos momentos.");
+        if (window.refreshAssistants) window.refreshAssistants();
+        setIsLinkModalOpen(false);
+        fetchClientDetails(selectedClientId);
+      } else {
+        alert("Error al desplegar: " + (result.error || "Respuesta desconocida"));
+      }
+    } catch (error) {
+      console.error("Error in handleConfirmDeployForClient:", error);
+      alert("Error crítico al intentar desplegar el template.");
+    } finally {
+      setDeployingTemplate(false);
+    }
+  };
 
   // Tickets inside client detail modal
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
@@ -577,11 +620,11 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
       return (
         <div
           className="link-assistant-card flex flex-col items-center justify-center p-6 rounded cursor-pointer"
-          onClick={() => { setLinkSearch(''); setIsLinkModalOpen(true); }}
+          onClick={() => { setLinkSearch(''); setLinkModalTab('menu'); setIsLinkModalOpen(true); }}
         >
           <i className="bi bi-plus-circle fs-3 mb-2 text-dim"></i>
-          <div className="font-semibold">Vincular proyecto</div>
-          <div className="text-sm text-dim mt-1">Asociar un proyecto a este cliente</div>
+          <div className="font-semibold">Vincular / Crear proyecto</div>
+          <div className="text-sm text-dim mt-1">Asociar o desplegar un proyecto para este cliente</div>
         </div>
       );
     }
@@ -704,10 +747,10 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
         <div
           className="link-assistant-card flex flex-col items-center justify-center p-4 rounded cursor-pointer"
           style={{ height: '100%', minHeight: '120px' }}
-          onClick={() => { setLinkSearch(''); setIsLinkModalOpen(true); }}
+          onClick={() => { setLinkSearch(''); setLinkModalTab('menu'); setIsLinkModalOpen(true); }}
         >
           <i className="bi bi-plus-circle fs-4 mb-1 text-dim"></i>
-          <div className="font-semibold text-sm">Vincular proyecto</div>
+          <div className="font-semibold text-sm">Vincular / Crear proyecto</div>
         </div>
       </div>
     );
@@ -1219,10 +1262,14 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
       {/* MODAL VINCULAR PROYECTO OVERLAY */}
       {isLinkModalOpen && (
         <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }} tabIndex="-1">
-          <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-dialog modal-dialog-centered modal-lg">
             <div className="modal-content glass-card">
               <div className="modal-header">
-                <h5 className="modal-title font-bold">Vincular Proyecto</h5>
+                <h5 className="modal-title font-bold">
+                  {linkModalTab === 'menu' && 'Vincular / Crear Proyecto'}
+                  {linkModalTab === 'link' && 'Vincular Proyecto Existente'}
+                  {linkModalTab === 'create' && 'Crear Proyecto para el Cliente'}
+                </h5>
                 <button
                   type="button"
                   className="btn-close btn-close-white"
@@ -1230,44 +1277,131 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
                 ></button>
               </div>
               <div className="modal-body p-6">
-                <div className="input-group input-group-sm mb-4">
-                  <span className="input-group-text text-dim">
-                    <i className="bi bi-search"></i>
-                  </span>
-                  <input
-                    type="text"
-                    className="form-control text-main"
-                    placeholder="Buscar proyecto..."
-                    value={linkSearch}
-                    onChange={(e) => setLinkSearch(e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-2 scrollable-list" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                  {availableProjectsForLink.length === 0 ? (
-                    <div className="text-dim text-sm text-center py-4">No hay proyectos disponibles</div>
-                  ) : (
-                    availableProjectsForLink.map(p => {
-                      const statusColor = getStatusColor(p.status);
-                      return (
-                        <div key={p.id} className="flex items-center justify-between p-2 glass-card rounded">
-                          <div className="flex items-center gap-2">
-                            <i className={`bi bi-cpu text-info`}></i>
-                            <span className="font-semibold text-sm">{p.name}</span>
-                            <span className={`badge badge-status-${statusColor}`}>
-                              {p.status.toUpperCase()}
-                            </span>
+                {linkModalTab === 'menu' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                    <div
+                      className="glass-card p-6 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all hover:border-success hover:scale-[1.02]"
+                      onClick={() => setLinkModalTab('link')}
+                    >
+                      <i className="bi bi-link-45deg text-success fs-1 mb-3"></i>
+                      <h6 className="font-bold text-lg mb-1">Vincular proyecto</h6>
+                      <p className="text-sm text-dim text-center mb-0">
+                        Buscar y asignar un proyecto existente de Railway a este cliente.
+                      </p>
+                    </div>
+
+                    <div
+                      className="glass-card p-6 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all hover:border-info hover:scale-[1.02]"
+                      onClick={handleOpenCreateTab}
+                    >
+                      <i className="bi bi-rocket-takeoff text-info fs-1 mb-3"></i>
+                      <h6 className="font-bold text-lg mb-1">Crear proyecto para el cliente</h6>
+                      <p className="text-sm text-dim text-center mb-0">
+                        Desplegar una nueva instancia en Railway asignada automáticamente a este cliente.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {linkModalTab === 'link' && (
+                  <>
+                    <div className="mb-4 flex items-center justify-between">
+                      <button className="btn btn-sm btn-outline-light" onClick={() => setLinkModalTab('menu')}>
+                        <i className="bi bi-arrow-left mr-1"></i>Volver
+                      </button>
+                    </div>
+                    <div className="input-group input-group-sm mb-4">
+                      <span className="input-group-text text-dim">
+                        <i className="bi bi-search"></i>
+                      </span>
+                      <input
+                        type="text"
+                        className="form-control text-main"
+                        placeholder="Buscar proyecto..."
+                        value={linkSearch}
+                        onChange={(e) => setLinkSearch(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2 scrollable-list" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      {availableProjectsForLink.length === 0 ? (
+                        <div className="text-dim text-sm text-center py-4">No hay proyectos disponibles</div>
+                      ) : (
+                        availableProjectsForLink.map(p => {
+                          const statusColor = getStatusColor(p.status);
+                          return (
+                            <div key={p.id} className="flex items-center justify-between p-2 glass-card rounded">
+                              <div className="flex items-center gap-2">
+                                <i className={`bi bi-cpu text-info`}></i>
+                                <span className="font-semibold text-sm">{p.name}</span>
+                                <span className={`badge badge-status-${statusColor}`}>
+                                  {p.status.toUpperCase()}
+                                </span>
+                              </div>
+                              <button
+                                className="btn btn-outline-success btn-sm btn-link-assistant"
+                                onClick={() => handleLinkAssistant(p.id)}
+                              >
+                                <i className="bi bi-plus mr-1"></i>Vincular
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {linkModalTab === 'create' && (
+                  <>
+                    <div className="mb-4 flex items-center justify-between">
+                      <button className="btn btn-sm btn-outline-light" onClick={() => setLinkModalTab('menu')} disabled={deployingTemplate}>
+                        <i className="bi bi-arrow-left mr-1"></i>Volver
+                      </button>
+                    </div>
+                    {loadingTemplates ? (
+                      <div className="text-center py-12">
+                        <div className="spinner-border text-success mb-3" role="status"></div>
+                        <div className="text-dim text-sm">Cargando plantillas...</div>
+                      </div>
+                    ) : templates.length === 0 ? (
+                      <div className="text-dim text-sm text-center py-12">No se encontraron plantillas disponibles.</div>
+                    ) : (
+                      <div className="flex flex-col gap-4 py-2">
+                        {templates.map(t => (
+                          <div key={t.id} className="glass-card p-6 rounded-xl border border-secondary relative overflow-hidden">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                              <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-xl bg-info/10 border border-info/20 text-info fs-3">
+                                  <i className="bi bi-rocket-takeoff-fill"></i>
+                                </div>
+                                <div>
+                                  <h6 className="font-bold text-main text-lg mb-1">{t.name}</h6>
+                                  <p className="text-xs text-dim mb-0">Instancia dedicada con API oficial de META</p>
+                                </div>
+                              </div>
+                              <button
+                                className="btn btn-success btn-sm px-4 py-2 font-bold rounded-lg flex items-center gap-2"
+                                onClick={() => handleConfirmDeployForClient(t.id)}
+                                disabled={deployingTemplate}
+                              >
+                                {deployingTemplate ? (
+                                  <>
+                                    <span className="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>
+                                    Desplegando...
+                                  </>
+                                ) : (
+                                  <>
+                                    <i className="bi bi-cloud-upload mr-1"></i>Desplegar y Vincular
+                                  </>
+                                )}
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            className="btn btn-outline-success btn-sm btn-link-assistant"
-                            onClick={() => handleLinkAssistant(p.id)}
-                          >
-                            <i className="bi bi-plus mr-1"></i>Vincular
-                          </button>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
