@@ -4,14 +4,14 @@ import { store, useStoreKey } from '../core/store';
 
 export default function ClientsView({ navigate, setHasTicketsBadge }) {
   // Shared data from global store — updates silently in background (no flicker)
-  const clientsData     = useStoreKey('clients',     () => store.fetchClients());
-  const assistantsData  = useStoreKey('assistants',  () => store.fetchAssistants());
+  const clientsData = useStoreKey('clients', () => store.fetchClients());
+  const assistantsData = useStoreKey('assistants', () => store.fetchAssistants());
   const ticketsMetaData = useStoreKey('ticketsMeta', () => store.fetchTicketsMeta());
 
   const loading = clientsData === null || assistantsData === null || ticketsMetaData === null;
 
-  const clients     = clientsData || [];
-  const assistants  = assistantsData || [];
+  const clients = clientsData || [];
+  const assistants = assistantsData || [];
   const ticketsMeta = ticketsMetaData || [];
 
   // Admins (not in shared store, local to this view)
@@ -43,6 +43,8 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
   const [formPlan, setFormPlan] = useState('Standard');
   const [formVencimiento, setFormVencimiento] = useState('');
   const [formVendedorUserId, setFormVendedorUserId] = useState('');
+  const [formAdminUser, setFormAdminUser] = useState('');
+  const [formAdminPass, setFormAdminPass] = useState('');
 
   // Link Assistant Modal
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
@@ -59,7 +61,7 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
 
   // Load admins once on mount
   useEffect(() => {
-    api.getAdmins().then(d => setAdmins(d || [])).catch(() => {});
+    api.getAdmins().then(d => setAdmins(d || [])).catch(() => { });
   }, []);
 
   // Sync sidebar ticket badge whenever ticketsMeta changes in store
@@ -80,7 +82,7 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
         api.getTickets({ cliente_id: clientId, limit: 500 }) || {}
       ]);
       setClientProjects(projIds);
-      
+
       const allTickets = ticketsRes?.data || [];
       const supportTickets = allTickets.filter(t => t.tipo === 'Soporte');
       setClientTickets(supportTickets);
@@ -192,7 +194,7 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
     const rows = filtered.map(c => {
       const admin = admins.find(a => a.auth_user_id === c.vendedor_user_id);
       const adjudicado = admin ? admin.nombre || admin.email : 'Sin Asignar';
-      
+
       const montoBruto = c.abono ?? 0;
       const montoNeto = montoBruto - (montoBruto * 0.07);
 
@@ -325,6 +327,8 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
     setFormPlan('Standard');
     setFormVencimiento('');
     setFormVendedorUserId('');
+    setFormAdminUser('');
+    setFormAdminPass('');
     setIsClientModalOpen(true);
   };
 
@@ -339,6 +343,8 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
     setFormPlan(c.plan || 'Standard');
     setFormVencimiento(c.vencimiento || '');
     setFormVendedorUserId(c.vendedor_user_id || '');
+    setFormAdminUser(c.admin_user || '');
+    setFormAdminPass(c.admin_pass || '');
     setIsClientModalOpen(true);
   };
 
@@ -352,7 +358,9 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
       telefono: formPhone || null,
       plan: formPlan,
       vencimiento: formVencimiento || null,
-      vendedor_user_id: formVendedorUserId || null
+      vendedor_user_id: formVendedorUserId || null,
+      admin_user: formAdminUser || null,
+      admin_pass: formAdminPass || null
     };
 
     try {
@@ -519,6 +527,7 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
       astCount = assistants.filter(p => projIds.includes(String(p.id))).length;
     }
     const ticketCount = ticketsMeta.filter(t => String(t.cliente_id) === String(c.id)).length;
+    const hasCreds = Boolean(c.admin_user || c.admin_pass);
 
     return (
       <div
@@ -533,7 +542,6 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
       >
         <div>
           <div className="flex items-center gap-4 mb-3">
-            <div className="client-avatar-lg shrink-0">{initials}</div>
             <div className="grow min-w-0 overflow-hidden">
               <h6 className="font-bold mb-0.5 truncate">{c.nombre}</h6>
               <div className="text-sm text-dim truncate mb-0.5">{c.empresa || 'Particular'}</div>
@@ -546,6 +554,9 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
                 <span className={`text-sm ${ticketCount > 0 ? 'text-red-400 font-semibold' : 'text-dim'}`} id={"ticket-count-" + c.id}>
                   <i className="bi bi-ticket-perforated-fill mr-1"></i>
                   <span className="tc-val">{ticketCount}</span>
+                </span>
+                <span className={`text-sm ${hasCreds ? 'text-green-500 font-bold' : 'text-dim font-bold'}`} title={hasCreds ? 'Con credenciales' : 'Sin credenciales'}>
+                  <i className="bi bi-key mr-1"></i>{hasCreds ? '✓' : 'X'}
                 </span>
               </div>
             </div>
@@ -614,7 +625,7 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
                 Último deploy: {new Date(svc.createdAt).toLocaleString()}
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
               <button
                 className="btn btn-svc-tile btn-sm w-full flex flex-col items-center py-2"
@@ -676,8 +687,8 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
                     onChange={(e) => handleSysConfigToggle(p.id, e.target.checked)}
                   />
                   <span className="sysconfig-thumb">
-                    <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" width="12" height="12" className="icon-off"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
-                    <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" width="12" height="12" className="icon-on"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                    <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" width="12" height="12" className="icon-off"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                    <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" width="12" height="12" className="icon-on"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                   </span>
                 </label>
               </div>
@@ -1145,6 +1156,45 @@ export default function ClientsView({ navigate, setHasTicketsBadge }) {
                           </option>
                         ))}
                       </select>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-dim text-sm font-bold">CREDENCIALES BACKOFFICE</span>
+                        <button
+                          type="button"
+                          className="btn-outline-custom text-xs px-2 py-1 flex items-center gap-1"
+                          onClick={() => {
+                            const randUser = 'admin_' + Math.random().toString(36).slice(2, 6);
+                            const randPass = Math.random().toString(36).slice(2, 12);
+                            setFormAdminUser(randUser);
+                            setFormAdminPass(randPass);
+                          }}
+                        >
+                          <i className="bi bi-magic"></i> Autogenerar
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="form-label text-dim text-xs font-bold">ADMIN_USER</label>
+                          <input
+                            type="text"
+                            className="form-control text-main"
+                            placeholder="Usuario admin"
+                            value={formAdminUser}
+                            onChange={(e) => setFormAdminUser(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label text-dim text-xs font-bold">ADMIN_PASS</label>
+                          <input
+                            type="text"
+                            className="form-control text-main"
+                            placeholder="Contraseña admin"
+                            value={formAdminPass}
+                            onChange={(e) => setFormAdminPass(e.target.value)}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

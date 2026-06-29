@@ -118,17 +118,58 @@ const supabaseService = {
             .order('created_at', { ascending: false });
         if (error) throw error;
         
+        // Cargar todas las credenciales de la tabla settings en una sola consulta eficiente
+        const { data: settingsData } = await supabase
+            .from('settings')
+            .select('project_id, key, value')
+            .in('key', ['ADMIN_USER', 'ADMIN_PASS']);
+
+        const credsMap = {};
+        if (settingsData) {
+            settingsData.forEach(s => {
+                if (!credsMap[s.project_id]) credsMap[s.project_id] = {};
+                let val = s.value;
+                if (val && val.startsWith('b64:')) {
+                    try {
+                        val = Buffer.from(val.slice(4), 'base64').toString('utf-8');
+                    } catch(e) {}
+                }
+                credsMap[s.project_id][s.key] = val;
+            });
+        }
+
         return data.map(c => {
             if (c.proyectos_railway) {
                 c.railway_project_ids = c.proyectos_railway.map(p => p.railway_project_id);
                 delete c.proyectos_railway;
             }
             c.vendedor_user_id = c.vendedor_id;
+
+            const clientCreds = credsMap[`client_${c.id}`];
+            if (clientCreds) {
+                if (!c.admin_user && clientCreds['ADMIN_USER']) c.admin_user = clientCreds['ADMIN_USER'];
+                if (!c.admin_pass && clientCreds['ADMIN_PASS']) c.admin_pass = clientCreds['ADMIN_PASS'];
+            }
+
+            if (c.railway_project_ids && c.railway_project_ids.length > 0) {
+                const firstProjectId = c.railway_project_ids[0];
+                const projCreds = credsMap[firstProjectId];
+                if (projCreds) {
+                    if (!c.admin_user && projCreds['ADMIN_USER']) c.admin_user = projCreds['ADMIN_USER'];
+                    if (!c.admin_pass && projCreds['ADMIN_PASS']) c.admin_pass = projCreds['ADMIN_PASS'];
+                }
+            }
+
             return c;
         });
     },
 
     async createClient(clientData) {
+        const adminUser = clientData.admin_user;
+        const adminPass = clientData.admin_pass;
+        delete clientData.admin_user;
+        delete clientData.admin_pass;
+
         if (clientData.vendedor_user_id !== undefined) {
             clientData.vendedor_id = clientData.vendedor_user_id || null;
             delete clientData.vendedor_user_id;
@@ -139,10 +180,25 @@ const supabaseService = {
             .select()
             .single();
         if (error) throw error;
+
+        if (data && data.id) {
+            if (adminUser) {
+                await this.updateSetting(`client_${data.id}`, 'ADMIN_USER', 'b64:' + Buffer.from(adminUser).toString('base64'));
+            }
+            if (adminPass) {
+                await this.updateSetting(`client_${data.id}`, 'ADMIN_PASS', 'b64:' + Buffer.from(adminPass).toString('base64'));
+            }
+        }
+
         return data;
     },
 
     async updateClient(id, clientData) {
+        const adminUser = clientData.admin_user;
+        const adminPass = clientData.admin_pass;
+        delete clientData.admin_user;
+        delete clientData.admin_pass;
+
         if (clientData.vendedor_user_id !== undefined) {
             clientData.vendedor_id = clientData.vendedor_user_id || null;
             delete clientData.vendedor_user_id;
@@ -154,6 +210,34 @@ const supabaseService = {
             .select()
             .single();
         if (error) throw error;
+
+        // Sync admin credentials with client fallback ID and linked projects
+        if (adminUser !== undefined || adminPass !== undefined) {
+            try {
+                if (adminUser) await this.updateSetting(`client_${id}`, 'ADMIN_USER', 'b64:' + Buffer.from(adminUser).toString('base64'));
+                if (adminPass) await this.updateSetting(`client_${id}`, 'ADMIN_PASS', 'b64:' + Buffer.from(adminPass).toString('base64'));
+
+                const { data: links } = await supabase
+                    .from('proyectos_railway')
+                    .select('railway_project_id')
+                    .eq('cliente_id', id);
+                if (links && links.length > 0) {
+                    for (const link of links) {
+                        if (link.railway_project_id) {
+                            if (adminUser) {
+                                await this.updateSetting(link.railway_project_id, 'ADMIN_USER', 'b64:' + Buffer.from(adminUser).toString('base64'));
+                            }
+                            if (adminPass) {
+                                await this.updateSetting(link.railway_project_id, 'ADMIN_PASS', 'b64:' + Buffer.from(adminPass).toString('base64'));
+                            }
+                        }
+                    }
+                }
+            } catch (syncErr) {
+                console.error('[Creds-Sync] Error syncing credentials on client update:', syncErr.message);
+            }
+        }
+
         return data;
     },
 
@@ -370,8 +454,21 @@ const supabaseService = {
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', clientId);
+
+            // 4. Sync client credentials to this project from client fallback ID
+            const { data: clientSettings } = await supabase
+                .from('settings')
+                .select('key, value')
+                .eq('project_id', `client_${clientId}`)
+                .in('key', ['ADMIN_USER', 'ADMIN_PASS']);
+
+            if (clientSettings && clientSettings.length > 0) {
+                for (const setting of clientSettings) {
+                    await this.updateSetting(railwayProjectId, setting.key, setting.value);
+                }
+            }
         } catch (syncErr) {
-            console.error('[Link-Sync] Failed to sync client tokens on manual link:', syncErr.message);
+            console.error('[Link-Sync] Failed to sync client tokens/credentials on manual link:', syncErr.message);
         }
 
         return data;

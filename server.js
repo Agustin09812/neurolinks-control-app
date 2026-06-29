@@ -310,7 +310,9 @@ router.post('/templates/:id/deploy', async (req, res) => {
             plan: 'Standard',
             vencimiento: null,
             abono: 9999,
-            vendedor_user_id: null
+            vendedor_user_id: null,
+            admin_user: 'admin',
+            admin_pass: result.projectId.slice(0, 8)
           };
           const newClient = await supabaseService.createClient(clientData);
           if (newClient && newClient.id) {
@@ -439,11 +441,13 @@ router.post('/clients', async (req, res) => {
   const vencimiento = isValidDate(req.body.vencimiento) ? (req.body.vencimiento || null) : null;
   const abono = req.body.abono !== undefined ? (parseFloat(req.body.abono) || 0) : 0;
   const vendedor_user_id = req.body.vendedor_user_id !== undefined ? (req.body.vendedor_user_id || null) : null;
+  const admin_user = req.body.admin_user !== undefined ? (sanitizeStr(req.body.admin_user, 100) || null) : null;
+  const admin_pass = req.body.admin_pass !== undefined ? (sanitizeStr(req.body.admin_pass, 100) || null) : null;
 
   if (!nombre) return res.status(400).json({ error: 'El nombre es requerido' });
   if (email && !isValidEmail(email)) return res.status(400).json({ error: 'Email inválido' });
 
-  const clientData = { nombre, email, empresa, telefono, plan, vencimiento, abono, vendedor_user_id };
+  const clientData = { nombre, email, empresa, telefono, plan, vencimiento, abono, vendedor_user_id, admin_user, admin_pass };
   try {
     const result = await supabaseService.createClient(clientData);
     await supabaseService.logAction('Crear Cliente', `Se creó el cliente ${nombre}`, 'clientes', result.id);
@@ -471,6 +475,8 @@ router.patch('/clients/:id', async (req, res) => {
   if (req.body.vencimiento !== undefined) clientData.vencimiento = isValidDate(req.body.vencimiento) ? (req.body.vencimiento || null) : null;
   if (req.body.abono !== undefined) clientData.abono = parseFloat(req.body.abono) || 0;
   if (req.body.vendedor_user_id !== undefined) clientData.vendedor_user_id = req.body.vendedor_user_id || null;
+  if (req.body.admin_user !== undefined) clientData.admin_user = sanitizeStr(req.body.admin_user, 100) || null;
+  if (req.body.admin_pass !== undefined) clientData.admin_pass = sanitizeStr(req.body.admin_pass, 100) || null;
 
   try {
     const result = await supabaseService.updateClient(req.params.id, clientData);
